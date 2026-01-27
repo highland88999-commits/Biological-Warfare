@@ -1,308 +1,267 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://quge5.com/88/tag.min.js" data-zone="206119" async data-cfasync="false"></script>
+    
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    <title>Artemis • Prime Symbiote</title>
+    <title>Artemis • Core Symbiote</title>
     <style>
         :root {
             --cyan: #00f2ff;
             --gold: #d4af37;
             --virus-red: #ff2d55;
             --disease-green: #00ff9d;
+            --portal-purple: #bc13fe;
             --glass: rgba(8, 8, 25, 0.75);
-            --border: rgba(0, 242, 255, 0.4);
             --glow-c: 0 0 40px rgba(0, 242, 255, 0.7);
         }
-
         * { margin:0; padding:0; box-sizing:border-box; }
         body, html { 
             width:100%; height:100%; overflow:hidden; 
             background:#000; font-family: 'Courier New', monospace; 
-            color:var(--cyan); touch-action: none;
+            color:var(--cyan); touch-action: none; 
+        }
+
+        /* Fullscreen Transition Portal */
+        #transition-overlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle, var(--portal-purple) 0%, #000 70%);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease-in-out;
+        }
+        #transition-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .portal-spinner {
+            width: 150px;
+            height: 150px;
+            border: 10px dashed var(--gold);
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        #rift-portal {
+            position: fixed; top: -40px; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 100px;
+            background: radial-gradient(ellipse at center, var(--portal-purple) 0%, transparent 70%);
+            z-index: 10; filter: blur(10px);
+            animation: portalPulse 3s infinite ease-in-out;
+        }
+
+        @keyframes portalPulse {
+            0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
         }
 
         #engine-bg { position: fixed; inset: 0; z-index: 1; }
         #bg-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.18); }
-
-        #oracle-nucleus {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: min(280px, 55vw); height: min(280px, 55vw);
-            border-radius: 50%; border: 5px solid var(--gold);
-            box-shadow: var(--glow-c), inset 0 0 60px rgba(212,175,55,0.3);
-            z-index: 100; overflow: hidden; background: #000;
-            pointer-events: none;
+        
+        #oracle-nucleus { 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            width: min(280px, 55vw); height: min(280px, 55vw); 
+            border-radius: 50%; border: 5px solid var(--gold); 
+            box-shadow: var(--glow-c), inset 0 0 60px rgba(212,175,55,0.3); 
+            z-index: 100; overflow: hidden; background: #000; pointer-events: none; 
         }
         #oracle-video { width: 100%; height: 100%; object-fit: cover; }
 
         #orbital-canvas { position: fixed; inset: 0; z-index: 150; pointer-events: none; }
 
-        .cell-orb {
-            position: absolute; width: 50px; height: 50px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            color: #fff; font-size: 0.7rem; font-weight: bold; text-align: center;
-            backdrop-filter: blur(6px); transition: transform 0.15s, opacity 0.4s;
-            pointer-events: auto; z-index: 160;
-            box-shadow: 0 0 15px rgba(0,242,255,0.4);
+        .cell-orb { 
+            position: absolute; width: 50px; height: 50px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            color: #fff; font-size: 0.6rem; font-weight: bold; text-align: center; 
+            backdrop-filter: blur(6px); pointer-events: auto; z-index: 160; 
+        }
+        
+        .hp-bar { position: absolute; bottom: 5px; width: 30px; height: 3px; background: #333; border-radius: 2px; overflow: hidden; }
+        .hp-fill { height: 100%; background: var(--disease-green); width: 100%; }
+
+        .cell-good { background: radial-gradient(circle at 30% 30%, #00f2ff88, #001122dd); border: 2px solid var(--cyan); }
+        .cell-virus { background: radial-gradient(circle at 30% 30%, #ff2d5588, #220000dd); border: 2px solid var(--virus-red); }
+        .cell-disease { background: radial-gradient(circle at 30% 30%, #00ff9d88, #002211dd); border: 2px solid var(--disease-green); }
+
+        #cannon { 
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); 
+            width: 120px; height: 100px; z-index: 300; pointer-events: auto; 
+            background: linear-gradient(to top, #0a0a1f, #001122); 
+            border-radius: 60px 60px 0 0; border: 3px solid var(--gold); 
+            box-shadow: 0 0 30px var(--gold); display: flex; align-items: center; 
+            justify-content: center; font-size: 1.2rem; color: var(--cyan); cursor: pointer; 
         }
 
-        .cell-good   { background: radial-gradient(circle at 30% 30%, #00f2ff88, #001122dd); border: 2px solid var(--cyan); }
-        .cell-virus  { background: radial-gradient(circle at 30% 30%, #ff2d5588, #220000dd); border: 2px solid var(--virus-red); animation: virusPulse 2s infinite; }
-        .cell-disease{ background: radial-gradient(circle at 30% 30%, #00ff9d88, #002211dd); border: 2px solid var(--disease-green); animation: diseaseGlow 3s infinite; }
-
-        @keyframes virusPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-        @keyframes diseaseGlow { 0%,100% { box-shadow: 0 0 20px var(--disease-green); } 50% { box-shadow: 0 0 40px var(--disease-green); } }
-
-        #cannon {
-            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-            width: 120px; height: 140px; z-index: 300; pointer-events: auto;
-            background: linear-gradient(to top, #0a0a1f, #001122); border-radius: 60px 60px 0 0;
-            border: 3px solid var(--gold); box-shadow: 0 0 30px var(--gold);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.8rem; color: var(--cyan); cursor: pointer;
-        }
-        #cannon:hover { transform: translateX(-50%) scale(1.05); }
-
-        #ui-layer {
-            position: fixed; inset: 0; z-index: 400; pointer-events: none;
-        }
-        #score-hud {
-            position: absolute; top: 20px; left: 20px;
-            background: var(--glass); border: 1px solid var(--cyan);
-            padding: 10px 20px; border-radius: 12px; font-size: 1.1rem;
-            backdrop-filter: blur(10px); pointer-events: auto;
-        }
-        #level-hud {
-            position: absolute; top: 20px; right: 20px;
-            background: var(--glass); border: 1px solid var(--gold);
-            padding: 10px 20px; border-radius: 12px; font-size: 1.1rem;
-            backdrop-filter: blur(10px); pointer-events: auto;
-        }
-
-        .particle {
-            position: absolute; width: 6px; height: 6px; border-radius: 50%;
-            pointer-events: none; z-index: 170; opacity: 0.9;
-            animation: particleBurst 0.8s forwards;
-        }
-        @keyframes particleBurst {
-            0%   { transform: scale(0.5); opacity: 1; }
-            100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
-        }
+        #ui-layer { position: fixed; inset: 0; z-index: 400; pointer-events: none; }
+        #score-hud { position: absolute; top: 20px; left: 20px; background: var(--glass); border: 1px solid var(--cyan); padding: 10px 20px; border-radius: 12px; backdrop-filter: blur(10px); pointer-events: auto; }
+        
+        .particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; z-index: 170; opacity: 0.9; animation: particleBurst 0.8s forwards; }
+        @keyframes particleBurst { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
     </style>
 </head>
 <body>
+    <div id="transition-overlay">
+        <div class="portal-spinner"></div>
+        <h1 style="position:absolute; color:var(--gold); margin-top:200px;">Warping...</h1>
+    </div>
 
-<div id="engine-bg"><video id="bg-video" autoplay loop muted playsinline src="https://files.catbox.moe/jhxjmx.mp4"></video></div>
-<div id="oracle-nucleus"><video id="oracle-video" autoplay loop muted playsinline src="https://files.catbox.moe/no2e76.mp4"></video></div>
-<div id="orbital-canvas"></div>
+    <div id="rift-portal"></div>
+    <div id="engine-bg"><video id="bg-video" autoplay loop muted playsinline src="https://files.catbox.moe/jhxjmx.mp4"></video></div>
+    <div id="oracle-nucleus"><video id="oracle-video" autoplay loop muted playsinline src="https://files.catbox.moe/no2e76.mp4"></video></div>
+    <div id="orbital-canvas"></div>
+    
+    <div id="ui-layer">
+        <div id="score-hud">Cells: <span id="cell-count">0</span> | Score: <span id="score">0</span> | Level: <span id="level">1</span></div>
+    </div>
 
-<div id="ui-layer">
-    <div id="score-hud">Cells: <span id="cell-count">0</span> | Score: <span id="score">0</span></div>
-    <div id="level-hud">Level: <span id="level">1</span> / 100</div>
-</div>
+    <div id="cannon" onclick="fireCannon()">⚡ DEPLOY</div>
 
-<div id="cannon" onclick="fireCannon()">⚡ SHOOT</div>
+    <script>
+        const canvas = document.getElementById('orbital-canvas');
+        const transitionOverlay = document.getElementById('transition-overlay');
+        const cellCountEl = document.getElementById('cell-count');
+        const scoreEl = document.getElementById('score');
+        const levelEl = document.getElementById('level');
+        
+        let cells = [];
+        let enemies = [];
+        let score = 0;
+        let level = 1;
+        let isTransitioning = false;
+        const MARGIN = 4;
 
-<script>
-    const canvas = document.getElementById('orbital-canvas');
-    const cellCountEl = document.getElementById('cell-count');
-    const scoreEl = document.getElementById('score');
-    const levelEl = document.getElementById('level');
-
-    let cells = [];
-    let enemies = [];
-    let score = 0;
-    let level = 1;
-    let cellProduction = 1;
-    let boosterActive = false;
-    let boosterEndTime = 0;
-
-    class Entity {
-        constructor(x, y, type = 'cell') {
-            this.el = document.createElement('div');
-            this.el.className = 'cell-orb ' + (type === 'cell' ? 'cell-good' : type === 'virus' ? 'cell-virus' : 'cell-disease');
-            this.el.innerHTML = type === 'cell' ? 'CELL' : type === 'virus' ? 'VIR' : 'DIS';
-            this.type = type;
-            this.x = x;
-            this.y = y;
-            this.vx = (Math.random()-0.5)*4;
-            this.vy = (Math.random()-0.5)*4;
-            this.radius = 25;
-            this.health = type === 'cell' ? 1 : (type === 'virus' ? 2 : 3); // enemies take hits
-            canvas.appendChild(this.el);
-        }
-
-        update() {
-            this.x += this.vx;
-            this.y += this.vy;
-
-            // Soft bounce on edges
-            if (this.x < this.radius || this.x > window.innerWidth - this.radius) this.vx *= -0.8;
-            if (this.y < this.radius || this.y > window.innerHeight - this.radius) this.vy *= -0.8;
-
-            // Oracle attraction/repulsion (nucleus effect)
-            const dx = this.x - window.innerWidth/2;
-            const dy = this.y - window.innerHeight/2;
-            const dist = Math.hypot(dx, dy);
-            if (dist < 300) {
-                const force = (this.type === 'cell' ? 0.8 : -1.2) * (300 - dist) / 300;
-                this.vx += (dx / dist) * force;
-                this.vy += (dy / dist) * force;
+        class Entity {
+            constructor(x, y, type = 'cell') {
+                this.type = type;
+                this.x = x; this.y = y;
+                this.radius = 25;
+                this.maxHealth = 100;
+                this.health = 100;
+                this.el = document.createElement('div');
+                this.el.className = `cell-orb cell-${type}`;
+                this.el.innerHTML = `<span>${type.toUpperCase().substring(0,3)}</span><div class="hp-bar"><div class="hp-fill"></div></div>`;
+                this.hpFill = this.el.querySelector('.hp-fill');
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = type === 'cell' ? -8 : 4;
+                canvas.appendChild(this.el);
             }
-
-            this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
-        }
-
-        remove() {
-            this.el.remove();
-        }
-    }
-
-    function createCell(count = cellProduction) {
-        for (let i = 0; i < count; i++) {
-            setTimeout(() => {
-                const cell = new Entity(window.innerWidth / 2, window.innerHeight - 80, 'cell');
-                cell.vy = -10 - Math.random() * 5;
-                cell.vx = (Math.random() - 0.5) * 4;
-                cells.push(cell);
-                updateUI();
-            }, i * 100);
-        }
-    }
-
-    function fireCannon() {
-        createCell();
-    }
-
-    function spawnEnemy() {
-        const type = Math.random() < 0.5 ? 'virus' : 'disease';
-        const side = Math.random() < 0.5 ? -1 : 1;
-        const x = side > 0 ? window.innerWidth + 60 : -60;
-        const y = Math.random() * (window.innerHeight * 0.7) + 50;
-        const enemy = new Entity(x, y, type);
-        enemy.vx = side * (1.5 + level * 0.2 + Math.random() * 2);
-        enemy.vy = (Math.random() - 0.5) * 1.5;
-        enemies.push(enemy);
-    }
-
-    function checkCollisions() {
-        for (let i = cells.length - 1; i >= 0; i--) {
-            const cell = cells[i];
-            for (let j = enemies.length - 1; j >= 0; j--) {
-                const enemy = enemies[j];
-                const dx = cell.x - enemy.x;
-                const dy = cell.y - enemy.y;
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                if (this.x < this.radius + MARGIN) { this.x = this.radius + MARGIN; this.vx *= -1; }
+                if (this.x > window.innerWidth - this.radius - MARGIN) { this.x = window.innerWidth - this.radius - MARGIN; this.vx *= -1; }
+                if (this.y < this.radius + MARGIN) { this.y = this.radius + MARGIN; this.vy *= -1; }
+                if (this.y > window.innerHeight - this.radius - MARGIN) { this.y = window.innerHeight - this.radius - MARGIN; this.vy *= -1; }
+                const dx = this.x - window.innerWidth / 2;
+                const dy = this.y - window.innerHeight / 2;
                 const dist = Math.hypot(dx, dy);
+                if (dist < 300) {
+                    const pull = (this.type === 'cell' ? 0.4 : -0.6);
+                    this.vx -= (dx / dist) * pull;
+                    this.vy -= (dy / dist) * pull;
+                }
+                this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
+            }
+            takeDamage(amt) {
+                this.health -= amt;
+                const pct = Math.max(0, (this.health / this.maxHealth) * 100);
+                this.hpFill.style.width = pct + '%';
+                this.el.style.filter = 'brightness(2) saturate(2)';
+                setTimeout(() => this.el.style.filter = '', 100);
+                return this.health <= 0;
+            }
+            remove() { this.el.remove(); }
+        }
 
-                if (dist < cell.radius + enemy.radius) {
-                    // Enhanced collision animation
-                    createExplosion(enemy.x, enemy.y, enemy.type === 'virus' ? '--virus-red' : '--disease-green', 18);
-                    enemy.health--;
-                    if (enemy.health <= 0) {
-                        enemy.remove();
-                        enemies.splice(j, 1);
-                        score += enemy.type === 'virus' ? 15 : 25;
-                        updateUI();
-                    } else {
-                        // Damage flash
-                        enemy.el.style.transition = 'all 0.2s';
-                        enemy.el.style.filter = 'brightness(3)';
-                        setTimeout(() => { enemy.el.style.filter = ''; }, 200);
+        async function triggerLevelTransition() {
+            isTransitioning = true;
+            transitionOverlay.classList.add('active');
+            
+            // Clear current entities
+            cells.forEach(c => c.remove());
+            enemies.forEach(e => e.remove());
+            cells = [];
+            enemies = [];
+
+            console.log("Portal Active: Triggering Ad/Transition");
+            
+            // Here the ad has space to display. We pause for 5 seconds for the transition/ad.
+            await new Promise(resolve => setTimeout(resolve, 5000)); 
+
+            level++;
+            levelEl.textContent = level;
+            isTransitioning = false;
+            transitionOverlay.classList.remove('active');
+        }
+
+        function fireCannon() {
+            if (isTransitioning) return;
+            const cell = new Entity(window.innerWidth / 2, window.innerHeight - 80, 'cell');
+            cells.push(cell);
+            updateUI();
+        }
+
+        function spawnEnemy() {
+            if (isTransitioning) return;
+            const type = Math.random() < 0.6 ? 'virus' : 'disease';
+            const enemy = new Entity(window.innerWidth / 2, 50, type);
+            enemies.push(enemy);
+        }
+
+        function checkCollisions() {
+            if (isTransitioning) return;
+            for (let i = cells.length - 1; i >= 0; i--) {
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const c = cells[i];
+                    const e = enemies[j];
+                    const dist = Math.hypot(c.x - e.x, c.y - e.y);
+                    if (dist < c.radius + e.radius) {
+                        createExplosion(e.x, e.y, e.type === 'virus' ? '--virus-red' : '--disease-green', 5);
+                        if (e.takeDamage(10)) { score += 50; e.remove(); enemies.splice(j, 1); updateUI(); }
+                        if (c.takeDamage(10)) { c.remove(); cells.splice(i, 1); break; }
                     }
-
-                    // Cell absorbs energy
-                    cell.vx += (dx / dist) * 3;
-                    cell.vy += (dy / dist) * 3;
-                    createExplosion(cell.x, cell.y, '--cyan', 8, 0.6);
                 }
             }
         }
-    }
 
-    function createExplosion(x, y, colorVar = '--cyan', count = 16, size = 1) {
-        for (let i = 0; i < count; i++) {
-            const p = document.createElement('div');
-            p.className = 'particle';
-            p.style.left = x + 'px';
-            p.style.top = y + 'px';
-            p.style.width = p.style.height = (4 + Math.random() * 6) * size + 'px';
-            p.style.background = `var(${colorVar})`;
-            p.style.setProperty('--dx', (Math.random()-0.5)*120 + 'px');
-            p.style.setProperty('--dy', (Math.random()-0.5)*120 + 'px');
-            p.style.animationDuration = (0.6 + Math.random() * 0.6) + 's';
-            canvas.appendChild(p);
-            setTimeout(() => p.remove(), 1200);
-        }
-    }
-
-    function updateUI() {
-        cellCountEl.textContent = cells.length;
-        scoreEl.textContent = score;
-        levelEl.textContent = level;
-
-        // Level progression (every 500 score for example)
-        if (score >= level * 500) {
-            level++;
-            levelEl.textContent = level;
-            // Increase difficulty
-            spawnEnemy(); // immediate spawn on level up
-            if (level % 5 === 0) {
-                triggerHoloPrompt(`LEVEL ${level} – BARRIER STRENGTHENED`);
-                // Future: add barriers here
+        function createExplosion(x, y, colorVar, count) {
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = x + 'px'; p.style.top = y + 'px';
+                p.style.background = `var(${colorVar})`;
+                p.style.setProperty('--dx', (Math.random()-0.5)*100 + 'px');
+                p.style.setProperty('--dy', (Math.random()-0.5)*100 + 'px');
+                canvas.appendChild(p);
+                setTimeout(() => p.remove(), 800);
             }
         }
-    }
 
-    function gameLoop() {
-        cells.forEach(c => c.update());
-        enemies.forEach(e => e.update());
-        checkCollisions();
-
-        // Spawn enemies more frequently as level increases
-        if (Math.random() < 0.02 + level * 0.003) spawnEnemy();
-
-        requestAnimationFrame(gameLoop);
-    }
-
-    // Booster logic (every ~200 score)
-    setInterval(() => {
-        if (score % 200 === 0 && score > 0 && !boosterActive) {
-            boosterActive = true;
-            const boosters = [
-                { name: 'DOUBLE', mult: 2, duration: 12000 },
-                { name: 'TRIPLE', mult: 3, duration: 10000 },
-                { name: 'RAPID', mult: 5, duration: 8000 },
-                { name: 'SHIELD', mult: 1, duration: 15000 } // placeholder for future
-            ];
-            const boost = boosters[Math.floor(Math.random() * boosters.length)];
-            cellProduction = boost.mult;
-            boosterEndTime = Date.now() + boost.duration;
-            triggerHoloPrompt(`BOOST: ${boost.name} ACTIVATED (${boost.duration/1000}s)`);
-
-            setTimeout(() => {
-                cellProduction = 1;
-                boosterActive = false;
-                triggerHoloPrompt("BOOST ENDED");
-            }, boost.duration);
+        function updateUI() {
+            cellCountEl.textContent = cells.length;
+            scoreEl.textContent = score;
+            if (score >= level * 1000 && !isTransitioning) {
+                triggerLevelTransition();
+            }
         }
-    }, 1000);
 
-    // Auto-spawn occasional enemies
-    setInterval(spawnEnemy, 6000 - level * 200); // faster with levels
+        function gameLoop() {
+            if (!isTransitioning) {
+                cells.forEach(c => c.update());
+                enemies.forEach(e => e.update());
+                checkCollisions();
+                if (Math.random() < 0.01 + (level * 0.005)) spawnEnemy();
+            }
+            requestAnimationFrame(gameLoop);
+        }
 
-    // Cannon auto-fire toggle (optional)
-    let autoFire = false;
-    setInterval(() => {
-        if (autoFire) fireCannon();
-    }, 5000);
-
-    gameLoop();
-
-    // Click cannon to fire
-    document.getElementById('cannon').addEventListener('click', fireCannon);
-
-    // Initial prompt
-    triggerHoloPrompt("LEVEL 1 – DEFEND THE NUCLEUS");
-</script>
+        gameLoop();
+    </script>
 </body>
 </html>
