@@ -5,7 +5,7 @@
     
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    <title>Artemis • Core Symbiote</title>
+    <title>Artemis • Prime Symbiote</title>
     <style>
         :root {
             --cyan: #00f2ff;
@@ -23,93 +23,68 @@
             color:var(--cyan); touch-action: none; 
         }
 
-        /* Fullscreen Transition Portal */
         #transition-overlay {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle, var(--portal-purple) 0%, #000 70%);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.8s ease-in-out;
+            position: fixed; inset: 0; z-index: 1000;
+            background: radial-gradient(circle, #1a0033 0%, #000 90%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 1s;
         }
-        #transition-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .portal-spinner {
-            width: 150px;
-            height: 150px;
-            border: 10px dashed var(--gold);
-            border-radius: 50%;
-            animation: spin 2s linear infinite;
-        }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        #transition-overlay.active { opacity: 1; pointer-events: auto; }
 
         #rift-portal {
-            position: fixed; top: -40px; left: 50%; transform: translateX(-50%);
-            width: 200px; height: 100px;
-            background: radial-gradient(ellipse at center, var(--portal-purple) 0%, transparent 70%);
-            z-index: 10; filter: blur(10px);
-            animation: portalPulse 3s infinite ease-in-out;
+            position: fixed; top: -30px; left: 50%; transform: translateX(-50%);
+            width: 300px; height: 120px; z-index: 10;
+            background: radial-gradient(ellipse at center, var(--portal-purple) 0%, transparent 80%);
+            filter: blur(15px); animation: portalPulse 2s infinite;
         }
 
-        @keyframes portalPulse {
-            0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
-            50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
-        }
+        @keyframes portalPulse { 0%,100% {opacity:0.6;} 50% {opacity:1; transform: translateX(-50%) scale(1.1);} }
 
         #engine-bg { position: fixed; inset: 0; z-index: 1; }
-        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.18); }
+        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.15); }
         
         #oracle-nucleus { 
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            width: min(280px, 55vw); height: min(280px, 55vw); 
-            border-radius: 50%; border: 5px solid var(--gold); 
-            box-shadow: var(--glow-c), inset 0 0 60px rgba(212,175,55,0.3); 
-            z-index: 100; overflow: hidden; background: #000; pointer-events: none; 
+            width: min(260px, 50vw); height: min(260px, 50vw); 
+            border-radius: 50%; border: 4px solid var(--gold); 
+            box-shadow: var(--glow-c); z-index: 100; overflow: hidden; background: #000;
         }
         #oracle-video { width: 100%; height: 100%; object-fit: cover; }
 
         #orbital-canvas { position: fixed; inset: 0; z-index: 150; pointer-events: none; }
 
         .cell-orb { 
-            position: absolute; width: 50px; height: 50px; border-radius: 50%; 
+            position: absolute; width: 44px; height: 44px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
-            color: #fff; font-size: 0.6rem; font-weight: bold; text-align: center; 
-            backdrop-filter: blur(6px); pointer-events: auto; z-index: 160; 
+            color: #fff; font-size: 0.6rem; font-weight: bold;
+            backdrop-filter: blur(4px); z-index: 160; 
         }
         
-        .hp-bar { position: absolute; bottom: 5px; width: 30px; height: 3px; background: #333; border-radius: 2px; overflow: hidden; }
-        .hp-fill { height: 100%; background: var(--disease-green); width: 100%; }
+        .hp-bar { position: absolute; bottom: 4px; width: 25px; height: 3px; background: #111; border-radius: 2px; overflow: hidden; }
+        .hp-fill { height: 100%; background: #0f0; width: 100%; }
 
-        .cell-good { background: radial-gradient(circle at 30% 30%, #00f2ff88, #001122dd); border: 2px solid var(--cyan); }
-        .cell-virus { background: radial-gradient(circle at 30% 30%, #ff2d5588, #220000dd); border: 2px solid var(--virus-red); }
-        .cell-disease { background: radial-gradient(circle at 30% 30%, #00ff9d88, #002211dd); border: 2px solid var(--disease-green); }
+        .cell-good { background: radial-gradient(circle, #00f2ff66, #001122); border: 2px solid var(--cyan); }
+        .cell-virus { background: radial-gradient(circle, #ff2d5566, #220000); border: 2px solid var(--virus-red); }
+        .cell-disease { background: radial-gradient(circle, #00ff9d66, #002211); border: 2px solid var(--disease-green); }
 
         #cannon { 
-            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); 
-            width: 120px; height: 100px; z-index: 300; pointer-events: auto; 
-            background: linear-gradient(to top, #0a0a1f, #001122); 
-            border-radius: 60px 60px 0 0; border: 3px solid var(--gold); 
-            box-shadow: 0 0 30px var(--gold); display: flex; align-items: center; 
-            justify-content: center; font-size: 1.2rem; color: var(--cyan); cursor: pointer; 
+            position: fixed; bottom: -10px; left: 50%; transform: translateX(-50%); 
+            width: 140px; height: 120px; z-index: 300; pointer-events: auto; 
+            background: linear-gradient(to top, #0a0a1f, #111); 
+            border-radius: 70px 70px 0 0; border: 4px solid var(--gold); 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 1.1rem; color: var(--gold); cursor: pointer; transition: 0.2s;
         }
+        #cannon:active { transform: translateX(-50%) scale(0.95); }
 
-        #ui-layer { position: fixed; inset: 0; z-index: 400; pointer-events: none; }
-        #score-hud { position: absolute; top: 20px; left: 20px; background: var(--glass); border: 1px solid var(--cyan); padding: 10px 20px; border-radius: 12px; backdrop-filter: blur(10px); pointer-events: auto; }
-        
-        .particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; z-index: 170; opacity: 0.9; animation: particleBurst 0.8s forwards; }
-        @keyframes particleBurst { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+        #ui-layer { position: fixed; inset: 0; z-index: 400; pointer-events: none; padding: 20px; color: var(--cyan); }
+        .hud-box { background: var(--glass); border: 1px solid var(--cyan); padding: 10px; border-radius: 8px; backdrop-filter: blur(8px); }
     </style>
 </head>
 <body>
     <div id="transition-overlay">
-        <div class="portal-spinner"></div>
-        <h1 style="position:absolute; color:var(--gold); margin-top:200px;">Warping...</h1>
+        <h2 id="trans-text" style="color:var(--gold); margin-bottom: 20px;">WARPING TO LEVEL 2</h2>
+        <div style="width: 50px; height: 50px; border: 5px solid var(--cyan); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
     </div>
 
     <div id="rift-portal"></div>
@@ -118,149 +93,121 @@
     <div id="orbital-canvas"></div>
     
     <div id="ui-layer">
-        <div id="score-hud">Cells: <span id="cell-count">0</span> | Score: <span id="score">0</span> | Level: <span id="level">1</span></div>
+        <div class="hud-box" style="width: fit-content;">
+            LVL: <span id="level">1</span> | SCORE: <span id="score">0</span> / 1000
+        </div>
     </div>
 
     <div id="cannon" onclick="fireCannon()">⚡ DEPLOY</div>
 
     <script>
         const canvas = document.getElementById('orbital-canvas');
-        const transitionOverlay = document.getElementById('transition-overlay');
-        const cellCountEl = document.getElementById('cell-count');
-        const scoreEl = document.getElementById('score');
-        const levelEl = document.getElementById('level');
+        const overlay = document.getElementById('transition-overlay');
+        const transText = document.getElementById('trans-text');
         
-        let cells = [];
-        let enemies = [];
-        let score = 0;
-        let level = 1;
-        let isTransitioning = false;
+        let cells = [], enemies = [];
+        let score = 0, level = 1, isWarping = false;
         const MARGIN = 4;
 
+        // PROGRESSIVE MULTIPLIER: 1, 2, 3, 6, 12, 24...
+        function getGenCount() {
+            if (level === 1) return 1;
+            if (level === 2) return 2;
+            return 3 * Math.pow(2, level - 3);
+        }
+
         class Entity {
-            constructor(x, y, type = 'cell') {
-                this.type = type;
-                this.x = x; this.y = y;
-                this.radius = 25;
-                this.maxHealth = 100;
-                this.health = 100;
+            constructor(x, y, type) {
+                this.type = type; this.x = x; this.y = y;
+                this.radius = 22; this.health = 100;
                 this.el = document.createElement('div');
                 this.el.className = `cell-orb cell-${type}`;
-                this.el.innerHTML = `<span>${type.toUpperCase().substring(0,3)}</span><div class="hp-bar"><div class="hp-fill"></div></div>`;
+                this.el.innerHTML = `<div class="hp-bar"><div class="hp-fill"></div></div>`;
                 this.hpFill = this.el.querySelector('.hp-fill');
-                this.vx = (Math.random() - 0.5) * 6;
-                this.vy = type === 'cell' ? -8 : 4;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = type === 'cell' ? -6 : (2 + level * 0.5); // Enemies get faster
                 canvas.appendChild(this.el);
             }
             update() {
                 this.x += this.vx; this.y += this.vy;
-                if (this.x < this.radius + MARGIN) { this.x = this.radius + MARGIN; this.vx *= -1; }
-                if (this.x > window.innerWidth - this.radius - MARGIN) { this.x = window.innerWidth - this.radius - MARGIN; this.vx *= -1; }
-                if (this.y < this.radius + MARGIN) { this.y = this.radius + MARGIN; this.vy *= -1; }
-                if (this.y > window.innerHeight - this.radius - MARGIN) { this.y = window.innerHeight - this.radius - MARGIN; this.vy *= -1; }
-                const dx = this.x - window.innerWidth / 2;
-                const dy = this.y - window.innerHeight / 2;
-                const dist = Math.hypot(dx, dy);
-                if (dist < 300) {
-                    const pull = (this.type === 'cell' ? 0.4 : -0.6);
-                    this.vx -= (dx / dist) * pull;
-                    this.vy -= (dy / dist) * pull;
-                }
+                if (this.x < this.radius + MARGIN || this.x > window.innerWidth - this.radius - MARGIN) this.vx *= -1;
+                if (this.y < this.radius + MARGIN || this.y > window.innerHeight - this.radius - MARGIN) this.vy *= -1;
                 this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
             }
-            takeDamage(amt) {
-                this.health -= amt;
-                const pct = Math.max(0, (this.health / this.maxHealth) * 100);
-                this.hpFill.style.width = pct + '%';
-                this.el.style.filter = 'brightness(2) saturate(2)';
-                setTimeout(() => this.el.style.filter = '', 100);
+            takeDamage(dmg) {
+                this.health -= dmg;
+                this.hpFill.style.width = Math.max(0, this.health) + '%';
                 return this.health <= 0;
             }
-            remove() { this.el.remove(); }
-        }
-
-        async function triggerLevelTransition() {
-            isTransitioning = true;
-            transitionOverlay.classList.add('active');
-            
-            // Clear current entities
-            cells.forEach(c => c.remove());
-            enemies.forEach(e => e.remove());
-            cells = [];
-            enemies = [];
-
-            console.log("Portal Active: Triggering Ad/Transition");
-            
-            // Here the ad has space to display. We pause for 5 seconds for the transition/ad.
-            await new Promise(resolve => setTimeout(resolve, 5000)); 
-
-            level++;
-            levelEl.textContent = level;
-            isTransitioning = false;
-            transitionOverlay.classList.remove('active');
         }
 
         function fireCannon() {
-            if (isTransitioning) return;
-            const cell = new Entity(window.innerWidth / 2, window.innerHeight - 80, 'cell');
-            cells.push(cell);
-            updateUI();
-        }
-
-        function spawnEnemy() {
-            if (isTransitioning) return;
-            const type = Math.random() < 0.6 ? 'virus' : 'disease';
-            const enemy = new Entity(window.innerWidth / 2, 50, type);
-            enemies.push(enemy);
-        }
-
-        function checkCollisions() {
-            if (isTransitioning) return;
-            for (let i = cells.length - 1; i >= 0; i--) {
-                for (let j = enemies.length - 1; j >= 0; j--) {
-                    const c = cells[i];
-                    const e = enemies[j];
-                    const dist = Math.hypot(c.x - e.x, c.y - e.y);
-                    if (dist < c.radius + e.radius) {
-                        createExplosion(e.x, e.y, e.type === 'virus' ? '--virus-red' : '--disease-green', 5);
-                        if (e.takeDamage(10)) { score += 50; e.remove(); enemies.splice(j, 1); updateUI(); }
-                        if (c.takeDamage(10)) { c.remove(); cells.splice(i, 1); break; }
-                    }
-                }
+            if (isWarping) return;
+            const count = getGenCount();
+            for(let i=0; i<count; i++) {
+                setTimeout(() => {
+                    cells.push(new Entity(window.innerWidth/2, window.innerHeight - 100, 'cell'));
+                }, i * 50);
             }
         }
 
-        function createExplosion(x, y, colorVar, count) {
-            for (let i = 0; i < count; i++) {
-                const p = document.createElement('div');
-                p.className = 'particle';
-                p.style.left = x + 'px'; p.style.top = y + 'px';
-                p.style.background = `var(${colorVar})`;
-                p.style.setProperty('--dx', (Math.random()-0.5)*100 + 'px');
-                p.style.setProperty('--dy', (Math.random()-0.5)*100 + 'px');
-                canvas.appendChild(p);
-                setTimeout(() => p.remove(), 800);
+        // AUTO-PORTAL GENERATION
+        setInterval(() => {
+            if (isWarping) return;
+            // Spawning becomes more aggressive with levels
+            if (Math.random() < 0.05 + (level * 0.01)) {
+                enemies.push(new Entity(window.innerWidth/2, 60, Math.random() > 0.5 ? 'virus' : 'disease'));
             }
-        }
+        }, 500);
 
-        function updateUI() {
-            cellCountEl.textContent = cells.length;
-            scoreEl.textContent = score;
-            if (score >= level * 1000 && !isTransitioning) {
-                triggerLevelTransition();
+        async function nextLevel() {
+            isWarping = true;
+            overlay.classList.add('active');
+            
+            if (level >= 100) {
+                transText.innerHTML = "OLYMPUS ASCENDED!<br><a href='https://georgia-aquarium.vercel.app/#' style='color:var(--cyan)'>CLAIM YOUR HOODIE</a>";
+                return; 
             }
+
+            // TRIGGER ADS HERE
+            console.log("Calling Ad Zone 206119...");
+            // If your ad script has a manual trigger like: window.tag.showInterstitial(); call it here.
+
+            await new Promise(r => setTimeout(r, 6000)); // Ad/Warp break
+            
+            level++;
+            score = 0;
+            cells.forEach(c => c.el.remove());
+            enemies.forEach(e => e.el.remove());
+            cells = []; enemies = [];
+            
+            document.getElementById('level').textContent = level;
+            document.getElementById('score').textContent = "0";
+            transText.textContent = `WARPING TO LEVEL ${level}`;
+            isWarping = false;
+            overlay.classList.remove('active');
         }
 
         function gameLoop() {
-            if (!isTransitioning) {
-                cells.forEach(c => c.update());
+            if (!isWarping) {
+                cells.forEach((c, ci) => {
+                    c.update();
+                    enemies.forEach((e, ei) => {
+                        if (Math.hypot(c.x-e.x, c.y-e.y) < 44) {
+                            if (e.takeDamage(5)) {
+                                e.el.remove(); enemies.splice(ei, 1);
+                                score += 20;
+                                document.getElementById('score').textContent = score;
+                                if (score >= 1000) nextLevel();
+                            }
+                            if (c.takeDamage(5)) { c.el.remove(); cells.splice(ci, 1); }
+                        }
+                    });
+                });
                 enemies.forEach(e => e.update());
-                checkCollisions();
-                if (Math.random() < 0.01 + (level * 0.005)) spawnEnemy();
             }
             requestAnimationFrame(gameLoop);
         }
-
         gameLoop();
     </script>
 </body>
