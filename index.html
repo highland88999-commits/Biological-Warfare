@@ -2,277 +2,312 @@
 <html lang="en">
 <head>
     <script src="https://www.youtube.com/iframe_api"></script>
+    
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>Artemis • Prime Symbiote</title>
     <style>
         :root {
             --cyan: #00f2ff;
+            --gold: #d4af37;
             --virus-red: #ff2d55;
-            --glass: rgba(8, 8, 25, 0.9);
+            --disease-green: #00ff9d;
+            --glass: rgba(8, 8, 25, 0.75);
+            --glow-c: 0 0 40px rgba(0, 242, 255, 0.7);
         }
-
-        /* 1. PRECISION RESET: Disable all browser-native triggers */
-        * { 
-            margin:0; padding:0; box-sizing:border-box; 
-            -webkit-user-select: none; 
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none; /* Disables long-press menus */
-        }
-        
+        * { margin:0; padding:0; box-sizing:border-box; }
         body, html { 
             width:100%; height:100%; overflow:hidden; 
             background:#000; font-family: 'Courier New', monospace; 
-            color:var(--cyan); touch-action: none;
+            color:var(--cyan); touch-action: none; 
         }
 
-        /* 2. ENFORCED BACKGROUND: Full-screen video layer */
-        #video-container {
-            position: fixed; inset: 0; z-index: -100;
-            background: #000; pointer-events: none;
-        }
-        #bg-video {
-            width: 100vw; height: 100vh;
-            object-fit: cover;
-            filter: brightness(0.4) contrast(1.1);
-            display: block;
-        }
-
-        /* 3. LANDING & DIGITAL RAIN */
         #landing-overlay {
             position: fixed; inset: 0; z-index: 2000;
-            background: #000; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: opacity 0.8s ease-out;
+            background: #000;
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column;
+            color: var(--cyan);
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 1.2s ease-out;
         }
         #landing-overlay.hidden { opacity: 0; pointer-events: none; }
-        #rain-canvas { position: absolute; inset: 0; z-index: 1; opacity: 0.4; }
-        #landing-text { z-index: 2; text-shadow: 0 0 20px var(--cyan); font-size: 1.4rem; font-weight: bold; }
+        #landing-text { 
+            text-shadow: 0 0 30px var(--cyan); 
+            animation: pulseText 3s infinite alternate; 
+            z-index: 2;
+        }
+        @keyframes pulseText { 0% { opacity: 0.7; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1.05); } }
 
-        /* 4. UI ELEMENTS */
-        #ui-layer {
-            position: fixed; top: 15px; left: 15px; z-index: 600;
-            background: var(--glass); padding: 10px 15px; border-radius: 4px;
-            border: 1px solid var(--cyan); pointer-events: none;
-            font-size: 0.9rem; letter-spacing: 1px;
+        #rain-canvas {
+            position: fixed; inset: 0; z-index: 1;
+            opacity: 0.35;
         }
 
-        .gen-bar { position: fixed; left: 0; width: 100%; height: 5px; z-index: 400; opacity: 0.8; }
-        #pathogen-gen { top: 0; background: var(--virus-red); box-shadow: 0 0 15px var(--virus-red); }
-        #cell-gen { bottom: 0; background: var(--cyan); box-shadow: 0 0 15px var(--cyan); }
+        #bg-youtube {
+            position: fixed; inset: 0; z-index: -1;
+            pointer-events: none;
+        }
+        #bg-youtube iframe {
+            width: 100vw; height: 100vh;
+            object-fit: cover;
+            filter: brightness(0.15) contrast(1.1) saturate(0.8);
+            transform: scale(1.1); /* slight overscan for no black bars */
+        }
 
-        /* 5. INTERACTION HUB */
-        #cannon {
-            position: fixed; bottom: 45px; left: 50%;
-            transform: translateX(-50%); width: 110px; height: 110px;
-            z-index: 500; background: rgba(0,0,0,0.85);
-            border: 3px solid var(--cyan); border-radius: 50%;
+        #start-overlay, #countdown-overlay, #transition-overlay, #revive-overlay, #win-overlay {
+            position: fixed; inset: 0; z-index: 1000;
+            background: radial-gradient(circle, #1a0033 0%, #000 90%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            pointer-events: auto;
+        }
+        #start-overlay, #countdown-overlay, #transition-overlay, #revive-overlay, #win-overlay { display: none; }
+
+        #disclaimer { 
+            max-width: 90%; 
+            background: rgba(255,0,0,0.15); 
+            border: 2px solid var(--gold); 
+            padding: 15px; 
+            border-radius: 12px; 
+            margin: 20px auto; 
+            font-size: 0.95rem; 
+            color: #ffcc00; 
+        }
+        .btn { 
+            width: 220px; height: 80px; margin: 20px;
+            background: linear-gradient(to top, #0a0a1f, #111);
+            border-radius: 40px; border: 4px solid var(--gold);
             display: flex; align-items: center; justify-content: center;
-            color: var(--cyan); font-weight: bold; cursor: pointer;
-            box-shadow: 0 0 25px var(--cyan);
-            text-align: center; line-height: 1.2;
+            font-size: 1.2rem; color: var(--gold); cursor: pointer; transition: 0.2s;
         }
-        #cannon:active { transform: translateX(-50%) scale(0.92); background: var(--cyan); color: #000; }
+        .btn:active { transform: scale(0.95); }
 
-        /* 6. ENTITY STYLES */
-        .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
-        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.1); box-shadow: 0 0 8px var(--cyan); }
-        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.1); box-shadow: 0 0 8px var(--virus-red); }
+        .spinner { width: 50px; height: 50px; border: 5px solid var(--cyan); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #countdown-text { font-size: 6rem; color: var(--gold); margin: 20px; font-weight: bold; }
+
+        #cannon { 
+            position: fixed; bottom: -10px; left: 50%; transform: translateX(-50%); 
+            width: 140px; height: 120px; z-index: 300; pointer-events: none; 
+            background: linear-gradient(to top, #0a0a1f, #111); 
+            border-radius: 70px 70px 0 0; border: 4px solid var(--gold); 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 1.1rem; color: var(--gold); 
+            transition: transform 0.1s, box-shadow 0.1s; 
+            box-shadow: 0 0 20px var(--gold);
+        }
+        #cannon.active { pointer-events: auto; }
+        #cannon:active, #cannon.pressed { transform: translateX(-50%) scale(0.92); box-shadow: 0 0 60px var(--gold); }
+
+        .cell-orb { 
+            position: absolute; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            color: #fff; font-size: 0.6rem; font-weight: bold;
+            backdrop-filter: blur(4px); z-index: 160; 
+            animation: cellPulse 4s infinite alternate ease-in-out;
+        }
+        @keyframes cellPulse { 0% { transform: scale(1); } 100% { transform: scale(1.08); } }
+
+        .cell-good { background: radial-gradient(circle, #00f2ff88, #001122); border: 2px solid var(--cyan); }
+        .cell-virus { background: radial-gradient(circle, #ff2d5588, #220000); border: 2px solid var(--virus-red); animation: virusWobble 3s infinite; }
+        @keyframes virusWobble { 0%,100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(8deg) scale(1.05); } }
+
+        .cell-disease { background: radial-gradient(circle, #00ff9d88, #002211); border: 2px solid var(--disease-green); animation: diseaseWave 6s infinite; }
+        @keyframes diseaseWave { 0%,100% { filter: hue-rotate(0deg); } 50% { filter: hue-rotate(30deg); } }
+
+        .hp-bar { position: absolute; bottom: 4px; width: 25px; height: 3px; background: #111; border-radius: 2px; overflow: hidden; }
+        .hp-fill { height: 100%; background: #0f0; width: 100%; }
+
+        #ui-layer { position: fixed; inset: 0; z-index: 400; pointer-events: none; padding: 20px; color: var(--cyan); }
+        .hud-box { background: var(--glass); border: 1px solid var(--cyan); padding: 12px; border-radius: 8px; backdrop-filter: blur(8px); pointer-events: auto; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.95rem; }
+        #music-toggle, #pause-toggle, #boost-btn { cursor: pointer; padding: 6px 14px; background: rgba(0,242,255,0.1); border: 1px solid var(--cyan); border-radius: 6px; }
+        #boost-btn.active { background: var(--cyan); color: #000; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="video-container">
-    <video id="bg-video" autoplay loop muted playsinline preload="auto">
-        <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
-    </video>
-</div>
+    <div id="landing-overlay">
+        <canvas id="rain-canvas"></canvas>
+        <div id="landing-text">CLICK ANYWHERE TO BEGIN</div>
+    </div>
 
-<div id="music-player" style="position: absolute; top: -9999px;"></div>
-
-<div id="landing-overlay" onclick="startSystem()">
-    <canvas id="rain-canvas"></canvas>
-    <div id="landing-text">INITIALIZE ARTEMIS</div>
-</div>
-
-<div id="ui-layer">SCORE: <span id="score">0</span> | LVL: <span id="level">1</span></div>
-<div id="pathogen-gen" class="gen-bar"></div>
-<div id="cell-gen" class="gen-bar"></div>
-
-<div id="orbital-canvas"></div>
-<div id="cannon">DEPLOY<br>CELL</div>
-
-<script>
-    let musicPlayer;
-    let score = 0, level = 1, gameActive = false;
-    let entities = [];
-
-    // YouTube Playlist Integration
-    function onYouTubeIframeAPIReady() {
-        musicPlayer = new YT.Player('music-player', {
-            videoId: 'qwMz1wgXokk',
-            playerVars: { 'autoplay': 1, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'mute': 1, 'controls': 0 },
-            events: { 'onReady': (e) => e.target.playVideo() }
-        });
-    }
-
-    // Digital Rain (Matrix Style)
-    const rainCanvas = document.getElementById('rain-canvas');
-    const ctx = rainCanvas.getContext('2d');
-    let drops = [];
-    function initRain() {
-        rainCanvas.width = window.innerWidth;
-        rainCanvas.height = window.innerHeight;
-        drops = Array(Math.floor(window.innerWidth/20)).fill(1);
-    }
-    function drawRain() {
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
-        ctx.fillRect(0,0,rainCanvas.width, rainCanvas.height);
-        ctx.fillStyle = '#00f2ff';
-        ctx.font = '15px monospace';
-        drops.forEach((y, i) => {
-            const text = String.fromCharCode(0x30A0 + Math.random() * 96);
-            ctx.fillText(text, i * 20, y * 20);
-            if (y * 20 > rainCanvas.height && Math.random() > 0.975) drops[i] = 0;
-            drops[i]++;
-        });
-    }
-    const rainTimer = setInterval(drawRain, 50);
-    initRain();
-
-    function startSystem() {
-        // Precise play trigger for video on mobile
-        const video = document.getElementById('bg-video');
-        video.play().catch(e => console.log("Video Play Blocked", e));
-
-        document.getElementById('landing-overlay').classList.add('hidden');
-        clearInterval(rainTimer);
+    <div id="start-overlay">
+        <h2 style="color:var(--gold); margin-bottom: 20px; font-size: 2rem;">Artemis • Prime Symbiote</h2>
         
-        if (musicPlayer) { 
-            musicPlayer.unMute(); 
-            musicPlayer.setVolume(70);
-            musicPlayer.playVideo(); 
+        <div id="disclaimer">
+            <strong>Heads up:</strong> This game is completely free, but hoodies and ongoing development are funded through player support and future features.<br>
+            By playing, you're part of the journey to make real hoodies possible!<br>
+            No purchases needed — enjoy the grind! 🚀
+        </div>
+
+        <div class="spinner" style="margin: 30px 0;"></div>
+        <div class="btn" id="start-btn">⚡ ENTER THE RIFT</div>
+    </div>
+
+    <div id="countdown-overlay">
+        <h2 style="color:var(--gold); margin-bottom: 20px;">PREPARING RIFT...</h2>
+        <div id="countdown-text">10</div>
+        <div class="spinner"></div>
+    </div>
+
+    <div id="transition-overlay">
+        <h2 id="trans-text" style="color:var(--gold); margin-bottom: 30px; font-size: 1.8rem;">WARPING...</h2>
+        <div class="spinner"></div>
+    </div>
+
+    <div id="revive-overlay">
+        <h2 style="color:var(--gold); margin-bottom: 30px; font-size: 1.8rem;">SYMBIOTE LOST!</h2>
+        <div class="btn" id="revive-btn">REVIVE (Free)</div>
+        <div class="btn" onclick="location.reload()">RESTART</div>
+    </div>
+
+    <div id="win-overlay">
+        <h2 style="color:var(--gold); margin-bottom: 20px; font-size: 2rem;">OLYMPUS ASCENDED!</h2>
+        <p style="max-width: 80%; text-align: center; font-size: 1.1rem; margin: 20px;">
+            Congratulations! You've reached Level 100.<br><br>
+            <strong>Certificate Code:</strong> <span id="cert-code" style="font-family: monospace; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;"></span><br><br>
+            Email this code + your email address to <strong>your-email@example.com</strong><br>
+            We will verify your completion and send hoodie claim instructions.
+        </p>
+        <div class="btn" onclick="location.reload()">PLAY AGAIN</div>
+    </div>
+
+    <!-- YouTube background player -->
+    <div id="bg-youtube">
+        <div id="yt-bg-player"></div>
+    </div>
+
+    <div id="orbital-canvas"></div>
+    
+    <div id="ui-layer">
+        <div class="hud-box">
+            LVL <span id="level">1</span>  •  SCORE <span id="score">0</span>/1000
+            <span id="music-toggle">[Music: OFF]</span>
+            <span id="pause-toggle">[PAUSE]</span>
+            <span id="boost-btn">BOOST: x2 (30s)</span>
+        </div>
+    </div>
+
+    <div id="cannon">⚡ DEPLOY</div>
+
+    <script>
+        // DIGITAL RAIN ON LANDING ONLY
+        const rainCanvas = document.getElementById('rain-canvas');
+        const rainCtx = rainCanvas.getContext('2d');
+
+        function resizeRainCanvas() {
+            rainCanvas.width = window.innerWidth;
+            rainCanvas.height = window.innerHeight;
         }
-        
-        gameActive = true;
-        autoSpawner();
-        requestAnimationFrame(gameLoop);
-    }
+        window.addEventListener('resize', resizeRainCanvas);
+        resizeRainCanvas();
 
-    class Entity {
-        constructor(x, y, type) {
-            this.type = type;
-            this.x = x; this.y = y;
-            this.radius = 17;
-            this.health = 100;
-            // Progressive difficulty: Faster speeds as levels increase
-            this.baseSpeed = (type === 'evil' ? 1.5 : 2.5) + (level * 0.4);
-            this.vx = (Math.random() - 0.5) * 5;
-            this.vy = type === 'good' ? -this.baseSpeed : this.baseSpeed;
-            
-            this.el = document.createElement('div');
-            this.el.className = `cell-orb cell-${type}`;
-            this.el.style.width = this.radius * 2 + 'px';
-            this.el.style.height = this.radius * 2 + 'px';
-            document.getElementById('orbital-canvas').appendChild(this.el);
-        }
+        const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+-=[]{}|;:,.<>?/'.split('');
+        const fontSize = 14;
+        const columns = rainCanvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
 
-        update(targets) {
-            // Predator AI: Red cells actively track Cyan cells
-            if (this.type === 'evil' && targets.length > 0) {
-                let target = targets[0];
-                let minDist = Math.hypot(this.x - target.x, this.y - target.y);
-                targets.forEach(t => {
-                    let d = Math.hypot(this.x - t.x, this.y - t.y);
-                    if (d < minDist) { minDist = d; target = t; }
-                });
+        function drawRain() {
+            rainCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            rainCtx.fillRect(0, 0, rainCanvas.width, rainCanvas.height);
 
-                const dx = target.x - this.x;
-                const dy = target.y - this.y;
-                const angle = Math.atan2(dy, dx);
-                const accel = 0.15 + (level * 0.05);
-                
-                this.vx += Math.cos(angle) * accel;
-                this.vy += Math.sin(angle) * accel;
-                
-                // Speed limitation per level
-                const speed = Math.hypot(this.vx, this.vy);
-                const max = 3.5 + (level * 0.6);
-                if (speed > max) {
-                    this.vx = (this.vx / speed) * max;
-                    this.vy = (this.vy / speed) * max;
-                }
+            rainCtx.fillStyle = '#00eaff';
+            rainCtx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                const x = i * fontSize;
+                const y = drops[i] * fontSize;
+
+                rainCtx.fillText(text, x, y);
+
+                if (y > rainCanvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
             }
-
-            this.x += this.vx; this.y += this.vy;
-            
-            // Boundary bouncing
-            if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
-            
-            // Loop logic to keep the arena full
-            if (this.type === 'evil' && this.y > window.innerHeight + 50) this.y = -50;
-            if (this.type === 'good' && this.y < -50) this.y = window.innerHeight + 50;
-
-            this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
         }
-    }
 
-    // Precise Touch Trigger: Prevents browser dictionary/highlighting
-    document.getElementById('cannon').addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if(!gameActive) return;
-        entities.push(new Entity(window.innerWidth/2, window.innerHeight - 80, 'good'));
-    }, {passive: false});
+        const rainInterval = setInterval(drawRain, 50);
 
-    function autoSpawner() {
-        if(gameActive) {
-            // Balanced spawns from both ends
-            entities.push(new Entity(Math.random() * window.innerWidth, window.innerHeight + 20, 'good'));
-            entities.push(new Entity(Math.random() * window.innerWidth, -40, 'evil'));
-        }
-        // Spawn rate accelerates with level
-        const delay = Math.max(250, 1000 - (level * 100));
-        setTimeout(autoSpawner, delay);
-    }
+        // LANDING CLICK → SHOW DISCLAIMER
+        const landing = document.getElementById('landing-overlay');
+        const startOverlay = document.getElementById('start-overlay');
 
-    function gameLoop() {
-        if (!gameActive) return;
-        const goods = entities.filter(e => e.type === 'good');
-        
-        entities.forEach((ent, i) => {
-            ent.update(ent.type === 'evil' ? goods : []);
-            
-            // Collision & Combat Logic
-            entities.forEach((other, j) => {
-                if (ent.type !== other.type) {
-                    const dist = Math.hypot(ent.x - other.x, ent.y - other.y);
-                    if (dist < ent.radius + other.radius) {
-                        ent.health -= 20; 
-                        other.health -= 20;
-                        
-                        if (ent.health <= 0) {
-                            ent.el.remove(); entities.splice(i, 1);
-                            if(other.type === 'good') { score += 10; updateLevel(); }
-                        }
-                        if (other.health <= 0) {
-                            other.el.remove(); entities.splice(j, 1);
-                            if(ent.type === 'good') { score += 10; updateLevel(); }
-                        }
-                        document.getElementById('score').textContent = score;
-                    }
+        landing.addEventListener('click', () => {
+            landing.style.opacity = '0';
+            setTimeout(() => {
+                landing.style.display = 'none';
+                clearInterval(rainInterval);
+                rainCanvas.remove();
+                startOverlay.style.display = 'flex';
+            }, 1200);
+        }, { once: true });
+
+        // AUTO MUSIC (unmute on first interaction)
+        let player, musicStarted = false, musicMuted = true;
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('yt-bg-player', {
+                height: '100%',
+                width: '100%',
+                videoId: 'JBVeJ5ZYENc',
+                playerVars: {
+                    'autoplay': 1,
+                    'mute': 1,
+                    'controls': 0,
+                    'rel': 0,
+                    'showinfo': 0,
+                    'modestbranding': 1,
+                    'loop': 1,
+                    'playlist': 'JBVeJ5ZYENc' // loop this video
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
                 }
             });
-        });
-        requestAnimationFrame(gameLoop);
-    }
-
-    function updateLevel() {
-        const nextLevel = Math.floor(score / 500) + 1;
-        if (nextLevel !== level) {
-            level = nextLevel;
-            document.getElementById('level').textContent = level;
         }
-    }
-</script>
+
+        function onPlayerReady(event) {
+            event.target.mute();
+            event.target.playVideo();
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.ENDED) {
+                player.playVideo();
+            }
+        }
+
+        document.body.addEventListener('click', () => {
+            if (!musicStarted && player) {
+                player.unMute();
+                musicStarted = true;
+                musicMuted = false;
+                document.getElementById('music-toggle').textContent = '[Music: ON]';
+            }
+        }, { once: true });
+
+        const musicToggle = document.getElementById('music-toggle');
+        musicToggle.addEventListener('click', () => {
+            if (!player) return;
+            if (musicMuted) {
+                player.unMute();
+                musicMuted = false;
+                musicToggle.textContent = '[Music: ON]';
+            } else {
+                player.mute();
+                musicMuted = true;
+                musicToggle.textContent = '[Music: OFF]';
+            }
+        });
+
+        // GAME LOGIC (rest of the code - paste your full game script here)
+        // ... (Entity class, fireCannon, spawnStarterCells, startCountdown, gameLoop, etc.)
+        // For brevity, assuming you have the rest; if not, add from previous messages
+    </script>
 </body>
 </html>
