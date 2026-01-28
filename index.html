@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <script src="https://www.youtube.com/iframe_api"></script>
-    
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>Artemis • Prime Symbiote</title>
@@ -12,578 +11,178 @@
             --gold: #d4af37;
             --virus-red: #ff2d55;
             --disease-green: #00ff9d;
-            --portal-purple: #bc13fe;
             --glass: rgba(8, 8, 25, 0.75);
-            --glow-c: 0 0 40px rgba(0, 242, 255, 0.7);
         }
+
         * { margin:0; padding:0; box-sizing:border-box; }
+        
         body, html { 
             width:100%; height:100%; overflow:hidden; 
             background:#000; font-family: 'Courier New', monospace; 
             color:var(--cyan); touch-action: none; 
         }
 
+        /* Full Screen Background Video */
+        #video-container {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+        }
+        #bg-video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            filter: brightness(0.4) contrast(1.2);
+        }
+
         #landing-overlay {
             position: fixed; inset: 0; z-index: 2000;
-            background: #000;
-            display: flex; align-items: center; justify-content: center;
-            flex-direction: column;
-            color: var(--cyan);
-            font-size: 3rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: opacity 1.2s ease-out;
+            background: #000; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: opacity 1.2s ease-out;
         }
         #landing-overlay.hidden { opacity: 0; pointer-events: none; }
-        #landing-text { 
-            text-shadow: 0 0 30px var(--cyan); 
-            animation: pulseText 3s infinite alternate; 
-            z-index: 2;
-        }
-        @keyframes pulseText { 0% { opacity: 0.7; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1.05); } }
 
-        #rain-canvas {
-            position: fixed; inset: 0; z-index: 1;
-            opacity: 0.35;
-        }
-
-        #start-overlay, #countdown-overlay, #transition-overlay, #revive-overlay, #win-overlay {
-            position: fixed; inset: 0; z-index: 1000;
-            background: radial-gradient(circle, #1a0033 0%, #000 90%);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            pointer-events: auto;
-        }
-        #start-overlay, #countdown-overlay, #transition-overlay, #revive-overlay, #win-overlay { display: none; }
-
-        #disclaimer { 
-            max-width: 90%; 
-            background: rgba(255,0,0,0.15); 
-            border: 2px solid var(--gold); 
-            padding: 15px; 
-            border-radius: 12px; 
-            margin: 20px auto; 
-            font-size: 0.95rem; 
-            color: #ffcc00; 
-        }
-        .btn { 
+        .btn {
             width: 220px; height: 80px; margin: 20px;
             background: linear-gradient(to top, #0a0a1f, #111);
             border-radius: 40px; border: 4px solid var(--gold);
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; color: var(--gold); cursor: pointer; transition: 0.2s;
-        }
-        .btn:active { transform: scale(0.95); }
-
-        #decoy-btn {
-            position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%);
-            width: 100px; height: 60px; z-index: 290;
-            background: linear-gradient(135deg, #111, #222);
-            border: 3px solid #ffcc00;
-            border-radius: 12px;
-            color: #ffcc00;
-            font-size: 0.9rem;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 0 15px #ffcc00;
-            overflow: hidden;
-        }
-        #decoy-btn::before {
-            content: '';
-            position: absolute; inset: 0;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, transparent 60%);
-            animation: stormPulse 3s infinite;
-            pointer-events: none;
-        }
-        #decoy-btn:active {
-            transform: translateX(-50%) scale(0.95);
-            box-shadow: 0 0 40px #00f2ff;
-        }
-        @keyframes stormPulse {
-            0%,100% { opacity: 0.2; transform: scale(1.1); }
-            50% { opacity: 0.8; transform: scale(1.3); }
+            font-size: 1.2rem; color: var(--gold); cursor: pointer;
         }
 
-        .spinner { width: 50px; height: 50px; border: 5px solid var(--cyan); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
-
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        #countdown-text { font-size: 6rem; color: var(--gold); margin: 20px; font-weight: bold; }
-
-        #bg-video { 
-            width: 100%; height: 100%; object-fit: cover; 
-            filter: brightness(0.10) contrast(1.15) saturate(0.8); 
+        #cannon {
+            position: fixed; bottom: 30px; left: 50%;
+            transform: translateX(-50%); width: 160px; height: 160px;
+            z-index: 500; background: radial-gradient(circle, #111, #000);
+            border: 4px solid var(--cyan); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--cyan); font-weight: bold; cursor: pointer;
+            box-shadow: 0 0 20px var(--cyan);
+            pointer-events: auto; /* Active */
         }
+        #cannon:active { transform: translateX(-50%) scale(0.9); }
 
-        #cannon { 
-            position: fixed; bottom: -10px; left: 50%; transform: translateX(-50%); 
-            width: 140px; height: 120px; z-index: 300; pointer-events: none; 
-            background: linear-gradient(to top, #0a0a1f, #111); 
-            border-radius: 70px 70px 0 0; border: 4px solid var(--gold); 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 1.1rem; color: var(--gold); 
-            transition: transform 0.1s, box-shadow 0.1s; 
-            box-shadow: 0 0 20px var(--gold);
+        .cell-orb {
+            position: absolute; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100; pointer-events: none;
         }
-        #cannon.active { pointer-events: auto; }
-        #cannon:active, #cannon.pressed { transform: translateX(-50%) scale(0.92); box-shadow: 0 0 60px var(--gold); }
+        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.2); }
+        .cell-virus { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.2); }
+        .cell-disease { border: 2px solid var(--disease-green); background: rgba(0, 255, 157, 0.2); }
 
-        .cell-orb { 
-            position: absolute; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            color: #fff; font-size: 0.6rem; font-weight: bold;
-            backdrop-filter: blur(4px); z-index: 160; 
-            animation: cellPulse 4s infinite alternate ease-in-out;
+        #ui-layer {
+            position: fixed; top: 20px; left: 20px; z-index: 600;
+            background: var(--glass); padding: 15px; border-radius: 10px;
+            border: 1px solid var(--cyan); pointer-events: none;
         }
-        @keyframes cellPulse { 0% { transform: scale(1); } 100% { transform: scale(1.08); } }
-
-        .cell-good { background: radial-gradient(circle, #00f2ff88, #001122); border: 2px solid var(--cyan); }
-        .cell-virus { background: radial-gradient(circle, #ff2d5588, #220000); border: 2px solid var(--virus-red); animation: virusWobble 3s infinite; }
-        @keyframes virusWobble { 0%,100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(8deg) scale(1.05); } }
-
-        .cell-disease { background: radial-gradient(circle, #00ff9d88, #002211); border: 2px solid var(--disease-green); animation: diseaseWave 6s infinite; }
-        @keyframes diseaseWave { 0%,100% { filter: hue-rotate(0deg); } 50% { filter: hue-rotate(30deg); } }
-
-        .hp-bar { position: absolute; bottom: 4px; width: 25px; height: 3px; background: #111; border-radius: 2px; overflow: hidden; }
-        .hp-fill { height: 100%; background: #0f0; width: 100%; }
-
-        #ui-layer { position: fixed; inset: 0; z-index: 400; pointer-events: none; padding: 20px; color: var(--cyan); }
-        .hud-box { background: var(--glass); border: 1px solid var(--cyan); padding: 12px; border-radius: 8px; backdrop-filter: blur(8px); pointer-events: auto; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.95rem; }
-        #music-toggle, #pause-toggle, #boost-btn { cursor: pointer; padding: 6px 14px; background: rgba(0,242,255,0.1); border: 1px solid var(--cyan); border-radius: 6px; }
-        #boost-btn.active { background: var(--cyan); color: #000; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="landing-overlay">
-        <canvas id="rain-canvas"></canvas>
-        <div id="landing-text">CLICK ANYWHERE TO BEGIN</div>
-    </div>
+<div id="video-container">
+    <video id="bg-video" autoplay loop muted playsinline src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm"></video>
+</div>
 
-    <div id="start-overlay">
-        <h2 style="color:var(--gold); margin-bottom: 20px; font-size: 2rem;">Artemis • Prime Symbiote</h2>
-        
-        <div id="disclaimer">
-            <strong>Heads up:</strong> This game is completely free, but hoodies and ongoing development are funded through player support and future features.<br>
-            By playing, you're part of the journey to make real hoodies possible!<br>
-            No purchases needed — enjoy the grind! 🚀
-        </div>
+<div id="landing-overlay" onclick="this.classList.add('hidden'); startGame();">
+    <h1 style="text-shadow: 0 0 20px var(--cyan);">INITIALIZE SYMBIOTE</h1>
+</div>
 
-        <div class="spinner" style="margin: 30px 0;"></div>
-        <div class="btn" id="start-btn">⚡ ENTER THE RIFT</div>
-    </div>
+<div id="ui-layer">
+    LVL <span id="level">1</span> • SCORE <span id="score">0</span>
+</div>
 
-    <div id="countdown-overlay">
-        <h2 style="color:var(--gold); margin-bottom: 20px;">PREPARING RIFT...</h2>
-        <div id="countdown-text">10</div>
-        <div class="spinner"></div>
-    </div>
+<div id="orbital-canvas"></div>
 
-    <div id="transition-overlay">
-        <h2 id="trans-text" style="color:var(--gold); margin-bottom: 30px; font-size: 1.8rem;">WARPING...</h2>
-        <div class="spinner"></div>
-    </div>
+<div id="cannon">SPAWN CELL</div>
 
-    <div id="revive-overlay">
-        <h2 style="color:var(--gold); margin-bottom: 30px; font-size: 1.8rem;">SYMBIOTE LOST!</h2>
-        <div class="btn" id="revive-btn">REVIVE (Free)</div>
-        <div class="btn" onclick="location.reload()">RESTART</div>
-    </div>
+<script>
+    const canvas = document.getElementById('orbital-canvas');
+    const cannon = document.getElementById('cannon');
+    let cells = [], enemies = [];
+    let score = 0, level = 1, gameActive = false;
 
-    <div id="win-overlay">
-        <h2 style="color:var(--gold); margin-bottom: 20px; font-size: 2rem;">OLYMPUS ASCENDED!</h2>
-        <p style="max-width: 80%; text-align: center; font-size: 1.1rem; margin: 20px;">
-            Congratulations! You've reached Level 100.<br><br>
-            <strong>Certificate Code:</strong> <span id="cert-code" style="font-family: monospace; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;"></span><br><br>
-            Email this code + your email address to <strong>your-email@example.com</strong><br>
-            We will verify your completion and send hoodie claim instructions.
-        </p>
-        <div class="btn" onclick="location.reload()">PLAY AGAIN</div>
-    </div>
-
-    <div id="rift-portal"></div>
-    <div id="engine-bg">
-        <video id="bg-video" autoplay loop muted playsinline src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm"></video>
-    </div>
-
-    <div id="ytplayer"></div>
-
-    <div id="orbital-canvas"></div>
-    
-    <div id="ui-layer">
-        <div class="hud-box">
-            LVL <span id="level">1</span>  •  SCORE <span id="score">0</span>/1000
-            <span id="music-toggle">[Music: OFF]</span>
-            <span id="pause-toggle">[PAUSE]</span>
-            <span id="boost-btn">BOOST: x2 (30s)</span>
-        </div>
-    </div>
-
-    <div id="cannon">⚡ DEPLOY</div>
-    <div id="decoy-btn">ELECTRIFY</div>
-
-    <script>
-        // DIGITAL RAIN ON LANDING ONLY
-        const rainCanvas = document.getElementById('rain-canvas');
-        const rainCtx = rainCanvas.getContext('2d');
-
-        function resizeRainCanvas() {
-            rainCanvas.width = window.innerWidth;
-            rainCanvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeRainCanvas);
-        resizeRainCanvas();
-
-        const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+-=[]{}|;:,.<>?/'.split('');
-        const fontSize = 14;
-        const columns = rainCanvas.width / fontSize;
-        const drops = Array(Math.floor(columns)).fill(1);
-
-        function drawRain() {
-            rainCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-            rainCtx.fillRect(0, 0, rainCanvas.width, rainCanvas.height);
-
-            rainCtx.fillStyle = '#00eaff';
-            rainCtx.font = fontSize + 'px monospace';
-
-            for (let i = 0; i < drops.length; i++) {
-                const text = chars[Math.floor(Math.random() * chars.length)];
-                const x = i * fontSize;
-                const y = drops[i] * fontSize;
-
-                rainCtx.fillText(text, x, y);
-
-                if (y > rainCanvas.height && Math.random() > 0.975) drops[i] = 0;
-                drops[i]++;
-            }
+    class Entity {
+        constructor(x, y, type) {
+            this.type = type;
+            this.x = x;
+            this.y = y;
+            this.radius = 25;
+            this.health = 100;
+            this.vx = (Math.random() - 0.5) * 6;
+            this.vy = (Math.random() - 0.5) * 6;
+            
+            this.el = document.createElement('div');
+            this.el.className = `cell-orb cell-${type}`;
+            this.el.style.width = this.radius * 2 + 'px';
+            this.el.style.height = this.radius * 2 + 'px';
+            canvas.appendChild(this.el);
         }
 
-        const rainInterval = setInterval(drawRain, 50);
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
 
-        // LANDING CLICK
-        const landing = document.getElementById('landing-overlay');
-        const startOverlay = document.getElementById('start-overlay');
+            // Bounce off walls
+            if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
+            if (this.y < 0 || this.y > window.innerHeight) this.vy *= -1;
 
-        landing.addEventListener('click', () => {
-            landing.style.opacity = '0';
-            setTimeout(() => {
-                landing.style.display = 'none';
-                clearInterval(rainInterval);
-                rainCanvas.remove();
-                startOverlay.style.display = 'flex';
-            }, 1200);
-        }, { once: true });
+            this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
+        }
+    }
 
-        // AUTO MUSIC
-        let player, musicStarted = false, musicMuted = true;
+    function startGame() {
+        gameActive = true;
+        spawnEnemyLoop();
+        requestAnimationFrame(gameLoop);
+    }
 
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('ytplayer', {
-                height: '0',
-                width: '0',
-                videoId: 'qwMz1wgXokk',
-                playerVars: {
-                    'playsinline': 1,
-                    'autoplay': 1,
-                    'mute': 1,
-                    'loop': 1,
-                    'playlist': 'qwMz1wgXokk'
-                },
-                events: {
-                    'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange
+    cannon.addEventListener('pointerdown', () => {
+        if(!gameActive) return;
+        // Spawn 3 cells per click
+        for(let i=0; i<3; i++) {
+            cells.push(new Entity(window.innerWidth/2, window.innerHeight - 150, 'good'));
+        }
+    });
+
+    function spawnEnemyLoop() {
+        if(gameActive) {
+            const type = Math.random() > 0.5 ? 'virus' : 'disease';
+            enemies.push(new Entity(Math.random() * window.innerWidth, 50, type));
+        }
+        setTimeout(spawnEnemyLoop, 2000 / level);
+    }
+
+    function gameLoop() {
+        if (!gameActive) return;
+
+        cells.forEach((c, ci) => {
+            c.update();
+            enemies.forEach((e, ei) => {
+                const dist = Math.hypot(c.x - e.x, c.y - e.y);
+                if (dist < c.radius + e.radius) {
+                    // Attack Logic: Both take damage
+                    e.health -= 2;
+                    c.health -= 2;
+
+                    if (e.health <= 0) {
+                        e.el.remove();
+                        enemies.splice(ei, 1);
+                        score += 50;
+                        document.getElementById('score').textContent = score;
+                    }
+                    if (c.health <= 0) {
+                        c.el.remove();
+                        cells.splice(ci, 1);
+                    }
                 }
             });
-        }
-
-        function onPlayerReady(event) {
-            event.target.mute();
-            event.target.playVideo();
-        }
-
-        function onPlayerStateChange(event) {
-            if (event.data === YT.PlayerState.ENDED) {
-                player.playVideo();
-            }
-        }
-
-        document.body.addEventListener('click', () => {
-            if (!musicStarted && player) {
-                player.unMute();
-                musicStarted = true;
-                musicMuted = false;
-                document.getElementById('music-toggle').textContent = '[Music: ON]';
-            }
-        }, { once: true });
-
-        const musicToggle = document.getElementById('music-toggle');
-        musicToggle.addEventListener('click', () => {
-            if (!player) return;
-            if (musicMuted) {
-                player.unMute();
-                musicMuted = false;
-                musicToggle.textContent = '[Music: ON]';
-            } else {
-                player.mute();
-                musicMuted = true;
-                musicToggle.textContent = '[Music: OFF]';
-            }
         });
 
-        // GAME START & LOGIC
-        const canvas = document.getElementById('orbital-canvas');
-        const countdownOverlay = document.getElementById('countdown-overlay');
-        const transitionOverlay = document.getElementById('transition-overlay');
-        const reviveOverlay = document.getElementById('revive-overlay');
-        const winOverlay = document.getElementById('win-overlay');
-        const transText = document.getElementById('trans-text');
-        const countdownText = document.getElementById('countdown-text');
-        const certCodeEl = document.getElementById('cert-code');
-        const pauseToggle = document.getElementById('pause-toggle');
-        const boostBtn = document.getElementById('boost-btn');
-        const cannon = document.getElementById('cannon');
-        const decoyBtn = document.getElementById('decoy-btn');
-
-        let cells = [], enemies = [];
-        let score = 0, level = 1, isWarping = false, isPaused = false, gameActive = false;
-        const MARGIN = 4;
-        let boostMultiplier = 1;
-        let boostTimer = null;
-
-        cannon.addEventListener('pointerdown', () => {
-            if (gameActive) {
-                cannon.classList.add('pressed');
-                fireCannon();
-            }
-        });
-        cannon.addEventListener('pointerup pointercancel', () => cannon.classList.remove('pressed'));
-
-        decoyBtn.addEventListener('pointerdown', () => {
-            decoyBtn.classList.add('pressed');
-            // Mini storm effect is already in CSS
-        });
-        decoyBtn.addEventListener('pointerup pointercancel', () => decoyBtn.classList.remove('pressed'));
-
-        function spawnStarterCells() {
-            for (let i = 0; i < 10; i++) {
-                const offsetX = (Math.random() - 0.5) * 400;
-                const offsetY = Math.random() * 100;
-                cells.push(new Entity(
-                    window.innerWidth / 2 + offsetX,
-                    window.innerHeight - 150 - offsetY,
-                    'cell'
-                ));
-            }
-        }
-
-        function startCountdown() {
-            startOverlay.style.display = 'none';
-            countdownOverlay.style.display = 'flex';
-            cannon.classList.remove('active');
-            let timeLeft = 10;
-            countdownText.textContent = timeLeft;
-
-            const timer = setInterval(() => {
-                timeLeft--;
-                countdownText.textContent = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
-                    countdownOverlay.style.display = 'none';
-                    gameActive = true;
-                    cannon.classList.add('active');
-                    spawnStarterCells();
-                    spawnTick();
-                }
-            }, 1000);
-        }
-
-        document.getElementById('start-btn').addEventListener('click', startCountdown);
-
-        function loadProgress() {
-            const savedLevel = localStorage.getItem('symbioteLevel');
-            const savedScore = localStorage.getItem('symbioteScore');
-            if (savedLevel && savedScore) {
-                level = parseInt(savedLevel, 10);
-                score = parseInt(savedScore, 10);
-                document.getElementById('level').textContent = level;
-                document.getElementById('score').textContent = score;
-            }
-        }
-
-        function saveProgress() {
-            localStorage.setItem('symbioteLevel', level);
-            localStorage.setItem('symbioteScore', score);
-        }
-
-        function getGenCount() {
-            return Math.min(level, 10) * boostMultiplier;
-        }
-
-        class Entity {
-            constructor(x, y, type) {
-                this.type = type; this.x = x; this.y = y;
-                this.radius = 40 + Math.random() * 8;
-                this.health = 100;
-                this.el = document.createElement('div');
-                this.el.className = `cell-orb cell-${type}`;
-                this.el.innerHTML = `<div class="hp-bar"><div class="hp-fill"></div></div>`;
-                this.hpFill = this.el.querySelector('.hp-fill');
-                this.vx = (Math.random() - 0.5) * 8;
-                this.vy = type === 'cell' ? -6 : (1.8 + level * 0.4);
-                canvas.appendChild(this.el);
-            }
-            update() {
-                this.x += this.vx; this.y += this.vy;
-                if (this.x < this.radius + MARGIN || this.x > window.innerWidth - this.radius - MARGIN) this.vx *= -1;
-                if (this.y < this.radius + MARGIN || this.y > window.innerHeight - this.radius - MARGIN) this.vy *= -1;
-                this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
-            }
-            takeDamage(dmg) {
-                this.health -= dmg;
-                this.hpFill.style.width = Math.max(0, this.health) + '%';
-                return this.health <= 0;
-            }
-        }
-
-        function fireCannon() {
-            if (!gameActive || isWarping || isPaused) return;
-            const count = getGenCount();
-            for (let i = 0; i < count; i++) {
-                setTimeout(() => {
-                    cells.push(new Entity(window.innerWidth / 2, window.innerHeight - 100, 'cell'));
-                }, i * 18);
-            }
-        }
-
-        function spawnTick() {
-            if (gameActive && !isWarping && !isPaused) {
-                const spawnChance = 0.03 + (level * 0.008);
-                if (Math.random() < spawnChance) {
-                    const offsetX = (Math.random() - 0.5) * Math.min(200, window.innerWidth * 0.15);
-                    const spawnY = 40 + Math.random() * 40;
-                    const type = Math.random() > 0.5 ? 'virus' : 'disease';
-                    enemies.push(new Entity(window.innerWidth / 2 + offsetX, spawnY, type));
-                }
-            }
-            setTimeout(spawnTick, 700 + Math.random() * 500);
-        }
-
-        function nextLevel() {
-            isWarping = true;
-            transitionOverlay.style.display = 'flex';
-            
-            const nextLvl = level + 1;
-            if (nextLvl >= 100) {
-                const timestamp = new Date().toISOString();
-                const randomSalt = Math.random().toString(36).slice(2, 10);
-                const certCode = btoa(timestamp + randomSalt).slice(0, 16);
-                certCodeEl.textContent = certCode;
-
-                winOverlay.style.display = 'flex';
-                transitionOverlay.style.display = 'none';
-                localStorage.removeItem('symbioteLevel');
-                localStorage.removeItem('symbioteScore');
-                return;
-            }
-
-            transText.textContent = `WARPING TO LEVEL ${nextLvl}`;
-
-            setTimeout(() => {
-                cells.forEach(c => c.el.remove());
-                enemies.forEach(e => e.el.remove());
-                cells = []; enemies = [];
-                
-                level = nextLvl;
-                score = 0;
-                
-                document.getElementById('level').textContent = level;
-                document.getElementById('score').textContent = '0';
-                
-                transitionOverlay.style.display = 'none';
-                isWarping = false;
-                saveProgress();
-            }, 3000);
-        }
-
-        function checkFieldClear() {
-            if (cells.length === 0 && enemies.length === 0 && gameActive && !isWarping && !isPaused) {
-                reviveOverlay.style.display = 'flex';
-            }
-        }
-
-        boostBtn.addEventListener('click', () => {
-            boostMultiplier = 2;
-            boostBtn.textContent = 'BOOST ACTIVE: x2 (30s)';
-            boostBtn.classList.add('active');
-            clearTimeout(boostTimer);
-            boostTimer = setTimeout(() => {
-                boostMultiplier = 1;
-                boostBtn.textContent = 'BOOST: x2 (30s)';
-                boostBtn.classList.remove('active');
-            }, 30000);
-        });
-
-        document.getElementById('revive-btn').addEventListener('click', () => {
-            reviveOverlay.style.display = 'none';
-            for(let i = 0; i < 12; i++) {
-                setTimeout(() => {
-                    cells.push(new Entity(window.innerWidth / 2 + (Math.random()-0.5)*300, window.innerHeight - 80, 'cell'));
-                }, i * 80);
-            }
-        });
-
-        pauseToggle.addEventListener('click', () => {
-            isPaused = !isPaused;
-            pauseToggle.textContent = isPaused ? '[PLAY]' : '[PAUSE]';
-            if (player) {
-                if (isPaused) player.pauseVideo();
-                else if (!musicMuted) player.playVideo();
-            }
-        });
-
-        function resetGame() { location.reload(); }
-
-        function gameLoop() {
-            if (gameActive && !isWarping && !isPaused) {
-                cells.forEach((c, ci) => {
-                    c.update();
-                    enemies.forEach((e, ei) => {
-                        if (Math.hypot(c.x - e.x, c.y - e.y) < (c.radius + e.radius)/2) {
-                            if (e.takeDamage(5)) {
-                                e.el.remove(); enemies.splice(ei, 1);
-                                score += 20;
-                                document.getElementById('score').textContent = score;
-                                if (score >= 1000) nextLevel();
-                            }
-                            if (c.takeDamage(5)) {
-                                c.el.remove(); cells.splice(ci, 1);
-                            }
-                        }
-                    });
-                });
-                enemies.forEach(e => e.update());
-                checkFieldClear();
-            }
-            requestAnimationFrame(gameLoop);
-        }
-
-        function loadProgress() {
-            const savedLevel = localStorage.getItem('symbioteLevel');
-            const savedScore = localStorage.getItem('symbioteScore');
-            if (savedLevel && savedScore) {
-                level = parseInt(savedLevel, 10);
-                score = parseInt(savedScore, 10);
-                document.getElementById('level').textContent = level;
-                document.getElementById('score').textContent = score;
-            }
-        }
-
-        function saveProgress() {
-            localStorage.setItem('symbioteLevel', level);
-            localStorage.setItem('symbioteScore', score);
-        }
-
-        window.addEventListener('beforeunload', saveProgress);
-        gameLoop();
-    </script>
+        enemies.forEach(e => e.update());
+        requestAnimationFrame(gameLoop);
+    }
+</script>
 </body>
 </html>
