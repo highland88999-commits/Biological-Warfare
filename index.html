@@ -4,123 +4,109 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>Artemis • Sequential Boot</title>
+    <title>Artemis • Master Fix</title>
     <style>
-        :root { --glow: #00f2ff; --gold: #d4af37; --bg: #000; }
+        :root { --glow: #00f2ff; --gold: #d4af37; }
         * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; }
-        body, html { width:100%; height:100%; overflow:hidden; background:var(--bg); font-family: monospace; color:var(--glow); }
+        body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: monospace; color:var(--glow); }
 
-        /* VIDEO LAYER - Bottom */
-        #video-viewport {
-            position: fixed; inset: 0; z-index: 1;
+        /* THE LAYERING PUZZLE SOLVED */
+        #video-layer {
+            position: fixed; inset: 0; z-index: -1; /* Behind everything */
             background: #000; pointer-events: none;
         }
         #bg-video {
             width: 100%; height: 100%; object-fit: cover;
-            filter: brightness(0.35) contrast(1.1);
-            display: none; /* Hidden until boot */
+            filter: brightness(0.4) contrast(1.1);
+            opacity: 0; transition: opacity 1s;
         }
 
-        /* GAME LAYER - Middle */
-        #arena { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
-
-        /* UI LAYER - Top */
-        #boot-overlay {
+        #ui-layer { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+        
+        /* OVERLAY - MUST BE TAPPED */
+        #overlay {
             position: fixed; inset: 0; z-index: 100;
             background: #000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center;
+            align-items: center; justify-content: center;
         }
 
-        .boot-btn {
-            border: 1px solid var(--glow); color: var(--glow);
-            padding: 20px 40px; border-radius: 50px; font-weight: bold;
-            background: rgba(0, 242, 255, 0.05); cursor: pointer;
-            text-transform: uppercase; letter-spacing: 3px; margin-bottom: 20px;
+        .start-btn {
+            border: 2px solid var(--glow); color: var(--glow);
+            padding: 25px 50px; border-radius: 10px; font-weight: bold;
+            background: rgba(0, 242, 255, 0.1); cursor: pointer;
+            text-transform: uppercase; letter-spacing: 5px;
         }
 
         #cannon {
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 110px; height: 110px; border-radius: 50%; z-index: 50;
-            background: rgba(0, 10, 20, 0.9); border: 3px solid var(--gold);
-            color: var(--gold); font-weight: bold; display: none; align-items: center; justify-content: center;
+            width: 120px; height: 120px; border-radius: 50%; z-index: 50;
+            background: rgba(0, 8, 15, 0.9); border: 3px solid var(--gold);
+            color: var(--gold); font-weight: bold; display: none; 
+            align-items: center; justify-content: center; pointer-events: auto;
         }
 
-        .cell-orb { position: absolute; border-radius: 50%; z-index: 100; }
+        .cell-orb { position: absolute; border-radius: 50%; z-index: 5; pointer-events: none; }
         .cell-good { border: 2px solid var(--glow); background: rgba(0, 242, 255, 0.1); }
         .cell-evil { border: 2px solid #ff2d55; background: rgba(255, 45, 85, 0.1); }
-        
-        #status-log { font-size: 0.6rem; opacity: 0.5; margin-top: 10px; height: 1.2rem; }
     </style>
 </head>
 <body>
 
-<div id="video-viewport">
-    <video id="bg-video" loop muted playsinline>
+<div id="video-layer">
+    <video id="bg-video" loop muted playsinline preload="auto">
         <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
     </video>
 </div>
 
 <div id="music-engine" style="position: absolute; top: -999px;"></div>
 
-<div id="boot-overlay">
-    <h1 style="margin-bottom: 30px; letter-spacing: 5px;">ARTEMIS PRIME</h1>
-    <div id="start-node" class="boot-btn" onclick="bootSequence()">Initialize Systems</div>
-    <div id="status-log">AWAITING INPUT...</div>
+<div id="overlay">
+    <h2 style="margin-bottom: 20px; color: var(--gold);">ARTEMIS PROTOCOL</h2>
+    <div class="start-btn" onclick="masterUnlock()">INITIALIZE</div>
+</div>
+
+<div id="ui-layer">
+    <div id="cannon" onclick="deploy()">DEPLOY</div>
 </div>
 
 <div id="arena"></div>
-<div id="cannon" onclick="deploy()">DEPLOY</div>
 
 <script>
     let musicPlayer, musicReady = false;
-    let entities = [], score = 0;
+    let entities = [];
 
-    // 1. YT API Loads first but stays quiet
+    // 1. Setup Music Engine
     function onYouTubeIframeAPIReady() {
         musicPlayer = new YT.Player('music-engine', {
             videoId: 'qwMz1wgXokk',
             playerVars: { 'controls': 0, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1 },
-            events: { 'onReady': () => { 
-                musicReady = true; 
-                document.getElementById('status-log').innerText = "AUDIO ENGINE READY";
-            } }
+            events: { 'onReady': () => { musicReady = true; } }
         });
     }
 
-    // 2. The Step-by-Step Boot
-    async function bootSequence() {
-        const log = document.getElementById('status-log');
-        const btn = document.getElementById('start-node');
-        
-        btn.style.display = 'none';
-        
-        // STEP A: UNLOCK AUDIO
-        log.innerText = "BOOTING AUDIO...";
-        if (musicReady) {
+    // 2. THE MASTER UNLOCK (One tap, all permissions)
+    function masterUnlock() {
+        // Unlock Video
+        const v = document.getElementById('bg-video');
+        v.play().then(() => {
+            v.style.opacity = "1";
+        }).catch(err => console.log("Video block:", err));
+
+        // Unlock Music
+        if (musicReady && musicPlayer) {
             musicPlayer.unMute();
             musicPlayer.playVideo();
         }
 
-        // STEP B: UNLOCK VIDEO (Wait 1 second for audio stability)
-        await new Promise(r => setTimeout(r, 1000));
-        log.innerText = "BOOTING VIDEO ENGINE...";
-        const v = document.getElementById('bg-video');
-        v.style.display = 'block';
-        try {
-            await v.play();
-            log.innerText = "VIDEO STABLE";
-        } catch(e) {
-            log.innerText = "VIDEO BYPASS TRIGGERED";
-        }
-
-        // STEP C: UNLOCK GAME
-        await new Promise(r => setTimeout(r, 1000));
-        document.getElementById('boot-overlay').style.display = 'none';
+        // Switch UI
+        document.getElementById('overlay').style.display = 'none';
         document.getElementById('cannon').style.display = 'flex';
+        
+        // Start Game
         spawnLoop();
+        requestAnimationFrame(gameLoop);
     }
 
-    // 3. Game Engine
     function deploy() {
         entities.push(new Entity('good'));
     }
@@ -128,9 +114,10 @@
     class Entity {
         constructor(type) {
             this.type = type;
-            this.x = type === 'good' ? window.innerWidth/2 : Math.random() * window.innerWidth;
-            this.y = type === 'good' ? window.innerHeight - 100 : -20;
-            this.vx = (Math.random()-0.5)*4;
+            this.radius = 15;
+            this.x = type === 'good' ? window.innerWidth / 2 : Math.random() * window.innerWidth;
+            this.y = type === 'good' ? window.innerHeight - 110 : -30;
+            this.vx = (Math.random() - 0.5) * 4;
             this.vy = type === 'good' ? -6 : 3;
             this.el = document.createElement('div');
             this.el.className = `cell-orb cell-${type}`;
@@ -149,16 +136,16 @@
         setTimeout(spawnLoop, 1500);
     }
 
-    function loop() {
-        for(let i=entities.length-1; i>=0; i--) {
+    function gameLoop() {
+        for(let i = entities.length - 1; i >= 0; i--) {
             entities[i].update();
             if(entities[i].y < -100 || entities[i].y > window.innerHeight + 100) {
-                entities[i].el.remove(); entities.splice(i, 1);
+                entities[i].el.remove();
+                entities.splice(i, 1);
             }
         }
-        requestAnimationFrame(loop);
+        requestAnimationFrame(gameLoop);
     }
-    loop();
 </script>
 </body>
 </html>
