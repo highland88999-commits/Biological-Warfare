@@ -7,14 +7,13 @@
     <title>Artemis • Prime Symbiote</title>
     <style>
         :root {
-            --cyan: #00f2ff;
+            --glow: #00f2ff;
             --gold: #d4af37;
             --virus-red: #ff2d55;
-            --disease-green: #00ff9d;
-            --glass: rgba(8, 8, 25, 0.85);
+            --ui-bg: rgba(0, 10, 20, 0.85);
         }
 
-        /* PRECISION RESET */
+        /* 1. RESET & GESTURE PROTECTION */
         * { 
             margin:0; padding:0; box-sizing:border-box; 
             -webkit-user-select: none; user-select: none;
@@ -25,139 +24,150 @@
         body, html { 
             width:100%; height:100%; overflow:hidden; 
             background:#000; font-family: 'Courier New', monospace; 
-            color:var(--cyan); touch-action: none;
+            color:var(--glow); touch-action: none;
         }
 
-        /* BACKGROUND VIDEO - ENSURE FULL COVERAGE */
-        #bg-container {
-            position: fixed; inset: 0; z-index: -100;
-            background: #000; pointer-events: none; overflow: hidden;
-        }
-        #bg-container iframe {
-            position: absolute; top: 50%; left: 50%;
+        /* 2. NEXUS VIDEO ENGINE (MIRRORED LOGIC) */
+        .video-engine {
+            position: fixed;
+            inset: 0;
             width: 100vw; height: 100vh;
-            transform: translate(-50%, -50%) scale(1.6); /* Overscan to hide UI elements */
+            z-index: -100;
+            overflow: hidden;
             pointer-events: none;
         }
 
-        /* LANDING & OVERLAYS */
+        #yt-bg-player {
+            width: 100vw; height: 56.25vw; /* 16:9 Aspect Ratio */
+            min-height: 100vh; min-width: 177.77vh;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            border: none;
+            filter: brightness(0.35) contrast(1.2) saturate(0.8);
+        }
+
+        /* 3. OVERLAYS & UI */
         #landing-overlay, #start-overlay, #countdown-overlay, #win-overlay {
             position: fixed; inset: 0; z-index: 2000;
-            background: #000; display: flex; align-items: center; 
-            justify-content: center; flex-direction: column;
-            transition: opacity 0.8s ease-out;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(12px);
+            display: flex; align-items: center; justify-content: center; 
+            flex-direction: column; transition: opacity 0.8s ease-out;
         }
         #landing-overlay.hidden { opacity: 0; pointer-events: none; }
-        #rain-canvas { position: absolute; inset: 0; z-index: 1; opacity: 0.4; }
-        #landing-text { z-index: 2; text-shadow: 0 0 20px var(--cyan); font-weight: bold; }
-
+        #rain-canvas { position: absolute; inset: 0; z-index: 1; opacity: 0.3; }
+        
         #start-overlay, #countdown-overlay, #win-overlay { display: none; z-index: 2100; }
 
-        #disclaimer {
-            max-width: 85%; background: rgba(255, 204, 0, 0.1); 
-            border: 1px solid var(--gold); padding: 20px; 
-            border-radius: 8px; margin: 20px; font-size: 0.85rem; color: #ffcc00;
-            text-align: center; line-height: 1.4;
+        .holo-frame {
+            width: min(400px, 90vw);
+            padding: 30px;
+            background: var(--ui-bg);
+            border: 2px solid var(--glow);
+            border-radius: 25px;
+            text-align: center;
         }
 
         .btn {
-            padding: 20px 40px; background: #000; border: 2px solid var(--gold);
-            color: var(--gold); border-radius: 50px; font-weight: bold;
-            cursor: pointer; box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+            display: block; width: 100%; margin-top: 15px; padding: 15px;
+            text-decoration: none; border-radius: 50px; font-weight: bold;
+            font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px;
+            border: 1px solid var(--gold); color: var(--gold);
+            background: rgba(212, 175, 55, 0.05); transition: 0.3s;
+            cursor: pointer;
         }
+        .btn:active { transform: scale(0.95); background: var(--gold); color: #000; }
 
-        /* HUD & UI */
-        #ui-layer {
+        #ui-hud {
             position: fixed; top: 20px; left: 20px; z-index: 600;
-            pointer-events: none;
-        }
-        .hud-box {
-            background: var(--glass); border: 1px solid var(--cyan);
-            padding: 12px 18px; border-radius: 6px; backdrop-filter: blur(5px);
-            pointer-events: auto; display: flex; gap: 15px; font-size: 0.9rem;
+            background: var(--ui-bg); padding: 12px 20px; border-radius: 10px;
+            border: 1px solid var(--glow); font-size: 0.75rem;
+            pointer-events: auto; display: flex; gap: 20px;
         }
 
-        /* THE DEPLOY BUTTON */
+        /* 4. COMBAT ELEMENTS */
         #cannon {
             position: fixed; bottom: 40px; left: 50%;
-            transform: translateX(-50%); width: 130px; height: 130px;
-            z-index: 500; background: rgba(0,0,0,0.9);
-            border: 4px solid var(--gold); border-radius: 50%;
+            transform: translateX(-50%); width: 120px; height: 120px;
+            z-index: 500; background: var(--ui-bg);
+            border: 3px solid var(--gold); border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             color: var(--gold); font-weight: bold; cursor: pointer;
-            box-shadow: 0 0 30px var(--gold);
+            box-shadow: 0 0 25px var(--gold);
         }
-        #cannon:active { transform: translateX(-50%) scale(0.9); }
 
-        /* ENTITIES */
         .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
-        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.15); box-shadow: 0 0 10px var(--cyan); }
-        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.15); box-shadow: 0 0 10px var(--virus-red); }
+        .cell-good { border: 2px solid var(--glow); background: rgba(0, 242, 255, 0.1); box-shadow: 0 0 10px var(--glow); }
+        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.1); box-shadow: 0 0 10px var(--virus-red); }
     </style>
 </head>
 <body>
 
-<div id="bg-container">
-    <div id="yt-visual-player"></div>
+<div class="video-engine">
+    <div id="yt-bg-player"></div>
 </div>
 
 <div id="music-player" style="position: absolute; top: -9999px;"></div>
 
 <div id="landing-overlay" onclick="showDisclaimer()">
     <canvas id="rain-canvas"></canvas>
-    <div id="landing-text">CLICK TO INITIALIZE</div>
+    <h1 style="z-index: 2; letter-spacing: 5px;">INITIALIZE</h1>
 </div>
 
 <div id="start-overlay">
-    <h2 style="color:var(--gold); margin-bottom:10px;">PRIME SYMBIOTE</h2>
-    <div id="disclaimer">
-        <strong>DEVELOPER NOTE:</strong> Hoodies and ongoing updates are funded by player support. 
-        By entering the rift, you help make the physical merchandise possible. Enjoy the grind!
+    <div class="holo-frame">
+        <h2 style="color:var(--gold); margin-bottom:15px; font-size: 1rem;">SYMBIOTE PROTOCOL</h2>
+        <p style="font-size: 0.7rem; color: #fff; margin-bottom: 20px; line-height: 1.5; opacity: 0.8;">
+            Development & Hardware funded by player support.<br>
+            Enter the rift to begin the sequence.
+        </p>
+        <div class="btn" onclick="startCountdown()">⚡ ENTER RIFT</div>
     </div>
-    <div class="btn" onclick="startCountdown()">⚡ ENTER THE RIFT</div>
 </div>
 
 <div id="countdown-overlay">
-    <h1 id="count-num" style="font-size: 5rem; color: var(--gold);">3</h1>
+    <h1 id="count-num" style="font-size: 6rem; color: var(--gold); text-shadow: 0 0 30px var(--gold);">3</h1>
 </div>
 
 <div id="win-overlay">
-    <h1 style="color:var(--gold)">OLYMPUS ASCENDED</h1>
-    <p style="margin: 20px; text-align: center;">Level 100 reached. Verification Code: <br><strong id="cert-code"></strong></p>
-    <div class="btn" onclick="location.reload()">RESTART RIFT</div>
+    <div class="holo-frame">
+        <h1 style="color:var(--gold); font-size: 1.2rem;">OLYMPUS ASCENDED</h1>
+        <p style="margin: 20px 0; font-size: 0.7rem;">LEVEL 100 COMPLETE<br>CODE: <strong id="cert-code" style="color:var(--glow)"></strong></p>
+        <div class="btn" onclick="location.reload()">RE-INITIALIZE</div>
+    </div>
 </div>
 
-<div id="ui-layer">
-    <div class="hud-box">
-        LVL: <span id="level">1</span> | SCORE: <span id="score">0</span>
-        <span id="music-btn" style="cursor:pointer">[Music: OFF]</span>
-    </div>
+<div id="ui-hud">
+    <span>LVL: <span id="level">1</span></span>
+    <span>SCORE: <span id="score">0</span></span>
+    <span id="music-btn" style="color:var(--gold); cursor:pointer;">AUDIO: OFF</span>
 </div>
 
 <div id="orbital-canvas"></div>
 <div id="cannon">DEPLOY</div>
 
 <script>
-    let visualPlayer, musicPlayer;
+    let bgPlayer, musicPlayer;
     let score = 0, level = 1, gameActive = false;
     let entities = [];
-    let musicMuted = true;
+    let musicStarted = false;
 
-    // YouTube API Integration
+    // YOUTUBE API: MIRRORED FROM CONSOLE LOGIC
     function onYouTubeIframeAPIReady() {
-        visualPlayer = new YT.Player('yt-visual-player', {
+        bgPlayer = new YT.Player('yt-bg-player', {
             videoId: 'JBVeJ5ZYENc',
-            playerVars: { 'autoplay': 1, 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc' },
+            playerVars: { 'autoplay': 1, 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc', 'rel': 0, 'modestbranding': 1 },
             events: { 'onReady': (e) => e.target.playVideo() }
         });
+
         musicPlayer = new YT.Player('music-player', {
             videoId: 'qwMz1wgXokk',
-            playerVars: { 'autoplay': 1, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'mute': 1 },
+            playerVars: { 'autoplay': 1, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'mute': 1, 'controls': 0 },
             events: { 'onReady': (e) => e.target.playVideo() }
         });
     }
 
-    // Matrix Rain logic
+    // MATRIX RAIN
     const rainCanvas = document.getElementById('rain-canvas');
     const rCtx = rainCanvas.getContext('2d');
     let drops = [];
@@ -178,14 +188,21 @@
             drops[i]++;
         });
     }
-    const rainTimer = setInterval(drawRain, 50);
+    const rainInterval = setInterval(drawRain, 50);
     initRain();
 
-    // Navigation Logic
+    // FLOW CONTROL
     function showDisclaimer() {
         document.getElementById('landing-overlay').classList.add('hidden');
-        clearInterval(rainTimer);
+        clearInterval(rainInterval);
         document.getElementById('start-overlay').style.display = 'flex';
+        // Unmute music on first real interaction
+        if(musicPlayer && !musicStarted) {
+            musicPlayer.unMute();
+            musicPlayer.setVolume(70);
+            musicStarted = true;
+            document.getElementById('music-btn').textContent = 'AUDIO: ON';
+        }
     }
 
     function startCountdown() {
@@ -198,30 +215,21 @@
             if(count <= 0) {
                 clearInterval(timer);
                 document.getElementById('countdown-overlay').style.display = 'none';
-                beginGame();
+                gameActive = true;
+                autoSpawner();
+                requestAnimationFrame(gameLoop);
             }
         }, 1000);
     }
 
-    function beginGame() {
-        gameActive = true;
-        if(musicPlayer) {
-            musicPlayer.unMute();
-            musicMuted = false;
-            document.getElementById('music-btn').textContent = '[Music: ON]';
-        }
-        autoSpawner();
-        requestAnimationFrame(gameLoop);
-    }
-
-    // PREDATOR AI Logic
+    // PREDATOR ENGINE
     class Entity {
         constructor(x, y, type) {
             this.type = type;
             this.x = x; this.y = y;
             this.radius = 18;
             this.health = 100;
-            this.speed = (type === 'evil' ? 2 : 3) + (level * 0.4);
+            this.speed = (type === 'evil' ? 2 : 3.5) + (level * 0.3);
             this.vx = (Math.random() - 0.5) * 6;
             this.vy = type === 'good' ? -this.speed : this.speed;
             
@@ -234,7 +242,6 @@
 
         update(targets) {
             if (this.type === 'evil' && targets.length > 0) {
-                // Predator Seek Logic
                 let target = targets[0];
                 let minDist = Math.hypot(this.x - target.x, this.y - target.y);
                 targets.forEach(t => {
@@ -242,11 +249,11 @@
                     if (d < minDist) { minDist = d; target = t; }
                 });
                 const angle = Math.atan2(target.y - this.y, target.x - this.x);
-                const force = 0.2 + (level * 0.08);
+                const force = 0.2 + (level * 0.05);
                 this.vx += Math.cos(angle) * force;
                 this.vy += Math.sin(angle) * force;
                 const s = Math.hypot(this.vx, this.vy);
-                const max = 4 + (level * 0.7);
+                const max = 4 + (level * 0.5);
                 if (s > max) { this.vx = (this.vx / s) * max; this.vy = (this.vy / s) * max; }
             }
             this.x += this.vx; this.y += this.vy;
@@ -257,16 +264,10 @@
         }
     }
 
-    // Controls
+    // COMBAT & LOOP
     document.getElementById('cannon').addEventListener('touchstart', (e) => {
         e.preventDefault();
         if(gameActive) entities.push(new Entity(window.innerWidth/2, window.innerHeight - 80, 'good'));
-    });
-
-    document.getElementById('music-btn').addEventListener('click', () => {
-        if(musicMuted) { musicPlayer.unMute(); musicMuted = false; }
-        else { musicPlayer.mute(); musicMuted = true; }
-        document.getElementById('music-btn').textContent = musicMuted ? '[Music: OFF]' : '[Music: ON]';
     });
 
     function autoSpawner() {
@@ -274,7 +275,7 @@
             entities.push(new Entity(Math.random() * window.innerWidth, window.innerHeight + 20, 'good'));
             entities.push(new Entity(Math.random() * window.innerWidth, -40, 'evil'));
         }
-        setTimeout(autoSpawner, Math.max(200, 1100 - (level * 100)));
+        setTimeout(autoSpawner, Math.max(250, 1200 - (level * 80)));
     }
 
     function gameLoop() {
@@ -286,7 +287,7 @@
                 if (ent.type !== other.type) {
                     const d = Math.hypot(ent.x - other.x, ent.y - other.y);
                     if (d < ent.radius + other.radius) {
-                        ent.health -= 25; other.health -= 25;
+                        ent.health -= 34; other.health -= 34;
                         if (ent.health <= 0) { ent.el.remove(); entities.splice(i, 1); if(other.type === 'good') addScore(); }
                         if (other.health <= 0) { other.el.remove(); entities.splice(j, 1); if(ent.type === 'good') addScore(); }
                     }
@@ -309,6 +310,17 @@
         document.getElementById('cert-code').textContent = 'ARTEMIS-' + Math.random().toString(36).substr(2, 9).toUpperCase();
         document.getElementById('win-overlay').style.display = 'flex';
     }
+
+    document.getElementById('music-btn').onclick = (e) => {
+        e.stopPropagation();
+        if(musicPlayer.isMuted()) {
+            musicPlayer.unMute();
+            document.getElementById('music-btn').textContent = 'AUDIO: ON';
+        } else {
+            musicPlayer.mute();
+            document.getElementById('music-btn').textContent = 'AUDIO: OFF';
+        }
+    };
 </script>
 </body>
 </html>
