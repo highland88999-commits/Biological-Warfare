@@ -24,19 +24,15 @@
             color:var(--cyan); touch-action: none;
         }
 
-        /* NEW YouTube Background Video - Full Screen Behind Everything */
-        #bg-video-container {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            z-index: -100;
-            pointer-events: none;
-            overflow: hidden;
+        /* FIXED BACKGROUND - High Performance */
+        #video-container {
+            position: fixed; inset: 0; z-index: -100;
+            background: #000; pointer-events: none;
         }
-        #bg-video-container iframe {
-            width: 300%; height: 100%;
-            margin-left: -100%; /* Centers the video */
-            pointer-events: none;
+        #bg-video {
+            width: 100vw; height: 100vh;
+            object-fit: cover;
+            filter: brightness(0.5) contrast(1.1);
         }
 
         #landing-overlay {
@@ -46,48 +42,53 @@
         }
         #landing-overlay.hidden { opacity: 0; pointer-events: none; }
         #rain-canvas { position: absolute; inset: 0; z-index: 1; opacity: 0.4; }
-        #landing-text { z-index: 2; text-shadow: 0 0 20px var(--cyan); font-size: 1.5rem; letter-spacing: 2px; }
+        #landing-text { z-index: 2; text-shadow: 0 0 20px var(--cyan); font-size: 1.4rem; font-weight: bold; }
 
+        /* UI LAYER */
         #ui-layer {
-            position: fixed; top: 20px; left: 20px; z-index: 600;
-            background: var(--glass); padding: 10px 20px; border-radius: 4px;
+            position: fixed; top: 15px; left: 15px; z-index: 600;
+            background: var(--glass); padding: 10px 15px; border-radius: 4px;
             border: 1px solid var(--cyan); pointer-events: none;
+            font-size: 0.9rem;
         }
 
-        .gen-bar { position: fixed; left: 0; width: 100%; height: 4px; z-index: 400; opacity: 0.8; }
+        .gen-bar { position: fixed; left: 0; width: 100%; height: 5px; z-index: 400; }
         #pathogen-gen { top: 0; background: var(--virus-red); box-shadow: 0 0 15px var(--virus-red); }
         #cell-gen { bottom: 0; background: var(--cyan); box-shadow: 0 0 15px var(--cyan); }
 
+        /* BUTTON FIX */
         #cannon {
-            position: fixed; bottom: 40px; left: 50%;
-            transform: translateX(-50%); width: 120px; height: 120px;
-            z-index: 500; background: rgba(0,0,0,0.8);
+            position: fixed; bottom: 45px; left: 50%;
+            transform: translateX(-50%); width: 110px; height: 110px;
+            z-index: 500; background: rgba(0,0,0,0.85);
             border: 3px solid var(--cyan); border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             color: var(--cyan); font-weight: bold; cursor: pointer;
-            box-shadow: 0 0 20px var(--cyan);
+            box-shadow: 0 0 25px var(--cyan);
         }
         #cannon:active { transform: translateX(-50%) scale(0.9); background: var(--cyan); color: #000; }
 
         .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
-        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.1); box-shadow: 0 0 10px var(--cyan); }
-        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.1); box-shadow: 0 0 10px var(--virus-red); }
+        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.1); box-shadow: 0 0 8px var(--cyan); }
+        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.1); box-shadow: 0 0 8px var(--virus-red); }
     </style>
 </head>
 <body>
 
-<div id="bg-video-container">
-    <div id="bg-player"></div>
+<div id="video-container">
+    <video id="bg-video" autoplay loop muted playsinline>
+        <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
+    </video>
 </div>
 
 <div id="music-player" style="position: absolute; top: -9999px;"></div>
 
-<div id="landing-overlay" onclick="startRift()">
+<div id="landing-overlay" onclick="startExperience()">
     <canvas id="rain-canvas"></canvas>
     <div id="landing-text">INITIALIZE ARTEMIS</div>
 </div>
 
-<div id="ui-layer">SCORE: <span id="score">0</span> | LVL: <span id="level">1</span></div>
+<div id="ui-layer">SCORE: <span id="score">0</span> | LEVEL: <span id="level">1</span></div>
 <div id="pathogen-gen" class="gen-bar"></div>
 <div id="cell-gen" class="gen-bar"></div>
 
@@ -95,19 +96,12 @@
 <div id="cannon">DEPLOY</div>
 
 <script>
-    let bgPlayer, musicPlayer;
+    let musicPlayer;
     let score = 0, level = 1, gameActive = false;
     let entities = [];
-    let spawnRate = 1000;
 
+    // YouTube API for Music
     function onYouTubeIframeAPIReady() {
-        // Background Video
-        bgPlayer = new YT.Player('bg-player', {
-            videoId: 'JBVeJ5ZYENc',
-            playerVars: { 'autoplay': 1, 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc' },
-            events: { 'onReady': (e) => e.target.playVideo() }
-        });
-        // Music Player
         musicPlayer = new YT.Player('music-player', {
             videoId: 'qwMz1wgXokk',
             playerVars: { 'autoplay': 1, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'mute': 1 },
@@ -115,6 +109,7 @@
         });
     }
 
+    // Landing Page Rain
     const rainCanvas = document.getElementById('rain-canvas');
     const ctx = rainCanvas.getContext('2d');
     let drops = [];
@@ -138,7 +133,7 @@
     const rainTimer = setInterval(drawRain, 50);
     initRain();
 
-    function startRift() {
+    function startExperience() {
         document.getElementById('landing-overlay').classList.add('hidden');
         clearInterval(rainTimer);
         if (musicPlayer) { musicPlayer.unMute(); musicPlayer.playVideo(); }
@@ -153,10 +148,10 @@
             this.x = x; this.y = y;
             this.radius = 16;
             this.health = 100;
-            // Progressive Difficulty Base Speed
-            this.baseSpeed = 1.5 + (level * 0.3);
+            // Progressive Difficulty
+            this.speed = (type === 'evil' ? 1.2 : 2) + (level * 0.4);
             this.vx = (Math.random() - 0.5) * 4;
-            this.vy = type === 'good' ? -this.baseSpeed : this.baseSpeed;
+            this.vy = type === 'good' ? -this.speed : this.speed;
             
             this.el = document.createElement('div');
             this.el.className = `cell-orb cell-${type}`;
@@ -167,6 +162,7 @@
 
         update(targets) {
             if (this.type === 'evil' && targets.length > 0) {
+                // Tracking Logic
                 let closest = targets[0];
                 let minDist = Math.hypot(this.x - closest.x, this.y - closest.y);
                 targets.forEach(t => {
@@ -174,16 +170,15 @@
                     if (d < minDist) { minDist = d; closest = t; }
                 });
                 const angle = Math.atan2(closest.y - this.y, closest.x - this.x);
-                // Aggressiveness scales with level
-                const accel = 0.15 + (level * 0.05);
+                const accel = 0.1 + (level * 0.05);
                 this.vx += Math.cos(angle) * accel;
                 this.vy += Math.sin(angle) * accel;
                 
                 const currSpeed = Math.hypot(this.vx, this.vy);
-                const maxSpeed = 3 + (level * 0.5);
-                if (currSpeed > maxSpeed) {
-                    this.vx = (this.vx / currSpeed) * maxSpeed;
-                    this.vy = (this.vy / currSpeed) * maxSpeed;
+                const max = 3 + (level * 0.5);
+                if (currSpeed > max) {
+                    this.vx = (this.vx / currSpeed) * max;
+                    this.vy = (this.vy / currSpeed) * max;
                 }
             }
             this.x += this.vx; this.y += this.vy;
@@ -193,6 +188,7 @@
         }
     }
 
+    // Interaction
     document.getElementById('cannon').addEventListener('touchstart', (e) => {
         e.preventDefault();
         if(!gameActive) return;
@@ -204,21 +200,22 @@
             entities.push(new Entity(Math.random() * window.innerWidth, window.innerHeight + 20, 'good'));
             entities.push(new Entity(Math.random() * window.innerWidth, -20, 'evil'));
         }
-        // Spawn rate accelerates
-        spawnRate = Math.max(200, 1000 - (level * 80));
-        setTimeout(autoSpawner, spawnRate);
+        const delay = Math.max(300, 1000 - (level * 100));
+        setTimeout(autoSpawner, delay);
     }
 
     function gameLoop() {
         if (!gameActive) return;
         const goods = entities.filter(e => e.type === 'good');
+        
         entities.forEach((ent, i) => {
             ent.update(ent.type === 'evil' ? goods : []);
+            
             entities.forEach((other, j) => {
                 if (ent.type !== other.type) {
                     const dist = Math.hypot(ent.x - other.x, ent.y - other.y);
                     if (dist < ent.radius + other.radius) {
-                        ent.health -= 10; other.health -= 10;
+                        ent.health -= 15; other.health -= 15;
                         if (ent.health <= 0) {
                             ent.el.remove(); entities.splice(i, 1);
                             if(other.type === 'good') { score += 10; updateLevel(); }
@@ -236,11 +233,8 @@
     }
 
     function updateLevel() {
-        const newLevel = Math.floor(score / 500) + 1;
-        if (newLevel !== level) {
-            level = newLevel;
-            document.getElementById('level').textContent = level;
-        }
+        level = Math.floor(score / 500) + 1;
+        document.getElementById('level').textContent = level;
     }
 </script>
 </body>
