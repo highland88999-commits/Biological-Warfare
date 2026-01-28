@@ -2,42 +2,108 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artemis</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Artemis Prime</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+        :root { --blue: #00f2ff; --gold: #d4af37; --red: #ff2d55; }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; touch-action:none; }
+        body { background:#000; overflow:hidden; font-family: monospace; }
+
+        /* THE LANDING PAGE */
         #landing {
-            position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.8);
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.8);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: #00f2ff; cursor: pointer; text-align: center;
+            cursor: pointer; text-align: center;
         }
+        #landing h1 { color: var(--blue); font-size: 3rem; letter-spacing: 15px; margin-bottom: 20px; text-shadow: 0 0 20px var(--blue); }
+        #landing p { color: var(--gold); letter-spacing: 5px; animation: blink 2s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* BACKGROUND VIDEO */
         #bg-video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: 2s; z-index: -1; }
-        #hud { display: none; position: fixed; top: 20px; width: 100%; text-align: center; color: #00f2ff; z-index: 10; }
+
+        /* GAME HUD */
+        #hud { display: none; position: fixed; top: 40px; width: 100%; text-align: center; color: var(--blue); z-index: 100; font-size: 1.2rem; }
+        #cannon {
+            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
+            width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--gold);
+            z-index: 100; display: none; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.8); color: var(--gold); font-weight: bold;
+        }
+        .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; z-index: 10; }
+        .blue { border: 2px solid var(--blue); box-shadow: 0 0 10px var(--blue); }
+        .red { border: 2px solid var(--red); box-shadow: 0 0 10px var(--red); }
     </style>
 </head>
 <body>
 
-    <div id="landing" onclick="enterGame()">
-        <h1 style="letter-spacing: 10px;">ARTEMIS</h1>
-        <p style="color: #d4af37;">CLICK TO ENTER</p>
+    <div id="landing" onclick="launch()">
+        <h1>ARTEMIS</h1>
+        <p>CLICK TO ENTER</p>
     </div>
 
     <div id="hud">STABILITY: <span id="xp">0</span>%</div>
     <video id="bg-video" loop muted playsinline></video>
     <div id="music-host" style="display:none"></div>
+    <div id="cannon" onpointerdown="spawnBlue()">DEPLOY</div>
+    <div id="arena"></div>
 
     <script src="media-controller.js"></script>
     <script>
-        function enterGame() {
-            // Call the media file
-            ArtemisMedia.playAll('bg-video');
+        let score = 0, entities = [], active = false;
 
-            // UI Swaps
+        function launch() {
+            // Trigger Media from External File
+            ArtemisMedia.ignite('bg-video');
+
+            // Switch UI
             document.getElementById('landing').style.display = 'none';
             document.getElementById('hud').style.display = 'block';
+            document.getElementById('cannon').style.display = 'flex';
             
-            // Your Game Logic Starts Here
-            console.log("Game Engaged");
+            active = true;
+            spawnRed();
+            gameLoop();
+        }
+
+        class Cell {
+            constructor(type) {
+                this.type = type;
+                this.hp = 100;
+                this.born = Date.now();
+                this.x = type === 'blue' ? window.innerWidth/2 : Math.random()*window.innerWidth;
+                this.y = type === 'blue' ? window.innerHeight-180 : -50;
+                this.vx = (Math.random()-0.5)*7;
+                this.vy = type === 'blue' ? -5 : 5;
+                this.el = document.createElement('div');
+                this.el.className = `cell ${type}`;
+                this.el.style.width = this.el.style.height = '32px';
+                document.getElementById('arena').appendChild(this.el);
+            }
+            update() {
+                if (Date.now() - this.born > 20000) this.hp -= 0.8;
+                this.x += this.vx; this.y += this.vy;
+                if(this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
+                this.el.style.transform = `translate(${this.x-16}px,${this.y-16}px)`;
+                this.el.innerText = Math.ceil(this.hp);
+            }
+        }
+
+        function spawnBlue() { if(active) entities.push(new Cell('blue')); }
+        function spawnRed() { if(active) { entities.push(new Cell('red')); setTimeout(spawnRed, 2500); }}
+
+        function gameLoop() {
+            for(let i = entities.length-1; i >= 0; i--) {
+                let c = entities[i];
+                c.update();
+                if(c.hp <= 0 || c.y > window.innerHeight + 200) {
+                    if(c.hp <= 0 && c.type === 'red') score += 10;
+                    c.el.remove(); entities.splice(i, 1);
+                }
+            }
+            document.getElementById('xp').innerText = score;
+            requestAnimationFrame(gameLoop);
         }
     </script>
 </body>
