@@ -4,66 +4,68 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>Artemis • Vercel Hybrid</title>
+    <title>Artemis • Sequential Boot</title>
     <style>
-        :root { --glow: #00f2ff; --gold: #d4af37; }
+        :root { --glow: #00f2ff; --gold: #d4af37; --bg: #000; }
         * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; }
-        body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: monospace; color:var(--glow); }
+        body, html { width:100%; height:100%; overflow:hidden; background:var(--bg); font-family: monospace; color:var(--glow); }
 
-        /* VERCEL VIDEO ENGINE (Direct Stream) */
-        #video-container {
-            position: fixed; inset: 0; z-index: -100;
+        /* VIDEO LAYER - Bottom */
+        #video-viewport {
+            position: fixed; inset: 0; z-index: 1;
             background: #000; pointer-events: none;
         }
         #bg-video {
-            width: 100%; height: 100%;
-            object-fit: cover; /* Perfectly fills any mobile screen */
-            filter: brightness(0.4) contrast(1.1);
-            opacity: 0; transition: opacity 2s;
+            width: 100%; height: 100%; object-fit: cover;
+            filter: brightness(0.35) contrast(1.1);
+            display: none; /* Hidden until boot */
         }
 
-        /* UI CONTROLS */
-        #top-deck {
-            position: fixed; top: 20px; width: 100%;
-            display: flex; justify-content: center; gap: 15px; z-index: 1000;
+        /* GAME LAYER - Middle */
+        #arena { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+
+        /* UI LAYER - Top */
+        #boot-overlay {
+            position: fixed; inset: 0; z-index: 100;
+            background: #000; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
         }
-        .control-btn {
-            background: rgba(0, 10, 20, 0.85); border: 1.5px solid var(--glow);
-            color: var(--glow); padding: 12px 18px; border-radius: 8px;
-            font-size: 0.7rem; font-weight: bold; cursor: pointer;
-            backdrop-filter: blur(10px); text-transform: uppercase;
+
+        .boot-btn {
+            border: 1px solid var(--glow); color: var(--glow);
+            padding: 20px 40px; border-radius: 50px; font-weight: bold;
+            background: rgba(0, 242, 255, 0.05); cursor: pointer;
+            text-transform: uppercase; letter-spacing: 3px; margin-bottom: 20px;
         }
-        .active { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 15px var(--gold); }
 
         #cannon {
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 120px; height: 120px; border-radius: 50%; z-index: 500;
+            width: 110px; height: 110px; border-radius: 50%; z-index: 50;
             background: rgba(0, 10, 20, 0.9); border: 3px solid var(--gold);
-            color: var(--gold); font-weight: bold; display: flex; align-items: center; justify-content: center;
+            color: var(--gold); font-weight: bold; display: none; align-items: center; justify-content: center;
         }
 
-        .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
+        .cell-orb { position: absolute; border-radius: 50%; z-index: 100; }
         .cell-good { border: 2px solid var(--glow); background: rgba(0, 242, 255, 0.1); }
         .cell-evil { border: 2px solid #ff2d55; background: rgba(255, 45, 85, 0.1); }
+        
+        #status-log { font-size: 0.6rem; opacity: 0.5; margin-top: 10px; height: 1.2rem; }
     </style>
 </head>
 <body>
 
-<div id="video-container">
-    <video id="bg-video" loop muted playsinline preload="auto">
+<div id="video-viewport">
+    <video id="bg-video" loop muted playsinline>
         <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
     </video>
 </div>
 
 <div id="music-engine" style="position: absolute; top: -999px;"></div>
 
-<div id="top-deck">
-    <div id="vid-toggle" class="control-btn" onclick="activateVideo()">Video: OFF</div>
-    <div id="mus-toggle" class="control-btn" onclick="activateMusic()">Music: OFF</div>
-</div>
-
-<div id="stats" style="position:fixed; top:85px; left:20px; font-size:0.8rem;">
-    SCORE: <span id="score">0</span>
+<div id="boot-overlay">
+    <h1 style="margin-bottom: 30px; letter-spacing: 5px;">ARTEMIS PRIME</h1>
+    <div id="start-node" class="boot-btn" onclick="bootSequence()">Initialize Systems</div>
+    <div id="status-log">AWAITING INPUT...</div>
 </div>
 
 <div id="arena"></div>
@@ -73,69 +75,63 @@
     let musicPlayer, musicReady = false;
     let entities = [], score = 0;
 
-    // 1. YouTube API only for Music
+    // 1. YT API Loads first but stays quiet
     function onYouTubeIframeAPIReady() {
         musicPlayer = new YT.Player('music-engine', {
             videoId: 'qwMz1wgXokk',
             playerVars: { 'controls': 0, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1 },
-            events: { 'onReady': () => { musicReady = true; } }
+            events: { 'onReady': () => { 
+                musicReady = true; 
+                document.getElementById('status-log').innerText = "AUDIO ENGINE READY";
+            } }
         });
     }
 
-    // 2. Vercel Video Activation
-    function activateVideo() {
-        const v = document.getElementById('bg-video');
-        const btn = document.getElementById('vid-toggle');
+    // 2. The Step-by-Step Boot
+    async function bootSequence() {
+        const log = document.getElementById('status-log');
+        const btn = document.getElementById('start-node');
         
-        if (v.paused) {
-            v.play();
-            v.style.opacity = "1";
-            btn.innerText = "Video: ON";
-            btn.classList.add('active');
-        } else {
-            v.pause();
-            v.style.opacity = "0";
-            btn.innerText = "Video: OFF";
-            btn.classList.remove('active');
-        }
-    }
-
-    // 3. Music Activation
-    function activateMusic() {
-        const btn = document.getElementById('mus-toggle');
+        btn.style.display = 'none';
+        
+        // STEP A: UNLOCK AUDIO
+        log.innerText = "BOOTING AUDIO...";
         if (musicReady) {
-            // Check if playing by state (YT.PlayerState.PLAYING = 1)
-            if (musicPlayer.getPlayerState() !== 1) {
-                musicPlayer.unMute();
-                musicPlayer.playVideo();
-                btn.innerText = "Music: ON";
-                btn.classList.add('active');
-            } else {
-                musicPlayer.pauseVideo();
-                btn.innerText = "Music: OFF";
-                btn.classList.remove('active');
-            }
+            musicPlayer.unMute();
+            musicPlayer.playVideo();
         }
+
+        // STEP B: UNLOCK VIDEO (Wait 1 second for audio stability)
+        await new Promise(r => setTimeout(r, 1000));
+        log.innerText = "BOOTING VIDEO ENGINE...";
+        const v = document.getElementById('bg-video');
+        v.style.display = 'block';
+        try {
+            await v.play();
+            log.innerText = "VIDEO STABLE";
+        } catch(e) {
+            log.innerText = "VIDEO BYPASS TRIGGERED";
+        }
+
+        // STEP C: UNLOCK GAME
+        await new Promise(r => setTimeout(r, 1000));
+        document.getElementById('boot-overlay').style.display = 'none';
+        document.getElementById('cannon').style.display = 'flex';
+        spawnLoop();
     }
 
-    // 4. Combat Logic
+    // 3. Game Engine
     function deploy() {
-        // Human gesture can also trigger video if user hasn't yet
-        const v = document.getElementById('bg-video');
-        if (v.paused && v.style.opacity === "1") v.play();
-
         entities.push(new Entity('good'));
-        if (score === 0) { score = 1; spawnLoop(); }
     }
 
     class Entity {
         constructor(type) {
             this.type = type;
-            this.radius = 15;
             this.x = type === 'good' ? window.innerWidth/2 : Math.random() * window.innerWidth;
-            this.y = type === 'good' ? window.innerHeight - 100 : -30;
-            this.vx = (Math.random()-0.5)*5;
-            this.vy = type === 'good' ? -7 : 3;
+            this.y = type === 'good' ? window.innerHeight - 100 : -20;
+            this.vx = (Math.random()-0.5)*4;
+            this.vy = type === 'good' ? -6 : 3;
             this.el = document.createElement('div');
             this.el.className = `cell-orb cell-${type}`;
             this.el.style.width = '30px'; this.el.style.height = '30px';
@@ -150,7 +146,7 @@
 
     function spawnLoop() {
         entities.push(new Entity('evil'));
-        setTimeout(spawnLoop, 1000);
+        setTimeout(spawnLoop, 1500);
     }
 
     function loop() {
@@ -160,7 +156,6 @@
                 entities[i].el.remove(); entities.splice(i, 1);
             }
         }
-        document.getElementById('score').innerText = score;
         requestAnimationFrame(loop);
     }
     loop();
