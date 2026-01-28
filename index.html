@@ -24,21 +24,19 @@
             color:var(--cyan); touch-action: none;
         }
 
-        /* STUBBORN VIDEO FIX */
+        /* Full Screen Muted Background Video */
         #video-container {
             position: fixed; 
-            top: 50%; left: 50%;
-            min-width: 100%; min-height: 100%;
-            width: auto; height: auto;
-            transform: translate(-50%, -50%);
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
             z-index: -100;
             background: #000;
+            overflow: hidden;
         }
         #bg-video {
-            width: 100vw; height: 100vh;
+            width: 100%; height: 100%;
             object-fit: cover;
-            filter: brightness(0.6) contrast(1.2);
-            display: block;
+            filter: brightness(0.5) contrast(1.1);
         }
 
         #landing-overlay {
@@ -47,12 +45,12 @@
             cursor: pointer; transition: opacity 0.8s ease-out;
         }
         #landing-overlay.hidden { opacity: 0; pointer-events: none; }
-        #rain-canvas { position: absolute; inset: 0; z-index: 1; opacity: 0.5; }
-        #landing-text { z-index: 2; text-shadow: 0 0 20px var(--cyan); font-weight: bold; font-size: 1.2rem; }
+        #rain-canvas { position: absolute; inset: 0; z-index: 1; opacity: 0.4; }
+        #landing-text { z-index: 2; text-shadow: 0 0 20px var(--cyan); font-weight: bold; font-size: 1.3rem; }
 
         #ui-layer {
             position: fixed; top: 20px; left: 20px; z-index: 600;
-            background: var(--glass); padding: 10px 15px; border-radius: 4px;
+            background: var(--glass); padding: 10px 20px; border-radius: 4px;
             border: 1px solid var(--cyan); pointer-events: none;
         }
 
@@ -69,10 +67,11 @@
             color: var(--cyan); font-weight: bold; cursor: pointer;
             box-shadow: 0 0 30px var(--cyan);
         }
+        #cannon:active { transform: translateX(-50%) scale(0.9); background: var(--cyan); color: #000; }
 
         .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
-        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.2); box-shadow: 0 0 10px var(--cyan); }
-        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.2); box-shadow: 0 0 10px var(--virus-red); }
+        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.15); box-shadow: 0 0 10px var(--cyan); }
+        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.15); box-shadow: 0 0 10px var(--virus-red); }
     </style>
 </head>
 <body>
@@ -102,17 +101,24 @@
     let score = 0, level = 1, gameActive = false;
     let entities = [];
 
+    // YouTube Iframe API for the music playlist
     function onYouTubeIframeAPIReady() {
         musicPlayer = new YT.Player('music-player', {
             videoId: 'qwMz1wgXokk',
-            playerVars: { 'autoplay': 1, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'mute': 1 },
+            playerVars: { 
+                'autoplay': 1, 
+                'loop': 1, 
+                'playlist': 'qwMz1wgXokk', 
+                'mute': 1,
+                'controls': 0
+            },
             events: { 'onReady': (e) => e.target.playVideo() }
         });
     }
 
-    // Digital Rain
+    // Digital Rain Effect for Landing
     const rainCanvas = document.getElementById('rain-canvas');
-    const rainCtx = rainCanvas.getContext('2d');
+    const rCtx = rainCanvas.getContext('2d');
     let drops = [];
     function initRain() {
         rainCanvas.width = window.innerWidth;
@@ -120,30 +126,33 @@
         drops = Array(Math.floor(window.innerWidth/20)).fill(1);
     }
     function drawRain() {
-        rainCtx.fillStyle = 'rgba(0,0,0,0.1)';
-        rainCtx.fillRect(0,0,rainCanvas.width, rainCanvas.height);
-        rainCtx.fillStyle = '#00f2ff';
-        rainCtx.font = '15px monospace';
+        rCtx.fillStyle = 'rgba(0,0,0,0.1)';
+        rCtx.fillRect(0,0,rainCanvas.width, rainCanvas.height);
+        rCtx.fillStyle = '#00f2ff';
+        rCtx.font = '15px monospace';
         drops.forEach((y, i) => {
             const text = String.fromCharCode(0x30A0 + Math.random() * 96);
-            rainCtx.fillText(text, i * 20, y * 20);
+            rCtx.fillText(text, i * 20, y * 20);
             if (y * 20 > rainCanvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
         });
     }
-    const rainInt = setInterval(drawRain, 50);
+    const rainTimer = setInterval(drawRain, 50);
     initRain();
 
     function startExperience() {
-        // Force video play on user interaction (Mobile Bypass)
+        // Trigger background video (must be muted for reliability)
         const v = document.getElementById('bg-video');
-        v.play().catch(e => console.log("Video play blocked", e));
-        
+        v.muted = true;
+        v.play().catch(() => {});
+
         document.getElementById('landing-overlay').classList.add('hidden');
-        clearInterval(rainInt);
+        clearInterval(rainTimer);
         
+        // Unmute the YouTube Music specifically
         if (musicPlayer) { 
             musicPlayer.unMute(); 
+            musicPlayer.setVolume(80);
             musicPlayer.playVideo(); 
         }
         
@@ -158,10 +167,9 @@
             this.x = x; this.y = y;
             this.radius = 18;
             this.health = 100;
-            // Red cells now have high mobility
-            this.baseSpeed = (type === 'evil' ? 2 : 2.5) + (level * 0.5);
+            this.speed = (type === 'evil' ? 2 : 3) + (level * 0.4);
             this.vx = (Math.random() - 0.5) * 6;
-            this.vy = type === 'good' ? -this.baseSpeed : this.baseSpeed;
+            this.vy = type === 'good' ? -this.speed : this.speed;
             
             this.el = document.createElement('div');
             this.el.className = `cell-orb cell-${type}`;
@@ -170,42 +178,33 @@
             document.getElementById('orbital-canvas').appendChild(this.el);
         }
 
-        update(goods) {
-            if (this.type === 'evil') {
-                if (goods.length > 0) {
-                    // Aggressive Pursuit AI
-                    let target = goods[0];
-                    let minDist = Math.hypot(this.x - target.x, this.y - target.y);
-                    goods.forEach(g => {
-                        let d = Math.hypot(this.x - g.x, this.y - g.y);
-                        if (d < minDist) { minDist = d; target = g; }
-                    });
-                    
-                    const angle = Math.atan2(target.y - this.y, target.x - this.x);
-                    const force = 0.2 + (level * 0.1);
-                    this.vx += Math.cos(angle) * force;
-                    this.vy += Math.sin(angle) * force;
-                } else {
-                    // If no goods, keep moving down and patrol
-                    if (this.y > window.innerHeight) this.vy = -Math.abs(this.vy);
-                    if (this.y < 0) this.vy = Math.abs(this.vy);
-                }
+        update(targets) {
+            if (this.type === 'evil' && targets.length > 0) {
+                // Predator AI
+                let target = targets[0];
+                let minDist = Math.hypot(this.x - target.x, this.y - target.y);
+                targets.forEach(t => {
+                    let d = Math.hypot(this.x - t.x, this.y - t.y);
+                    if (d < minDist) { minDist = d; target = t; }
+                });
 
-                // Speed Cap (Increases with level)
-                const speed = Math.hypot(this.vx, this.vy);
-                const max = 4 + (level * 0.8);
-                if (speed > max) {
-                    this.vx = (this.vx / speed) * max;
-                    this.vy = (this.vy / speed) * max;
-                }
+                const angle = Math.atan2(target.y - this.y, target.x - this.x);
+                const accel = 0.2 + (level * 0.08);
+                this.vx += Math.cos(angle) * accel;
+                this.vy += Math.sin(angle) * accel;
+                
+                // Speed Cap increases with level
+                const s = Math.hypot(this.vx, this.vy);
+                const max = 4 + (level * 0.7);
+                if (s > max) { this.vx = (this.vx / s) * max; this.vy = (this.vy / s) * max; }
             }
 
             this.x += this.vx; this.y += this.vy;
-            
-            // Wall bounce
             if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
-            // Vertical wrapping/bouncing for Reds to prevent staying on one side
-            if (this.type === 'evil' && this.y > window.innerHeight + 50) this.y = -40;
+            
+            // Loop evil cells if they miss targets
+            if (this.type === 'evil' && this.y > window.innerHeight + 50) this.y = -50;
+            if (this.type === 'good' && this.y < -50) this.y = window.innerHeight + 50;
 
             this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
         }
@@ -215,14 +214,14 @@
         e.preventDefault();
         if(!gameActive) return;
         entities.push(new Entity(window.innerWidth/2, window.innerHeight - 80, 'good'));
-    });
+    }, {passive: false});
 
     function autoSpawner() {
         if(gameActive) {
             entities.push(new Entity(Math.random() * window.innerWidth, window.innerHeight + 20, 'good'));
             entities.push(new Entity(Math.random() * window.innerWidth, -40, 'evil'));
         }
-        const delay = Math.max(250, 1100 - (level * 150));
+        const delay = Math.max(200, 1000 - (level * 120));
         setTimeout(autoSpawner, delay);
     }
 
@@ -231,13 +230,13 @@
         const goods = entities.filter(e => e.type === 'good');
         
         entities.forEach((ent, i) => {
-            ent.update(goods);
+            ent.update(ent.type === 'evil' ? goods : []);
             
             entities.forEach((other, j) => {
                 if (ent.type !== other.type) {
                     const dist = Math.hypot(ent.x - other.x, ent.y - other.y);
                     if (dist < ent.radius + other.radius) {
-                        ent.health -= 20; other.health -= 20;
+                        ent.health -= 25; other.health -= 25;
                         if (ent.health <= 0) {
                             ent.el.remove(); entities.splice(i, 1);
                             if(other.type === 'good') { score += 10; updateLevel(); }
@@ -255,9 +254,9 @@
     }
 
     function updateLevel() {
-        const nextLvl = Math.floor(score / 500) + 1;
-        if(nextLvl !== level) {
-            level = nextLvl;
+        const next = Math.floor(score / 500) + 1;
+        if(next !== level) {
+            level = next;
             document.getElementById('level').textContent = level;
         }
     }
