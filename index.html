@@ -4,176 +4,144 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>Artemis • Oracle</title>
+    <title>Artemis Prime</title>
     <style>
-        :root { --glow: #00f2ff; --gold: #d4af37; --red: #ff2d55; }
+        :root { --blue: #00f2ff; --gold: #d4af37; --red: #ff2d55; }
         * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; touch-action:none; }
-        body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: 'Courier New', monospace; }
+        body { background:#000; overflow:hidden; font-family: sans-serif; }
 
         /* THE ORACLE WINDOW */
-        #oracle-container {
+        #oracle {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 280px; height: 280px; border-radius: 50%;
-            border: 4px solid var(--gold); box-shadow: 0 0 30px rgba(212, 175, 55, 0.4);
+            width: 260px; height: 260px; border-radius: 50%;
+            border: 4px solid var(--gold); box-shadow: 0 0 40px rgba(212, 175, 55, 0.4);
             z-index: 5; overflow: hidden; background: #000;
         }
-        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.2); opacity: 0; transition: opacity 2s; }
+        #bg-video { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: 1s; }
 
-        /* UI & GAMEPLAY */
-        #arena { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
-        #hud { position: fixed; top: 20px; left: 20px; color: var(--glow); font-size: 0.7rem; z-index: 100; border: 1px solid var(--glow); padding: 8px; background: rgba(0,0,0,0.8); }
-        
-        #boot-screen {
-            position: fixed; inset: 0; z-index: 500; background: #000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .boot-btn { border: 2px solid var(--glow); color: var(--glow); padding: 25px 50px; background: rgba(0,242,255,0.1); cursor: pointer; font-weight: bold; }
-
+        /* UI */
+        #hud { position: fixed; top: 40px; width: 100%; text-align: center; color: var(--blue); font-weight: bold; font-size: 1.2rem; z-index: 100; text-shadow: 0 0 10px #000; }
         #cannon {
-            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--gold);
-            z-index: 100; display: none; align-items: center; justify-content: center;
-            color: var(--gold); background: rgba(0,0,0,0.8); pointer-events: auto;
+            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
+            width: 110px; height: 110px; border-radius: 50%; border: 4px solid var(--gold);
+            z-index: 100; display: flex; align-items: center; justify-content: center;
+            color: var(--gold); background: rgba(0,0,0,0.8); font-weight: bold;
         }
 
-        .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; }
-        .cell-good { border: 2px solid var(--glow); box-shadow: 0 0 10px var(--glow); }
-        .cell-evil { border: 2px solid var(--red); box-shadow: 0 0 10px var(--red); }
+        /* CELLS */
+        .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; z-index: 10; pointer-events: none; }
+        .blue { border: 2px solid var(--blue); box-shadow: 0 0 10px var(--blue); }
+        .red { border: 2px solid var(--red); box-shadow: 0 0 10px var(--red); }
     </style>
 </head>
-<body>
+<body onclick="kickstart()">
 
-<div id="oracle-container">
-    <video id="bg-video" loop muted playsinline preload="auto">
-        <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
-    </video>
+<div id="hud">STABILITY: <span id="xp">0</span></div>
+
+<div id="oracle">
+    <video id="bg-video" loop muted playsinline><source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm"></video>
 </div>
 
 <div id="music-engine" style="position: absolute; top: -9999px;"></div>
 
-<div id="boot-screen" onclick="initializeOracle()">
-    <div class="boot-btn">OPEN ORACLE</div>
-</div>
-
-<div id="hud">STABILITY: <span id="xp">0</span> | DEGENERATE PROTOCOL: ACTIVE</div>
-<div id="cannon" onpointerdown="deploy()">DEPLOY</div>
+<div id="cannon" onpointerdown="deploy(event)">DEPLOY</div>
 <div id="arena"></div>
 
 <script>
-    let musicPlayer, musicReady = false, gameActive = false;
-    let entities = [], score = 0;
-    const ORACLE_RADIUS = 140; // 280 / 2
+    let musicPlayer, musicReady = false, active = false, score = 0, entities = [];
+    const ORACLE_R = 130; 
 
     function onYouTubeIframeAPIReady() {
         musicPlayer = new YT.Player('music-engine', {
             videoId: 'qwMz1wgXokk',
             playerVars: { 'controls': 0, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1 },
-            events: { 'onReady': () => { musicReady = true; } }
+            events: { 'onReady': () => musicReady = true }
         });
     }
 
-    function initializeOracle() {
+    function kickstart() {
+        if(active) return;
+        active = true;
         const v = document.getElementById('bg-video');
-        v.play();
-        v.style.opacity = "1";
-
-        if (musicReady) {
-            musicPlayer.unMute();
-            musicPlayer.playVideo();
-        }
-
-        document.getElementById('boot-screen').style.display = 'none';
-        document.getElementById('cannon').style.display = 'flex';
-        gameActive = true;
+        v.play(); v.style.opacity = 1;
+        if(musicReady) { musicPlayer.unMute(); musicPlayer.playVideo(); }
         spawnEnemy();
-        requestAnimationFrame(gameLoop);
+        loop();
     }
 
-    class Symbiote {
+    function deploy(e) {
+        e.stopPropagation();
+        if(active) entities.push(new Cell('blue'));
+    }
+
+    class Cell {
         constructor(type) {
             this.type = type;
             this.hp = 100;
-            this.radius = 15;
-            this.birthTime = Date.now();
-            this.x = type === 'good' ? window.innerWidth / 2 : Math.random() * window.innerWidth;
-            this.y = type === 'good' ? window.innerHeight - 150 : -50;
-            this.vx = (Math.random() - 0.5) * 4;
-            this.vy = type === 'good' ? -4 : 4;
-            
+            this.born = Date.now();
+            this.r = 16;
+            this.x = type === 'blue' ? window.innerWidth/2 : Math.random()*window.innerWidth;
+            this.y = type === 'blue' ? window.innerHeight-160 : -50;
+            this.vx = (Math.random()-0.5)*6;
+            this.vy = type === 'blue' ? -5 : 5;
             this.el = document.createElement('div');
-            this.el.className = `cell cell-${type}`;
-            this.el.style.width = '30px'; this.el.style.height = '30px';
+            this.el.className = `cell ${type}`;
+            this.el.style.width = this.el.style.height = '32px';
             document.getElementById('arena').appendChild(this.el);
         }
 
-        update(rivals) {
-            // 20-Second Degeneration
-            let age = (Date.now() - this.birthTime) / 1000;
-            if (age > 20) { this.hp -= 0.5; } // Rapidly die after 20s
+        update(others) {
+            // Degenerate after 20s
+            if ((Date.now() - this.born) > 20000) this.hp -= 0.6;
 
-            // Oracle Boundary Collision
-            let dx = this.x - (window.innerWidth / 2);
-            let dy = this.y - (window.innerHeight / 2);
+            // Oracle Bounce
+            let dx = this.x - (window.innerWidth/2);
+            let dy = this.y - (window.innerHeight/2);
             let dist = Math.hypot(dx, dy);
-
-            if (dist < ORACLE_RADIUS + this.radius) {
+            if (dist < ORACLE_R + this.r) {
                 let angle = Math.atan2(dy, dx);
-                this.vx = Math.cos(angle) * 5;
-                this.vy = Math.sin(angle) * 5;
-                // Move out of collision
-                this.x = (window.innerWidth / 2) + Math.cos(angle) * (ORACLE_RADIUS + this.radius + 1);
-                this.y = (window.innerHeight / 2) + Math.sin(angle) * (ORACLE_RADIUS + this.radius + 1);
+                this.vx = Math.cos(angle) * 6;
+                this.vy = Math.sin(angle) * 6;
+                this.x = (window.innerWidth/2) + Math.cos(angle)*(ORACLE_R + this.r + 2);
+                this.y = (window.innerHeight/2) + Math.sin(angle)*(ORACLE_R + this.r + 2);
             }
 
-            // Predator AI
-            if (rivals.length > 0) {
-                let target = rivals[0];
-                let angle = Math.atan2(target.y - this.y, target.x - this.x);
-                this.vx += Math.cos(angle) * 0.2;
-                this.vy += Math.sin(angle) * 0.2;
+            // Simple Homing
+            let target = others.find(o => o.type !== this.type);
+            if(target) {
+                this.vx += (target.x - this.x) * 0.01;
+                this.vy += (target.y - this.y) * 0.01;
             }
 
             this.x += this.vx; this.y += this.vy;
-            if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
-            this.el.style.transform = `translate(${this.x - 15}px, ${this.y - 15}px)`;
+            if(this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
+            this.el.style.transform = `translate(${this.x-16}px,${this.y-16}px)`;
             this.el.innerText = Math.ceil(this.hp);
         }
     }
 
-    function deploy() { if(gameActive) entities.push(new Symbiote('good')); }
     function spawnEnemy() {
-        if(gameActive) {
-            entities.push(new Symbiote('evil'));
-            setTimeout(spawnEnemy, 2500);
-        }
+        if(active) { entities.push(new Cell('red')); setTimeout(spawnEnemy, 2500); }
     }
 
-    function gameLoop() {
-        if (!gameActive) return;
-
-        for (let i = entities.length - 1; i >= 0; i--) {
-            let ent = entities[i];
-            let rivals = entities.filter(e => e.type !== ent.type);
-            ent.update(rivals);
-
-            rivals.forEach(rival => {
-                if (Math.hypot(ent.x - rival.x, ent.y - rival.y) < 30) {
-                    ent.hp -= 1.5;
-                    if (ent.hp <= 0) {
-                        ent.el.remove();
-                        entities.splice(i, 1);
-                        if(ent.type === 'evil') score += 10;
-                    }
+    function loop() {
+        for(let i=entities.length-1; i>=0; i--) {
+            let c = entities[i];
+            c.update(entities);
+            
+            entities.forEach(other => {
+                if(c.type !== other.type && Math.hypot(c.x-other.x, c.y-other.y) < 32) {
+                    c.hp -= 2;
                 }
             });
 
-            if (ent.hp <= 0 || ent.y < -300 || ent.y > window.innerHeight + 300) {
-                ent.el.remove();
-                entities.splice(i, 1);
+            if(c.hp <= 0 || c.y > window.innerHeight + 100 || c.y < -200) {
+                if(c.hp <= 0 && c.type === 'red') score += 10;
+                c.el.remove(); entities.splice(i, 1);
             }
         }
         document.getElementById('xp').innerText = score;
-        requestAnimationFrame(gameLoop);
+        requestAnimationFrame(loop);
     }
 </script>
 </body>
