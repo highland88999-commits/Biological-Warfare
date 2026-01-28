@@ -24,15 +24,21 @@
             color:var(--cyan); touch-action: none;
         }
 
-        /* FIXED BACKGROUND - High Performance */
+        /* STUBBORN VIDEO FIX */
         #video-container {
-            position: fixed; inset: 0; z-index: -100;
-            background: #000; pointer-events: none;
+            position: fixed; 
+            top: 50%; left: 50%;
+            min-width: 100%; min-height: 100%;
+            width: auto; height: auto;
+            transform: translate(-50%, -50%);
+            z-index: -100;
+            background: #000;
         }
         #bg-video {
             width: 100vw; height: 100vh;
             object-fit: cover;
-            filter: brightness(0.5) contrast(1.1);
+            filter: brightness(0.6) contrast(1.2);
+            display: block;
         }
 
         #landing-overlay {
@@ -41,42 +47,38 @@
             cursor: pointer; transition: opacity 0.8s ease-out;
         }
         #landing-overlay.hidden { opacity: 0; pointer-events: none; }
-        #rain-canvas { position: absolute; inset: 0; z-index: 1; opacity: 0.4; }
-        #landing-text { z-index: 2; text-shadow: 0 0 20px var(--cyan); font-size: 1.4rem; font-weight: bold; }
+        #rain-canvas { position: absolute; inset: 0; z-index: 1; opacity: 0.5; }
+        #landing-text { z-index: 2; text-shadow: 0 0 20px var(--cyan); font-weight: bold; font-size: 1.2rem; }
 
-        /* UI LAYER */
         #ui-layer {
-            position: fixed; top: 15px; left: 15px; z-index: 600;
+            position: fixed; top: 20px; left: 20px; z-index: 600;
             background: var(--glass); padding: 10px 15px; border-radius: 4px;
             border: 1px solid var(--cyan); pointer-events: none;
-            font-size: 0.9rem;
         }
 
-        .gen-bar { position: fixed; left: 0; width: 100%; height: 5px; z-index: 400; }
+        .gen-bar { position: fixed; left: 0; width: 100%; height: 6px; z-index: 400; opacity: 0.8; }
         #pathogen-gen { top: 0; background: var(--virus-red); box-shadow: 0 0 15px var(--virus-red); }
         #cell-gen { bottom: 0; background: var(--cyan); box-shadow: 0 0 15px var(--cyan); }
 
-        /* BUTTON FIX */
         #cannon {
-            position: fixed; bottom: 45px; left: 50%;
-            transform: translateX(-50%); width: 110px; height: 110px;
-            z-index: 500; background: rgba(0,0,0,0.85);
-            border: 3px solid var(--cyan); border-radius: 50%;
+            position: fixed; bottom: 40px; left: 50%;
+            transform: translateX(-50%); width: 120px; height: 120px;
+            z-index: 500; background: rgba(0,0,0,0.9);
+            border: 4px solid var(--cyan); border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             color: var(--cyan); font-weight: bold; cursor: pointer;
-            box-shadow: 0 0 25px var(--cyan);
+            box-shadow: 0 0 30px var(--cyan);
         }
-        #cannon:active { transform: translateX(-50%) scale(0.9); background: var(--cyan); color: #000; }
 
         .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
-        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.1); box-shadow: 0 0 8px var(--cyan); }
-        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.1); box-shadow: 0 0 8px var(--virus-red); }
+        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.2); box-shadow: 0 0 10px var(--cyan); }
+        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.2); box-shadow: 0 0 10px var(--virus-red); }
     </style>
 </head>
 <body>
 
 <div id="video-container">
-    <video id="bg-video" autoplay loop muted playsinline>
+    <video id="bg-video" autoplay loop muted playsinline preload="auto">
         <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
     </video>
 </div>
@@ -100,7 +102,6 @@
     let score = 0, level = 1, gameActive = false;
     let entities = [];
 
-    // YouTube API for Music
     function onYouTubeIframeAPIReady() {
         musicPlayer = new YT.Player('music-player', {
             videoId: 'qwMz1wgXokk',
@@ -109,9 +110,9 @@
         });
     }
 
-    // Landing Page Rain
+    // Digital Rain
     const rainCanvas = document.getElementById('rain-canvas');
-    const ctx = rainCanvas.getContext('2d');
+    const rainCtx = rainCanvas.getContext('2d');
     let drops = [];
     function initRain() {
         rainCanvas.width = window.innerWidth;
@@ -119,24 +120,33 @@
         drops = Array(Math.floor(window.innerWidth/20)).fill(1);
     }
     function drawRain() {
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
-        ctx.fillRect(0,0,rainCanvas.width, rainCanvas.height);
-        ctx.fillStyle = '#00f2ff';
-        ctx.font = '15px monospace';
+        rainCtx.fillStyle = 'rgba(0,0,0,0.1)';
+        rainCtx.fillRect(0,0,rainCanvas.width, rainCanvas.height);
+        rainCtx.fillStyle = '#00f2ff';
+        rainCtx.font = '15px monospace';
         drops.forEach((y, i) => {
             const text = String.fromCharCode(0x30A0 + Math.random() * 96);
-            ctx.fillText(text, i * 20, y * 20);
+            rainCtx.fillText(text, i * 20, y * 20);
             if (y * 20 > rainCanvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
         });
     }
-    const rainTimer = setInterval(drawRain, 50);
+    const rainInt = setInterval(drawRain, 50);
     initRain();
 
     function startExperience() {
+        // Force video play on user interaction (Mobile Bypass)
+        const v = document.getElementById('bg-video');
+        v.play().catch(e => console.log("Video play blocked", e));
+        
         document.getElementById('landing-overlay').classList.add('hidden');
-        clearInterval(rainTimer);
-        if (musicPlayer) { musicPlayer.unMute(); musicPlayer.playVideo(); }
+        clearInterval(rainInt);
+        
+        if (musicPlayer) { 
+            musicPlayer.unMute(); 
+            musicPlayer.playVideo(); 
+        }
+        
         gameActive = true;
         autoSpawner();
         requestAnimationFrame(gameLoop);
@@ -146,12 +156,12 @@
         constructor(x, y, type) {
             this.type = type;
             this.x = x; this.y = y;
-            this.radius = 16;
+            this.radius = 18;
             this.health = 100;
-            // Progressive Difficulty
-            this.speed = (type === 'evil' ? 1.2 : 2) + (level * 0.4);
-            this.vx = (Math.random() - 0.5) * 4;
-            this.vy = type === 'good' ? -this.speed : this.speed;
+            // Red cells now have high mobility
+            this.baseSpeed = (type === 'evil' ? 2 : 2.5) + (level * 0.5);
+            this.vx = (Math.random() - 0.5) * 6;
+            this.vy = type === 'good' ? -this.baseSpeed : this.baseSpeed;
             
             this.el = document.createElement('div');
             this.el.className = `cell-orb cell-${type}`;
@@ -160,47 +170,59 @@
             document.getElementById('orbital-canvas').appendChild(this.el);
         }
 
-        update(targets) {
-            if (this.type === 'evil' && targets.length > 0) {
-                // Tracking Logic
-                let closest = targets[0];
-                let minDist = Math.hypot(this.x - closest.x, this.y - closest.y);
-                targets.forEach(t => {
-                    let d = Math.hypot(this.x - t.x, this.y - t.y);
-                    if (d < minDist) { minDist = d; closest = t; }
-                });
-                const angle = Math.atan2(closest.y - this.y, closest.x - this.x);
-                const accel = 0.1 + (level * 0.05);
-                this.vx += Math.cos(angle) * accel;
-                this.vy += Math.sin(angle) * accel;
-                
-                const currSpeed = Math.hypot(this.vx, this.vy);
-                const max = 3 + (level * 0.5);
-                if (currSpeed > max) {
-                    this.vx = (this.vx / currSpeed) * max;
-                    this.vy = (this.vy / currSpeed) * max;
+        update(goods) {
+            if (this.type === 'evil') {
+                if (goods.length > 0) {
+                    // Aggressive Pursuit AI
+                    let target = goods[0];
+                    let minDist = Math.hypot(this.x - target.x, this.y - target.y);
+                    goods.forEach(g => {
+                        let d = Math.hypot(this.x - g.x, this.y - g.y);
+                        if (d < minDist) { minDist = d; target = g; }
+                    });
+                    
+                    const angle = Math.atan2(target.y - this.y, target.x - this.x);
+                    const force = 0.2 + (level * 0.1);
+                    this.vx += Math.cos(angle) * force;
+                    this.vy += Math.sin(angle) * force;
+                } else {
+                    // If no goods, keep moving down and patrol
+                    if (this.y > window.innerHeight) this.vy = -Math.abs(this.vy);
+                    if (this.y < 0) this.vy = Math.abs(this.vy);
+                }
+
+                // Speed Cap (Increases with level)
+                const speed = Math.hypot(this.vx, this.vy);
+                const max = 4 + (level * 0.8);
+                if (speed > max) {
+                    this.vx = (this.vx / speed) * max;
+                    this.vy = (this.vy / speed) * max;
                 }
             }
+
             this.x += this.vx; this.y += this.vy;
+            
+            // Wall bounce
             if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
-            if (this.y < 0 || this.y > window.innerHeight) this.vy *= -1;
+            // Vertical wrapping/bouncing for Reds to prevent staying on one side
+            if (this.type === 'evil' && this.y > window.innerHeight + 50) this.y = -40;
+
             this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
         }
     }
 
-    // Interaction
     document.getElementById('cannon').addEventListener('touchstart', (e) => {
         e.preventDefault();
         if(!gameActive) return;
-        entities.push(new Entity(window.innerWidth/2, window.innerHeight - 60, 'good'));
+        entities.push(new Entity(window.innerWidth/2, window.innerHeight - 80, 'good'));
     });
 
     function autoSpawner() {
         if(gameActive) {
             entities.push(new Entity(Math.random() * window.innerWidth, window.innerHeight + 20, 'good'));
-            entities.push(new Entity(Math.random() * window.innerWidth, -20, 'evil'));
+            entities.push(new Entity(Math.random() * window.innerWidth, -40, 'evil'));
         }
-        const delay = Math.max(300, 1000 - (level * 100));
+        const delay = Math.max(250, 1100 - (level * 150));
         setTimeout(autoSpawner, delay);
     }
 
@@ -209,13 +231,13 @@
         const goods = entities.filter(e => e.type === 'good');
         
         entities.forEach((ent, i) => {
-            ent.update(ent.type === 'evil' ? goods : []);
+            ent.update(goods);
             
             entities.forEach((other, j) => {
                 if (ent.type !== other.type) {
                     const dist = Math.hypot(ent.x - other.x, ent.y - other.y);
                     if (dist < ent.radius + other.radius) {
-                        ent.health -= 15; other.health -= 15;
+                        ent.health -= 20; other.health -= 20;
                         if (ent.health <= 0) {
                             ent.el.remove(); entities.splice(i, 1);
                             if(other.type === 'good') { score += 10; updateLevel(); }
@@ -233,8 +255,11 @@
     }
 
     function updateLevel() {
-        level = Math.floor(score / 500) + 1;
-        document.getElementById('level').textContent = level;
+        const nextLvl = Math.floor(score / 500) + 1;
+        if(nextLvl !== level) {
+            level = nextLvl;
+            document.getElementById('level').textContent = level;
+        }
     }
 </script>
 </body>
