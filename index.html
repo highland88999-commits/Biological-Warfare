@@ -4,188 +4,103 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>Artemis Prime • Fullscape</title>
+    <title>Artemis Prime</title>
     <style>
         :root { --blue: #00f2ff; --gold: #d4af37; --red: #ff2d55; }
         * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; touch-action:none; }
-        body { background:#000; overflow:hidden; font-family: 'Courier New', monospace; }
+        body { background:#000; overflow:hidden; font-family: monospace; }
 
-        /* FULL SCREEN BACKGROUND ENGINE */
-        #bg-container {
-            position: fixed; inset: 0; z-index: -1; 
-            background: #000; pointer-events: none;
-        }
-        #bg-video { 
-            width: 100%; height: 100%; object-fit: cover; 
-            filter: brightness(0.4) contrast(1.1);
-            opacity: 0; transition: opacity 2s ease-in;
-        }
+        /* LAYER 1: VIDEO */
+        #bg-wrap { position: fixed; inset: 0; z-index: -1; }
+        #bg-render { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 2s; }
 
-        /* HUD & UI */
-        #hud { 
-            position: fixed; top: 40px; width: 100%; text-align: center; 
-            color: var(--blue); font-weight: bold; font-size: 1.1rem; 
-            z-index: 100; text-shadow: 0 0 10px rgba(0,0,0,1);
-        }
+        /* LAYER 2: UI */
+        #hud { position: fixed; top: 40px; width: 100%; text-align: center; color: var(--blue); z-index: 100; font-size: 1.2rem; }
+        #boot { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; align-items: center; justify-content: center; }
+        .btn { border: 2px solid var(--blue); color: var(--blue); padding: 20px 40px; cursor: pointer; letter-spacing: 5px; background: none; font-family: inherit; }
         
-        #boot-screen {
-            position: fixed; inset: 0; z-index: 1000; background: #000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .boot-btn { 
-            border: 2px solid var(--blue); color: var(--blue); padding: 25px 50px; 
-            background: rgba(0,242,255,0.05); cursor: pointer; letter-spacing: 5px;
-        }
-
         #cannon {
             position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
             width: 110px; height: 110px; border-radius: 50%; border: 4px solid var(--gold);
             z-index: 100; display: none; align-items: center; justify-content: center;
-            background: rgba(0, 10, 20, 0.9); color: var(--gold); font-weight: bold;
+            background: rgba(0,0,0,0.8); color: var(--gold); font-weight: bold;
         }
 
-        /* GAMEPLAY ELEMENTS */
-        .cell { 
-            position: absolute; border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; font-size: 10px; font-weight: bold; color: #fff; 
-            z-index: 10; pointer-events: none;
-        }
-        .blue { border: 2px solid var(--blue); box-shadow: 0 0 15px var(--blue); }
-        .red { border: 2px solid var(--red); box-shadow: 0 0 15px var(--red); }
+        /* LAYER 3: CELLS */
+        .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; z-index: 10; }
+        .blue { border: 2px solid var(--blue); box-shadow: 0 0 10px var(--blue); }
+        .red { border: 2px solid var(--red); box-shadow: 0 0 10px var(--red); }
     </style>
 </head>
 <body>
 
-<div id="boot-screen" onclick="launchArtemis()">
-    <div class="boot-btn">LOAD REMOTE ASSETS</div>
-</div>
-
+<div id="boot"><button class="btn" id="start-btn">ENGAGE</button></div>
 <div id="hud">CORE STABILITY: <span id="xp">0</span>%</div>
-
-<div id="bg-container">
-    <video id="bg-video" loop muted playsinline></video>
-</div>
-
-<div id="music-host" style="position:absolute; top:-999px;"></div>
-
-<div id="cannon" onpointerdown="deploy(event)">DEPLOY</div>
+<div id="bg-wrap"><video id="bg-render" loop muted playsinline></video></div>
+<div id="music-host" style="display:none"></div>
+<div id="cannon">DEPLOY</div>
 <div id="arena"></div>
 
-<script>
-    let active = false, score = 0, entities = [], musicPlayer;
-    
-    // Remote Asset Links
-    const ASSETS = {
-        video: "https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm",
-        music: "qwMz1wgXokk"
-    };
+<script type="module">
+    import { loadBackground, initMusic, startAudio } from './media-controller.js';
 
-    function onYouTubeIframeAPIReady() {
-        musicPlayer = new YT.Player('music-host', {
-            videoId: ASSETS.music,
-            playerVars: { 'controls': 0, 'loop': 1, 'playlist': ASSETS.music, 'playsinline': 1 }
-        });
-    }
+    let active = false, score = 0, entities = [];
 
-    async function launchArtemis() {
+    // Initialize Audio Engine immediately
+    initMusic('music-host');
+
+    document.getElementById('start-btn').addEventListener('click', () => {
         if(active) return;
         
-        // 1. Trigger Full Screen Video
-        const v = document.getElementById('bg-video');
-        v.src = ASSETS.video;
-        try {
-            await v.play();
-            v.style.opacity = 1;
-        } catch(e) { console.warn("Autoplay blocked:", e); }
+        // Call external media functions
+        loadBackground('bg-render');
+        startAudio();
 
-        // 2. Trigger Music
-        if(musicPlayer && musicPlayer.playVideo) {
-            musicPlayer.unMute();
-            musicPlayer.playVideo();
-        }
-
-        // 3. Reveal Game
-        document.getElementById('boot-screen').style.display = 'none';
+        document.getElementById('boot').style.display = 'none';
         document.getElementById('cannon').style.display = 'flex';
         active = true;
-        spawnLoop();
+        spawnEnemy();
         gameLoop();
-    }
+    });
 
+    // Game Logic
     class Cell {
         constructor(type) {
             this.type = type;
             this.hp = 100;
             this.born = Date.now();
-            this.r = 16;
-            this.x = type === 'blue' ? window.innerWidth / 2 : Math.random() * window.innerWidth;
-            this.y = type === 'blue' ? window.innerHeight - 180 : -50;
-            this.vx = (Math.random() - 0.5) * 6;
-            this.vy = type === 'blue' ? -5 : 4;
-            
+            this.x = type === 'blue' ? window.innerWidth/2 : Math.random()*window.innerWidth;
+            this.y = type === 'blue' ? window.innerHeight-180 : -50;
+            this.vx = (Math.random()-0.5)*8;
+            this.vy = type === 'blue' ? -5 : 5;
             this.el = document.createElement('div');
             this.el.className = `cell ${type}`;
             this.el.style.width = this.el.style.height = '32px';
             document.getElementById('arena').appendChild(this.el);
         }
 
-        update(others) {
-            // 20s Degeneration
-            if (Date.now() - this.born > 20000) {
-                this.hp -= 0.8; 
-                this.el.style.opacity = this.hp / 100;
-            }
-
-            // Boundary Bounce (Screen edges)
-            if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
-
-            // Simple Aggressive AI
-            let target = others.find(o => o.type !== this.type);
-            if (target) {
-                let dx = target.x - this.x;
-                let dy = target.y - this.y;
-                let angle = Math.atan2(dy, dx);
-                this.vx += Math.cos(angle) * 0.15;
-                this.vy += Math.sin(angle) * 0.15;
-            }
-
+        update() {
+            // Degenerate after 20s
+            if (Date.now() - this.born > 20000) this.hp -= 0.8;
+            
             this.x += this.vx; this.y += this.vy;
-            this.el.style.transform = `translate(${this.x - 16}px, ${this.y - 16}px)`;
+            if(this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
+            this.el.style.transform = `translate(${this.x-16}px,${this.y-16}px)`;
             this.el.innerText = Math.ceil(this.hp);
         }
     }
 
-    function deploy(e) { 
-        e.stopPropagation(); 
-        if(active) entities.push(new Cell('blue')); 
-    }
+    document.getElementById('cannon').onpointerdown = () => { if(active) entities.push(new Cell('blue')); };
 
-    function spawnLoop() { 
-        if(active) { 
-            entities.push(new Cell('red')); 
-            setTimeout(spawnLoop, 3000); 
-        }
-    }
+    function spawnEnemy() { if(active) { entities.push(new Cell('red')); setTimeout(spawnEnemy, 2500); }}
 
     function gameLoop() {
-        if (!active) return;
-        
-        for (let i = entities.length - 1; i >= 0; i--) {
+        for(let i=entities.length-1; i>=0; i--) {
             let c = entities[i];
-            c.update(entities);
-            
-            // Combat Check
-            entities.forEach(other => {
-                if (c.type !== other.type && Math.hypot(c.x - other.x, c.y - other.y) < 32) {
-                    c.hp -= 1.5;
-                }
-            });
-
-            // Cleanup
-            if (c.hp <= 0 || c.y > window.innerHeight + 300 || c.y < -300) {
-                if (c.hp <= 0 && c.type === 'red') score += 10;
-                c.el.remove();
-                entities.splice(i, 1);
+            c.update();
+            if(c.hp <= 0 || c.y > window.innerHeight + 200) {
+                if(c.hp <= 0 && c.type === 'red') score += 10;
+                c.el.remove(); entities.splice(i, 1);
             }
         }
         document.getElementById('xp').innerText = score;
