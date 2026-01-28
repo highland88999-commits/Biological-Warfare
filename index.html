@@ -4,55 +4,57 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>Artemis • Master Fix</title>
+    <title>Artemis • Prime</title>
     <style>
-        :root { --glow: #00f2ff; --gold: #d4af37; }
-        * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; }
-        body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: monospace; color:var(--glow); }
+        :root { --glow: #00f2ff; --gold: #d4af37; --red: #ff2d55; }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; touch-action:none; }
+        body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: 'Courier New', monospace; color:var(--glow); }
 
-        /* THE LAYERING PUZZLE SOLVED */
-        #video-layer {
-            position: fixed; inset: 0; z-index: -1; /* Behind everything */
+        /* VIDEO ENGINE - FORCED Z-LAYER */
+        #video-viewport {
+            position: fixed; inset: 0; z-index: -100;
             background: #000; pointer-events: none;
         }
         #bg-video {
             width: 100%; height: 100%; object-fit: cover;
-            filter: brightness(0.4) contrast(1.1);
-            opacity: 0; transition: opacity 1s;
+            filter: brightness(0.4) contrast(1.2);
+            opacity: 0; transition: opacity 1.5s;
         }
 
-        #ui-layer { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
-        
-        /* OVERLAY - MUST BE TAPPED */
-        #overlay {
-            position: fixed; inset: 0; z-index: 100;
+        /* UI SYSTEM */
+        #boot-screen {
+            position: fixed; inset: 0; z-index: 1000;
             background: #000; display: flex; flex-direction: column;
             align-items: center; justify-content: center;
         }
-
-        .start-btn {
+        .prime-btn {
             border: 2px solid var(--glow); color: var(--glow);
-            padding: 25px 50px; border-radius: 10px; font-weight: bold;
-            background: rgba(0, 242, 255, 0.1); cursor: pointer;
-            text-transform: uppercase; letter-spacing: 5px;
+            padding: 30px 60px; border-radius: 5px; font-weight: bold;
+            background: rgba(0, 242, 255, 0.05); cursor: pointer;
+            text-transform: uppercase; letter-spacing: 5px; box-shadow: 0 0 20px rgba(0,242,255,0.2);
+        }
+
+        #hud {
+            position: fixed; top: 20px; left: 20px; z-index: 500;
+            font-size: 0.8rem; background: rgba(0,10,20,0.8); padding: 10px; border: 1px solid var(--glow);
         }
 
         #cannon {
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 120px; height: 120px; border-radius: 50%; z-index: 50;
-            background: rgba(0, 8, 15, 0.9); border: 3px solid var(--gold);
+            width: 120px; height: 120px; border-radius: 50%; z-index: 500;
+            background: rgba(0, 8, 15, 0.9); border: 4px solid var(--gold);
             color: var(--gold); font-weight: bold; display: none; 
-            align-items: center; justify-content: center; pointer-events: auto;
+            align-items: center; justify-content: center;
         }
 
-        .cell-orb { position: absolute; border-radius: 50%; z-index: 5; pointer-events: none; }
-        .cell-good { border: 2px solid var(--glow); background: rgba(0, 242, 255, 0.1); }
-        .cell-evil { border: 2px solid #ff2d55; background: rgba(255, 45, 85, 0.1); }
+        .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: bold; }
+        .cell-good { border: 2px solid var(--glow); box-shadow: 0 0 15px var(--glow); color: var(--glow); }
+        .cell-evil { border: 2px solid var(--red); box-shadow: 0 0 15px var(--red); color: var(--red); }
     </style>
 </head>
 <body>
 
-<div id="video-layer">
+<div id="video-viewport">
     <video id="bg-video" loop muted playsinline preload="auto">
         <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
     </video>
@@ -60,22 +62,19 @@
 
 <div id="music-engine" style="position: absolute; top: -999px;"></div>
 
-<div id="overlay">
-    <h2 style="margin-bottom: 20px; color: var(--gold);">ARTEMIS PROTOCOL</h2>
-    <div class="start-btn" onclick="masterUnlock()">INITIALIZE</div>
+<div id="boot-screen" onclick="protocolInitialize()">
+    <div class="prime-btn">INITIALIZE PROTOCOL</div>
+    <p style="margin-top:20px; font-size:0.6rem; opacity:0.5;">[ SYSTEM AWAITING HANDSHAKE ]</p>
 </div>
 
-<div id="ui-layer">
-    <div id="cannon" onclick="deploy()">DEPLOY</div>
-</div>
-
+<div id="hud">CORE STABILITY: <span id="xp">0</span>%</div>
 <div id="arena"></div>
+<div id="cannon" onpointerdown="deploy()">DEPLOY</div>
 
 <script>
-    let musicPlayer, musicReady = false;
-    let entities = [];
+    let musicPlayer, musicReady = false, gameActive = false;
+    let entities = [], score = 0;
 
-    // 1. Setup Music Engine
     function onYouTubeIframeAPIReady() {
         musicPlayer = new YT.Player('music-engine', {
             videoId: 'qwMz1wgXokk',
@@ -84,66 +83,113 @@
         });
     }
 
-    // 2. THE MASTER UNLOCK (One tap, all permissions)
-    function masterUnlock() {
-        // Unlock Video
-        const v = document.getElementById('bg-video');
-        v.play().then(() => {
-            v.style.opacity = "1";
-        }).catch(err => console.log("Video block:", err));
+    async function protocolInitialize() {
+        const video = document.getElementById('bg-video');
+        
+        // FORCE VIDEO AWAKE
+        video.muted = true;
+        try {
+            await video.play();
+            video.style.opacity = "1";
+        } catch(e) { console.log("Video fail", e); }
 
-        // Unlock Music
-        if (musicReady && musicPlayer) {
+        // FORCE MUSIC AWAKE
+        if (musicReady) {
             musicPlayer.unMute();
             musicPlayer.playVideo();
         }
 
-        // Switch UI
-        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('boot-screen').style.display = 'none';
         document.getElementById('cannon').style.display = 'flex';
-        
-        // Start Game
+        gameActive = true;
         spawnLoop();
         requestAnimationFrame(gameLoop);
     }
 
-    function deploy() {
-        entities.push(new Entity('good'));
-    }
-
-    class Entity {
+    class Symbiote {
         constructor(type) {
             this.type = type;
-            this.radius = 15;
+            this.hp = 100;
+            this.radius = 18;
             this.x = type === 'good' ? window.innerWidth / 2 : Math.random() * window.innerWidth;
-            this.y = type === 'good' ? window.innerHeight - 110 : -30;
+            this.y = type === 'good' ? window.innerHeight - 120 : -50;
             this.vx = (Math.random() - 0.5) * 4;
-            this.vy = type === 'good' ? -6 : 3;
+            this.vy = type === 'good' ? -4 : 2;
+            
             this.el = document.createElement('div');
-            this.el.className = `cell-orb cell-${type}`;
-            this.el.style.width = '30px'; this.el.style.height = '30px';
+            this.el.className = `cell cell-${type}`;
+            this.el.style.width = this.radius * 2 + 'px';
+            this.el.style.height = this.radius * 2 + 'px';
             document.getElementById('arena').appendChild(this.el);
         }
-        update() {
+
+        update(enemies) {
+            // PREDATOR AI: Seek nearest enemy
+            if (enemies.length > 0) {
+                let target = enemies[0];
+                let minDist = Math.hypot(this.x - target.x, this.y - target.y);
+                enemies.forEach(e => {
+                    let d = Math.hypot(this.x - e.x, this.y - e.y);
+                    if (d < minDist) { minDist = d; target = e; }
+                });
+
+                let angle = Math.atan2(target.y - this.y, target.x - this.x);
+                this.vx += Math.cos(angle) * 0.2;
+                this.vy += Math.sin(angle) * 0.2;
+            }
+
+            // Speed limit
+            const speed = Math.hypot(this.vx, this.vy);
+            if (speed > 5) { this.vx = (this.vx / speed) * 5; this.vy = (this.vy / speed) * 5; }
+
             this.x += this.vx; this.y += this.vy;
-            if(this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
-            this.el.style.transform = `translate(${this.x-15}px, ${this.y-15}px)`;
+            if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
+            
+            this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
+            this.el.innerText = Math.ceil(this.hp);
         }
+    }
+
+    function deploy() {
+        if(gameActive) entities.push(new Symbiote('good'));
     }
 
     function spawnLoop() {
-        entities.push(new Entity('evil'));
-        setTimeout(spawnLoop, 1500);
+        if(gameActive) {
+            entities.push(new Symbiote('evil'));
+            setTimeout(spawnLoop, 2000);
+        }
     }
 
     function gameLoop() {
-        for(let i = entities.length - 1; i >= 0; i--) {
-            entities[i].update();
-            if(entities[i].y < -100 || entities[i].y > window.innerHeight + 100) {
-                entities[i].el.remove();
+        if (!gameActive) return;
+
+        for (let i = entities.length - 1; i >= 0; i--) {
+            let ent = entities[i];
+            let enemies = entities.filter(e => e.type !== ent.type);
+            ent.update(enemies);
+
+            // Collision & Combat
+            enemies.forEach(enemy => {
+                let d = Math.hypot(ent.x - enemy.x, ent.y - enemy.y);
+                if (d < ent.radius + enemy.radius) {
+                    ent.hp -= 1; // Continuous damage on contact
+                    if (ent.hp <= 0) {
+                        ent.el.remove();
+                        entities.splice(i, 1);
+                        if(ent.type === 'evil') score++;
+                    }
+                }
+            });
+
+            // Cleanup
+            if (ent.y < -200 || ent.y > window.innerHeight + 200) {
+                ent.el.remove();
                 entities.splice(i, 1);
             }
         }
+
+        document.getElementById('xp').innerText = score;
         requestAnimationFrame(gameLoop);
     }
 </script>
