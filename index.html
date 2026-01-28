@@ -10,16 +10,25 @@
             --glow: #00f2ff;
             --gold: #d4af37;
             --virus-red: #ff2d55;
-            --ui-bg: rgba(0, 10, 20, 0.95);
+            --ui-bg: rgba(0, 8, 15, 0.9);
         }
 
-        * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
-        body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: 'Courier New', monospace; color:var(--glow); }
+        * { 
+            margin:0; padding:0; box-sizing:border-box; 
+            -webkit-user-select: none; user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body, html { 
+            width:100%; height:100%; overflow:hidden; 
+            background:#000; font-family: 'Courier New', monospace; 
+            color:var(--glow); touch-action: none;
+        }
 
-        /* RE-ENGINEERED BACKGROUND CONTAINER */
-        #nexus-bg-container {
+        /* THE NEXUS ENGINE */
+        #video-layer {
             position: fixed; inset: 0; z-index: -100;
-            background: #000; overflow: hidden; pointer-events: none;
+            background: #000; pointer-events: none; overflow: hidden;
         }
 
         #yt-bg-player {
@@ -27,49 +36,36 @@
             min-height: 100vh; min-width: 177.77vh;
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            filter: brightness(0.4) contrast(1.1);
+            filter: brightness(0.4) contrast(1.2);
             opacity: 0; transition: opacity 2s ease;
         }
 
-        /* UI ELEMENTS */
-        #landing-overlay {
+        /* UI OVERLAYS */
+        #landing-page {
             position: fixed; inset: 0; z-index: 2000;
             background: #000; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; flex-direction: column;
-        }
-        
-        #start-overlay, #win-overlay {
-            position: fixed; inset: 0; z-index: 2100;
-            background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
-            display: none; align-items: center; justify-content: center;
-        }
-
-        .holo-frame {
-            width: 85vw; max-width: 380px; padding: 30px;
-            background: var(--ui-bg); border: 2px solid var(--glow); border-radius: 20px;
-            text-align: center; box-shadow: 0 0 40px rgba(0, 242, 255, 0.2);
-        }
-
-        .btn {
-            display: block; width: 100%; margin-top: 20px; padding: 15px;
-            border-radius: 50px; border: 1px solid var(--gold); color: var(--gold);
-            text-transform: uppercase; letter-spacing: 2px; font-weight: bold;
-            background: rgba(212, 175, 55, 0.05); cursor: pointer;
+            flex-direction: column; cursor: pointer;
         }
 
         #ui-hud {
-            position: fixed; top: 15px; left: 15px; z-index: 500;
-            padding: 10px 15px; background: var(--ui-bg); border: 1px solid var(--glow);
-            font-size: 0.7rem; border-radius: 5px; display: flex; gap: 15px;
+            position: fixed; top: 20px; left: 20px; z-index: 500;
+            background: var(--ui-bg); border: 1px solid var(--glow);
+            padding: 10px 15px; border-radius: 5px; font-size: 0.8rem;
+            display: flex; gap: 15px; pointer-events: none;
         }
 
+        /* THE TRIGGER BUTTON */
         #cannon {
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            width: 100px; height: 100px; border-radius: 50%; z-index: 500;
-            background: var(--ui-bg); border: 3px solid var(--gold);
-            color: var(--gold); font-weight: bold; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 20px var(--gold);
+            position: fixed; bottom: 40px; left: 50%;
+            transform: translateX(-50%); width: 130px; height: 130px;
+            z-index: 1000; background: var(--ui-bg);
+            border: 4px solid var(--gold); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--gold); font-weight: bold; font-size: 1.1rem;
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+            text-align: center; line-height: 1;
         }
+        #cannon:active { transform: translateX(-50%) scale(0.92); }
 
         .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
         .cell-good { border: 2px solid var(--glow); background: rgba(0, 242, 255, 0.1); }
@@ -78,101 +74,86 @@
 </head>
 <body>
 
-<div id="nexus-bg-container">
+<div id="video-layer">
     <div id="yt-bg-player"></div>
 </div>
 
 <div id="music-player" style="position: absolute; top: -9999px;"></div>
 
-<div id="landing-overlay" onclick="activateSystems()">
-    <h1 style="letter-spacing: 10px; font-size: 1.5rem;">INITIALIZE</h1>
-    <p style="font-size: 0.6rem; margin-top: 15px; opacity: 0.5;">TAP TO ESTABLISH LINK</p>
-</div>
-
-<div id="start-overlay">
-    <div class="holo-frame">
-        <h2 style="color:var(--gold);">LINK ESTABLISHED</h2>
-        <p style="font-size: 0.7rem; margin: 15px 0;">Deploy symbiotic cells to neutralize pathogens.</p>
-        <div class="btn" onclick="startGame()">⚡ BEGIN PROTOCOL</div>
-    </div>
-</div>
-
-<div id="win-overlay">
-    <div class="holo-frame">
-        <h2 style="color:var(--gold);">LEVEL 100 REACHED</h2>
-        <p id="win-code" style="margin: 15px 0; color: var(--glow);"></p>
-        <div class="btn" onclick="location.reload()">REBOOT</div>
-    </div>
+<div id="landing-page" onclick="this.style.display='none'">
+    <h1 style="letter-spacing: 8px;">ARTEMIS PRIME</h1>
+    <p style="margin-top: 15px; font-size: 0.7rem; opacity: 0.6;">TAP TO LOAD INTERFACE</p>
 </div>
 
 <div id="ui-hud">
-    <span>LVL: <span id="lvl">1</span></span>
-    <span>XP: <span id="xp">0</span></span>
+    <span>LEVEL: <span id="lvl">1</span></span>
+    <span>SCORE: <span id="xp">0</span></span>
 </div>
 
-<div id="orbital-field"></div>
-<div id="cannon">DEPLOY</div>
+<div id="arena"></div>
+<div id="cannon">DEPLOY<br>CELL</div>
 
 <script>
-    let bgPlayer, musicPlayer;
-    let gameActive = false, score = 0, level = 1, entities = [];
+    let bgPlayer, musicPlayer, engineUnlocked = false, gameActive = true;
+    let entities = [];
+    let score = 0, level = 1;
 
-    // 1. ASYNC API SETUP
+    // YOUTUBE API SETUP
     function onYouTubeIframeAPIReady() {
-        // Pre-create the background but don't force play yet
         bgPlayer = new YT.Player('yt-bg-player', {
             videoId: 'JBVeJ5ZYENc',
-            playerVars: { 
-                'autoplay': 0, 'controls': 0, 'mute': 1, 'loop': 1, 
-                'playlist': 'JBVeJ5ZYENc', 'playsinline': 1, 'rel': 0 
-            },
-            events: {
-                'onReady': (e) => { e.target.mute(); },
-                'onStateChange': (e) => { if(e.data === YT.PlayerState.PLAYING) document.getElementById('yt-bg-player').style.opacity = '1'; }
-            }
+            playerVars: { 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc', 'playsinline': 1, 'rel': 0 },
+            events: { 'onStateChange': (e) => { if(e.data === 1) document.getElementById('yt-bg-player').style.opacity = '1'; } }
         });
 
         musicPlayer = new YT.Player('music-player', {
             videoId: 'qwMz1wgXokk',
-            playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1 }
+            playerVars: { 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1, 'controls': 0 }
         });
     }
 
-    // 2. HYDRATION: User tap unlocks media engine
-    function activateSystems() {
-        if(bgPlayer && bgPlayer.playVideo) bgPlayer.playVideo();
-        if(musicPlayer && musicPlayer.playVideo) {
-            musicPlayer.unMute();
-            musicPlayer.playVideo();
-        }
+    // THE DEPLOY BUTTON (THE KEY TO THE PUZZLE)
+    const cannon = document.getElementById('cannon');
+    
+    cannon.addEventListener('touchstart', (e) => {
+        e.preventDefault();
         
-        document.getElementById('landing-overlay').style.display = 'none';
-        document.getElementById('start-overlay').style.display = 'flex';
+        // UNLOCK MEDIA ON FIRST TAP
+        if (!engineUnlocked) {
+            if (bgPlayer && bgPlayer.playVideo) bgPlayer.playVideo();
+            if (musicPlayer && musicPlayer.playVideo) {
+                musicPlayer.unMute();
+                musicPlayer.setVolume(70);
+                musicPlayer.playVideo();
+            }
+            engineUnlocked = true;
+            cannon.style.borderColor = var(--glow); // Visual confirmation
+            autoSpawner();
+        }
+
+        // SPAWN CELL REGARDLESS
+        spawnCell('good');
+    });
+
+    function spawnCell(type) {
+        entities.push(new Entity(type));
     }
 
-    function startGame() {
-        document.getElementById('start-overlay').style.display = 'none';
-        gameActive = true;
-        spawnLoop();
-        requestAnimationFrame(gameLoop);
-    }
-
-    // 3. GAME CORE
-    class Pathogen {
+    class Entity {
         constructor(type) {
             this.type = type;
-            this.radius = 15;
-            this.x = Math.random() * window.innerWidth;
-            this.y = type === 'evil' ? -20 : window.innerHeight + 20;
+            this.radius = 16;
+            this.x = type === 'good' ? window.innerWidth / 2 : Math.random() * window.innerWidth;
+            this.y = type === 'good' ? window.innerHeight - 100 : -50;
             this.health = 100;
             this.vx = (Math.random() - 0.5) * 4;
-            this.vy = type === 'evil' ? 2 + (level * 0.2) : -4;
+            this.vy = type === 'good' ? -5 : 2 + (level * 0.3);
             
             this.el = document.createElement('div');
-            this.el.className = `cell-orb cell-${type}`;
+            this.el.className = `cell-orb cell-${this.type}`;
             this.el.style.width = this.radius * 2 + 'px';
             this.el.style.height = this.radius * 2 + 'px';
-            document.getElementById('orbital-field').appendChild(this.el);
+            document.getElementById('arena').appendChild(this.el);
         }
 
         update(targets) {
@@ -188,55 +169,45 @@
         }
     }
 
-    document.getElementById('cannon').addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if(gameActive) entities.push(new Pathogen('good'));
-    });
-
-    function spawnLoop() {
-        if(gameActive) entities.push(new Pathogen('evil'));
-        setTimeout(spawnLoop, Math.max(300, 1500 - (level * 100)));
+    function autoSpawner() {
+        if(engineUnlocked) entities.push(new Entity('evil'));
+        setTimeout(autoSpawner, Math.max(400, 1500 - (level * 100)));
     }
 
     function gameLoop() {
-        if(!gameActive) return;
         let goods = entities.filter(e => e.type === 'good');
         
         for(let i = entities.length - 1; i >= 0; i--) {
             let ent = entities[i];
             ent.update(ent.type === 'evil' ? goods : []);
 
-            // Collision Check
             for(let j = entities.length - 1; j >= 0; j--) {
                 let other = entities[j];
                 if(ent.type !== other.type) {
                     let d = Math.hypot(ent.x - other.x, ent.y - other.y);
                     if(d < ent.radius + other.radius) {
                         ent.health -= 50; other.health -= 50;
-                        if(ent.health <= 0) { ent.el.remove(); entities.splice(i, 1); score += 10; updateHUD(); break; }
+                        if(ent.health <= 0) {
+                            ent.el.remove();
+                            entities.splice(i, 1);
+                            score += 10;
+                            document.getElementById('xp').textContent = score;
+                            level = Math.floor(score / 500) + 1;
+                            document.getElementById('lvl').textContent = level;
+                            break;
+                        }
                     }
                 }
             }
-            
-            // Cleanup off-screen
-            if(ent.y < -100 || ent.y > window.innerHeight + 100) {
+            if(ent.y < -150 || ent.y > window.innerHeight + 150) {
                 ent.el.remove();
                 entities.splice(i, 1);
             }
         }
         requestAnimationFrame(gameLoop);
     }
+    requestAnimationFrame(gameLoop);
 
-    function updateHUD() {
-        document.getElementById('xp').textContent = score;
-        level = Math.floor(score / 300) + 1;
-        document.getElementById('lvl').textContent = level;
-        if(level >= 100) {
-            gameActive = false;
-            document.getElementById('win-code').textContent = "XP-VALIDATED: " + Math.random().toString(36).substring(7).toUpperCase();
-            document.getElementById('win-overlay').style.display = 'flex';
-        }
-    }
 </script>
 </body>
 </html>
