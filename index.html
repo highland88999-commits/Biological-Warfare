@@ -1,131 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>Artemis Prime</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artemis</title>
     <style>
-        :root { --blue: #00f2ff; --gold: #d4af37; --red: #ff2d55; }
-        * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; touch-action:none; }
-        body { background:#000; overflow:hidden; font-family: 'Courier New', monospace; color: white; }
-
-        /* VIDEO LAYER */
-        #bg-wrap { position: fixed; inset: 0; z-index: 1; }
-        #bg-render { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.5); opacity: 0; transition: opacity 2s; }
-
-        /* LANDING PAGE OVERLAY */
-        #landing-page {
-            position: fixed; inset: 0; z-index: 1000;
-            background: rgba(0,0,0,0.6);
+        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+        #landing {
+            position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.8);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            cursor: pointer; transition: opacity 1s ease, visibility 1s;
+            color: #00f2ff; cursor: pointer; text-align: center;
         }
-        #landing-page h1 { font-size: 3rem; letter-spacing: 15px; color: var(--blue); text-shadow: 0 0 20px var(--blue); margin-bottom: 20px; }
-        #landing-page p { font-size: 1rem; letter-spacing: 5px; color: var(--gold); animate: pulse 2s infinite; }
-
-        @keyframes pulse {
-            0% { opacity: 0.4; }
-            50% { opacity: 1; }
-            100% { opacity: 0.4; }
-        }
-
-        /* GAME HUD & UI */
-        #hud { position: fixed; top: 40px; width: 100%; text-align: center; color: var(--blue); z-index: 100; font-size: 1.2rem; display: none; }
-        #cannon {
-            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
-            width: 110px; height: 110px; border-radius: 50%; border: 4px solid var(--gold);
-            z-index: 100; display: none; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.8); color: var(--gold); font-weight: bold; pointer-events: auto;
-        }
-
-        .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; z-index: 10; }
-        .blue { border: 2px solid var(--blue); box-shadow: 0 0 10px var(--blue); }
-        .red { border: 2px solid var(--red); box-shadow: 0 0 10px var(--red); }
+        #bg-video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: 2s; z-index: -1; }
+        #hud { display: none; position: fixed; top: 20px; width: 100%; text-align: center; color: #00f2ff; z-index: 10; }
     </style>
 </head>
 <body>
 
-<div id="landing-page">
-    <h1>ARTEMIS</h1>
-    <p>CLICK TO ENTER</p>
-</div>
+    <div id="landing" onclick="enterGame()">
+        <h1 style="letter-spacing: 10px;">ARTEMIS</h1>
+        <p style="color: #d4af37;">CLICK TO ENTER</p>
+    </div>
 
-<div id="hud">STABILITY: <span id="xp">0</span>%</div>
-<div id="bg-wrap"><video id="bg-render" loop muted playsinline></video></div>
-<div id="music-host" style="display:none"></div>
-<div id="cannon">DEPLOY</div>
-<div id="arena"></div>
+    <div id="hud">STABILITY: <span id="xp">0</span>%</div>
+    <video id="bg-video" loop muted playsinline></video>
+    <div id="music-host" style="display:none"></div>
 
-<script type="module">
-    import { loadBackground, initMusic, startAudio } from './media-controller.js';
+    <script src="media-controller.js"></script>
+    <script>
+        function enterGame() {
+            // Call the media file
+            ArtemisMedia.playAll('bg-video');
 
-    let active = false, score = 0, entities = [];
-
-    // Initialize media systems
-    initMusic('music-host');
-    loadBackground('bg-render');
-
-    // Enter Game Trigger
-    document.getElementById('landing-page').addEventListener('click', () => {
-        if(active) return;
-        
-        const landing = document.getElementById('landing-page');
-        landing.style.opacity = '0';
-        setTimeout(() => { landing.style.visibility = 'hidden'; }, 1000);
-
-        startAudio();
-        document.getElementById('hud').style.display = 'block';
-        document.getElementById('cannon').style.display = 'flex';
-        
-        active = true;
-        spawnEnemy();
-        gameLoop();
-    });
-
-    class Cell {
-        constructor(type) {
-            this.type = type;
-            this.hp = 100;
-            this.born = Date.now();
-            this.x = type === 'blue' ? window.innerWidth/2 : Math.random()*window.innerWidth;
-            this.y = type === 'blue' ? window.innerHeight-180 : -50;
-            this.vx = (Math.random()-0.5)*8;
-            this.vy = type === 'blue' ? -5 : 5;
-            this.el = document.createElement('div');
-            this.el.className = `cell ${type}`;
-            this.el.style.width = this.el.style.height = '32px';
-            document.getElementById('arena').appendChild(this.el);
+            // UI Swaps
+            document.getElementById('landing').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            
+            // Your Game Logic Starts Here
+            console.log("Game Engaged");
         }
-
-        update() {
-            if (Date.now() - this.born > 20000) this.hp -= 0.8;
-            this.x += this.vx; this.y += this.vy;
-            if(this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
-            this.el.style.transform = `translate(${this.x-16}px,${this.y-16}px)`;
-            this.el.innerText = Math.ceil(this.hp);
-        }
-    }
-
-    document.getElementById('cannon').onpointerdown = (e) => { 
-        e.stopPropagation();
-        if(active) entities.push(new Cell('blue')); 
-    };
-
-    function spawnEnemy() { if(active) { entities.push(new Cell('red')); setTimeout(spawnEnemy, 2500); }}
-
-    function gameLoop() {
-        for(let i=entities.length-1; i>=0; i--) {
-            let c = entities[i];
-            c.update();
-            if(c.hp <= 0 || c.y > window.innerHeight + 300) {
-                if(c.hp <= 0 && c.type === 'red') score += 10;
-                c.el.remove(); entities.splice(i, 1);
-            }
-        }
-        document.getElementById('xp').innerText = score;
-        requestAnimationFrame(gameLoop);
-    }
-</script>
+    </script>
 </body>
 </html>
