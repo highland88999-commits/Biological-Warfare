@@ -10,62 +10,54 @@
             --glow: #00f2ff;
             --gold: #d4af37;
             --virus-red: #ff2d55;
-            --ui-bg: rgba(0, 8, 15, 0.9);
+            --ui-bg: rgba(0, 10, 20, 0.9);
         }
 
-        * { 
-            margin:0; padding:0; box-sizing:border-box; 
-            -webkit-user-select: none; user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        body, html { 
-            width:100%; height:100%; overflow:hidden; 
-            background:#000; font-family: 'Courier New', monospace; 
-            color:var(--glow); touch-action: none;
-        }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+        body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: 'Courier New', monospace; color:var(--glow); }
 
-        /* THE NEXUS ENGINE */
-        #video-layer {
+        /* VIDEO ENGINE */
+        #video-viewport {
             position: fixed; inset: 0; z-index: -100;
             background: #000; pointer-events: none; overflow: hidden;
         }
-
         #yt-bg-player {
             width: 100vw; height: 56.25vw;
             min-height: 100vh; min-width: 177.77vh;
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             filter: brightness(0.4) contrast(1.2);
-            opacity: 0; transition: opacity 2s ease;
+            opacity: 0; transition: opacity 1.5s;
         }
 
-        /* UI OVERLAYS */
-        #landing-page {
-            position: fixed; inset: 0; z-index: 2000;
-            background: #000; display: flex; align-items: center; justify-content: center;
-            flex-direction: column; cursor: pointer;
+        /* CONTROL DECK (TOP) */
+        #control-deck {
+            position: fixed; top: 20px; width: 100%;
+            display: flex; justify-content: center; gap: 10px; z-index: 1000;
         }
-
-        #ui-hud {
-            position: fixed; top: 20px; left: 20px; z-index: 500;
+        .deck-btn {
             background: var(--ui-bg); border: 1px solid var(--glow);
-            padding: 10px 15px; border-radius: 5px; font-size: 0.8rem;
-            display: flex; gap: 15px; pointer-events: none;
+            color: var(--glow); padding: 10px 15px; border-radius: 5px;
+            font-size: 0.65rem; font-weight: bold; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 1px;
+            backdrop-filter: blur(5px);
+        }
+        .deck-btn.active { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 10px var(--gold); }
+
+        /* HUD (SIDES) */
+        #stats {
+            position: fixed; top: 80px; left: 20px; z-index: 500;
+            font-size: 0.8rem; pointer-events: none;
         }
 
-        /* THE TRIGGER BUTTON */
+        /* DEPLOYMENT */
         #cannon {
-            position: fixed; bottom: 40px; left: 50%;
-            transform: translateX(-50%); width: 130px; height: 130px;
-            z-index: 1000; background: var(--ui-bg);
-            border: 4px solid var(--gold); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            color: var(--gold); font-weight: bold; font-size: 1.1rem;
-            box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
-            text-align: center; line-height: 1;
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 110px; height: 110px; border-radius: 50%; z-index: 500;
+            background: var(--ui-bg); border: 3px solid var(--gold);
+            color: var(--gold); font-weight: bold; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 20px var(--gold);
         }
-        #cannon:active { transform: translateX(-50%) scale(0.92); }
 
         .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
         .cell-good { border: 2px solid var(--glow); background: rgba(0, 242, 255, 0.1); }
@@ -74,70 +66,78 @@
 </head>
 <body>
 
-<div id="video-layer">
+<div id="video-viewport">
     <div id="yt-bg-player"></div>
 </div>
 
-<div id="music-player" style="position: absolute; top: -9999px;"></div>
+<div id="music-engine" style="position: absolute; top: -999px;"></div>
 
-<div id="landing-page" onclick="this.style.display='none'">
-    <h1 style="letter-spacing: 8px;">ARTEMIS PRIME</h1>
-    <p style="margin-top: 15px; font-size: 0.7rem; opacity: 0.6;">TAP TO LOAD INTERFACE</p>
+<div id="control-deck">
+    <div id="vid-toggle" class="deck-btn" onclick="toggleVideo()">Video: Off</div>
+    <div id="mus-toggle" class="deck-btn" onclick="toggleMusic()">Music: Off</div>
 </div>
 
-<div id="ui-hud">
-    <span>LEVEL: <span id="lvl">1</span></span>
-    <span>SCORE: <span id="xp">0</span></span>
+<div id="stats">
+    LVL <span id="lvl">1</span><br>
+    SCORE <span id="xp">0</span>
 </div>
 
 <div id="arena"></div>
-<div id="cannon">DEPLOY<br>CELL</div>
+<div id="cannon">DEPLOY</div>
 
 <script>
-    let bgPlayer, musicPlayer, engineUnlocked = false, gameActive = true;
-    let entities = [];
-    let score = 0, level = 1;
+    let bgPlayer, musicPlayer;
+    let vidActive = false, musActive = false;
+    let entities = [], score = 0, level = 1;
 
-    // YOUTUBE API SETUP
     function onYouTubeIframeAPIReady() {
         bgPlayer = new YT.Player('yt-bg-player', {
             videoId: 'JBVeJ5ZYENc',
-            playerVars: { 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc', 'playsinline': 1, 'rel': 0 },
+            playerVars: { 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc', 'playsinline': 1 },
             events: { 'onStateChange': (e) => { if(e.data === 1) document.getElementById('yt-bg-player').style.opacity = '1'; } }
         });
 
-        musicPlayer = new YT.Player('music-player', {
+        musicPlayer = new YT.Player('music-engine', {
             videoId: 'qwMz1wgXokk',
-            playerVars: { 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1, 'controls': 0 }
+            playerVars: { 'controls': 0, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1 }
         });
     }
 
-    // THE DEPLOY BUTTON (THE KEY TO THE PUZZLE)
-    const cannon = document.getElementById('cannon');
-    
-    cannon.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        
-        // UNLOCK MEDIA ON FIRST TAP
-        if (!engineUnlocked) {
-            if (bgPlayer && bgPlayer.playVideo) bgPlayer.playVideo();
-            if (musicPlayer && musicPlayer.playVideo) {
-                musicPlayer.unMute();
-                musicPlayer.setVolume(70);
-                musicPlayer.playVideo();
-            }
-            engineUnlocked = true;
-            cannon.style.borderColor = var(--glow); // Visual confirmation
-            autoSpawner();
+    function toggleVideo() {
+        if (!vidActive) {
+            bgPlayer.playVideo();
+            document.getElementById('vid-toggle').textContent = "Video: On";
+            document.getElementById('vid-toggle').classList.add('active');
+            vidActive = true;
+        } else {
+            bgPlayer.pauseVideo();
+            document.getElementById('vid-toggle').textContent = "Video: Off";
+            document.getElementById('vid-toggle').classList.remove('active');
+            vidActive = false;
         }
-
-        // SPAWN CELL REGARDLESS
-        spawnCell('good');
-    });
-
-    function spawnCell(type) {
-        entities.push(new Entity(type));
     }
+
+    function toggleMusic() {
+        if (!musActive) {
+            musicPlayer.unMute();
+            musicPlayer.playVideo();
+            document.getElementById('mus-toggle').textContent = "Music: On";
+            document.getElementById('mus-toggle').classList.add('active');
+            musActive = true;
+        } else {
+            musicPlayer.pauseVideo();
+            document.getElementById('mus-toggle').textContent = "Music: Off";
+            document.getElementById('mus-toggle').classList.remove('active');
+            musActive = false;
+        }
+    }
+
+    // GAMEPLAY
+    document.getElementById('cannon').addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        entities.push(new Entity('good'));
+        if (score === 0) autoSpawner(); // Start spawning on first shot
+    });
 
     class Entity {
         constructor(type) {
@@ -147,15 +147,13 @@
             this.y = type === 'good' ? window.innerHeight - 100 : -50;
             this.health = 100;
             this.vx = (Math.random() - 0.5) * 4;
-            this.vy = type === 'good' ? -5 : 2 + (level * 0.3);
-            
+            this.vy = type === 'good' ? -6 : 2 + (level * 0.3);
             this.el = document.createElement('div');
             this.el.className = `cell-orb cell-${this.type}`;
             this.el.style.width = this.radius * 2 + 'px';
             this.el.style.height = this.radius * 2 + 'px';
             document.getElementById('arena').appendChild(this.el);
         }
-
         update(targets) {
             if (this.type === 'evil' && targets.length > 0) {
                 let t = targets[0];
@@ -170,26 +168,22 @@
     }
 
     function autoSpawner() {
-        if(engineUnlocked) entities.push(new Entity('evil'));
-        setTimeout(autoSpawner, Math.max(400, 1500 - (level * 100)));
+        entities.push(new Entity('evil'));
+        setTimeout(autoSpawner, Math.max(400, 1600 - (level * 100)));
     }
 
     function gameLoop() {
         let goods = entities.filter(e => e.type === 'good');
-        
         for(let i = entities.length - 1; i >= 0; i--) {
             let ent = entities[i];
             ent.update(ent.type === 'evil' ? goods : []);
-
             for(let j = entities.length - 1; j >= 0; j--) {
                 let other = entities[j];
                 if(ent.type !== other.type) {
-                    let d = Math.hypot(ent.x - other.x, ent.y - other.y);
-                    if(d < ent.radius + other.radius) {
+                    if(Math.hypot(ent.x - other.x, ent.y - other.y) < ent.radius + other.radius) {
                         ent.health -= 50; other.health -= 50;
                         if(ent.health <= 0) {
-                            ent.el.remove();
-                            entities.splice(i, 1);
+                            ent.el.remove(); entities.splice(i, 1);
                             score += 10;
                             document.getElementById('xp').textContent = score;
                             level = Math.floor(score / 500) + 1;
@@ -200,14 +194,12 @@
                 }
             }
             if(ent.y < -150 || ent.y > window.innerHeight + 150) {
-                ent.el.remove();
-                entities.splice(i, 1);
+                ent.el.remove(); entities.splice(i, 1);
             }
         }
         requestAnimationFrame(gameLoop);
     }
-    requestAnimationFrame(gameLoop);
-
+    gameLoop();
 </script>
 </body>
 </html>
