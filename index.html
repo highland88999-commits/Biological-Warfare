@@ -4,59 +4,76 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>Artemis • Sequential Prime</title>
+    <title>Artemis • Prime Overlay</title>
     <style>
-        :root { --glow: #00f2ff; --gold: #d4af37; --red: #ff2d55; --ui: rgba(0, 8, 15, 0.95); }
+        :root { --glow: #00f2ff; --gold: #d4af37; --red: #ff2d55; }
         * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; touch-action:none; }
-        body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: 'Courier New', monospace; color:var(--glow); }
+        body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: 'Courier New', monospace; }
 
-        /* VIDEO LAYER */
-        #video-viewport { position: fixed; inset: 0; z-index: -100; background: #000; }
-        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); opacity: 0; transition: opacity 1.5s; }
-
-        /* INTERFACE */
-        #boot-overlay {
-            position: fixed; inset: 0; z-index: 1000; background: #000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        /* LAYER 1: THE FOUNDATION (Video) */
+        #media-layer {
+            position: fixed; inset: 0; z-index: 1;
+            background: #000; pointer-events: none;
         }
-        .boot-btn {
-            border: 2px solid var(--glow); color: var(--glow); padding: 25px 50px;
-            background: rgba(0, 242, 255, 0.05); cursor: pointer; letter-spacing: 4px; font-weight: bold;
-        }
-        #status-log { margin-top: 20px; font-size: 0.7rem; color: var(--gold); height: 1.5rem; text-transform: uppercase; }
+        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); opacity: 0; transition: opacity 2s; }
 
-        #hud { position: fixed; top: 20px; left: 20px; z-index: 500; font-size: 0.8rem; padding: 10px; border: 1px solid var(--glow); background: var(--ui); border-radius: 4px; }
+        /* LAYER 2: THE GAME OVERLAY (Transparent) */
+        #game-overlay {
+            position: fixed; inset: 0; z-index: 10;
+            pointer-events: none; /* Allows clicks to pass through to buttons if needed */
+        }
+
+        /* LAYER 3: THE UI (Top) */
+        #ui-layer { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
+        
+        #boot-screen {
+            position: fixed; inset: 0; z-index: 200;
+            background: #000; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; pointer-events: auto;
+        }
+        .prime-btn {
+            border: 2px solid var(--glow); color: var(--glow);
+            padding: 30px 60px; background: rgba(0, 242, 255, 0.05);
+            cursor: pointer; letter-spacing: 5px; font-weight: bold;
+        }
+
+        #hud { position: fixed; top: 20px; left: 20px; color: var(--glow); font-size: 0.8rem; padding: 10px; border: 1px solid var(--glow); background: rgba(0,10,20,0.8); }
+        
         #cannon {
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 115px; height: 115px; border-radius: 50%; z-index: 500;
-            background: var(--ui); border: 4px solid var(--gold);
-            color: var(--gold); font-weight: bold; display: none; align-items: center; justify-content: center;
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+            width: 120px; height: 120px; border-radius: 50%;
+            background: rgba(0, 8, 15, 0.95); border: 4px solid var(--gold);
+            color: var(--gold); font-weight: bold; display: none; 
+            align-items: center; justify-content: center; pointer-events: auto;
         }
 
-        .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; pointer-events: none; }
-        .cell-good { border: 2px solid var(--glow); box-shadow: 0 0 12px var(--glow); color: var(--glow); }
-        .cell-evil { border: 2px solid var(--red); box-shadow: 0 0 12px var(--red); color: var(--red); }
+        .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: white; transition: transform 0.05s linear; }
+        .cell-good { border: 2px solid var(--glow); box-shadow: 0 0 15px var(--glow); }
+        .cell-evil { border: 2px solid var(--red); box-shadow: 0 0 15px var(--red); }
     </style>
 </head>
 <body>
 
-<div id="video-viewport">
+<div id="media-layer">
     <video id="bg-video" loop muted playsinline preload="auto">
         <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
     </video>
+    <div id="music-engine" style="position: absolute; top: -999px;"></div>
 </div>
 
-<div id="music-engine" style="position: absolute; top: -999px;"></div>
-
-<div id="boot-overlay" onclick="startSequence()">
-    <div class="boot-btn">INITIALIZE CORE</div>
-    <div id="status-log">AWAITING HANDSHAKE</div>
+<div id="game-overlay">
+    <div id="arena"></div>
 </div>
 
-<div id="hud">STABILITY: <span id="score">0</span>%</div>
-<div id="arena"></div>
-<div id="cannon" onpointerdown="deploy()">DEPLOY</div>
+<div id="ui-layer">
+    <div id="hud">CORE STABILITY: <span id="xp">0</span></div>
+    <div id="cannon" onpointerdown="deploy()">DEPLOY</div>
+</div>
+
+<div id="boot-screen" onclick="masterBoot()">
+    <div class="prime-btn">ENGAGE SYSTEMS</div>
+    <p id="boot-status" style="margin-top:20px; font-size:0.6rem; color:var(--gold); opacity:0.7;">AWAITING COMMAND</p>
+</div>
 
 <script>
     let musicPlayer, musicReady = false, gameActive = false;
@@ -70,49 +87,43 @@
         });
     }
 
-    async function startSequence() {
-        const log = document.getElementById('status-log');
-        const v = document.getElementById('bg-video');
+    async function masterBoot() {
+        const status = document.getElementById('boot-status');
+        const video = document.getElementById('bg-video');
 
-        // PHASE 1: VIDEO FIRST
-        log.innerText = "STREAMING VIDEO ENGINE...";
+        // 1. Trigger Video
+        status.innerText = "INITIALIZING VIDEO...";
         try {
-            await v.play();
-            v.style.opacity = "1";
-            log.innerText = "VIDEO STABLE";
-        } catch(e) {
-            log.innerText = "VIDEO BYPASS ENGAGED";
-        }
+            await video.play();
+            video.style.opacity = "1";
+        } catch(e) { console.log("Video Error:", e); }
 
-        // PHASE 2: DELAY FOR STABILITY
-        await new Promise(r => setTimeout(r, 1200));
-
-        // PHASE 3: TRIGGER MUSIC
-        log.innerText = "CONNECTING AUDIO UPLINK...";
-        if (musicReady && musicPlayer) {
+        // 2. Trigger Music
+        status.innerText = "SYNCHRONIZING AUDIO...";
+        if (musicReady) {
             musicPlayer.unMute();
             musicPlayer.playVideo();
-            log.innerText = "AUDIO SYNCED";
         }
 
-        // PHASE 4: ENGAGE GAME
-        await new Promise(r => setTimeout(r, 800));
-        document.getElementById('boot-overlay').style.display = 'none';
-        document.getElementById('cannon').style.display = 'flex';
-        gameActive = true;
-        spawnEnemy();
-        requestAnimationFrame(gameLoop);
+        // 3. Trigger Game
+        setTimeout(() => {
+            document.getElementById('boot-screen').style.display = 'none';
+            document.getElementById('cannon').style.display = 'flex';
+            gameActive = true;
+            spawnEnemy();
+            requestAnimationFrame(gameLoop);
+        }, 1000);
     }
 
-    class Symbiote {
+    class Organism {
         constructor(type) {
             this.type = type;
             this.hp = 100;
-            this.radius = 18;
+            this.radius = 20;
             this.x = type === 'good' ? window.innerWidth / 2 : Math.random() * window.innerWidth;
             this.y = type === 'good' ? window.innerHeight - 150 : -50;
-            this.vx = (Math.random() - 0.5) * 3;
-            this.vy = type === 'good' ? -3 : 3;
+            this.vx = (Math.random() - 0.5) * 4;
+            this.vy = type === 'good' ? -4 : 4;
             
             this.el = document.createElement('div');
             this.el.className = `cell cell-${type}`;
@@ -121,68 +132,66 @@
             document.getElementById('arena').appendChild(this.el);
         }
 
-        update(enemies) {
-            // PREDATOR AI: Attack opposition
-            if (enemies.length > 0) {
-                let target = enemies[0];
-                let min = Math.hypot(this.x - target.x, this.y - target.y);
-                enemies.forEach(e => {
-                    let d = Math.hypot(this.x - e.x, this.y - e.y);
-                    if (d < min) { min = d; target = e; }
+        update(targets) {
+            // PREDATOR AI: Track and Kill
+            if (targets.length > 0) {
+                let nearest = targets[0];
+                let minDist = Math.hypot(this.x - nearest.x, this.y - nearest.y);
+                targets.forEach(t => {
+                    let d = Math.hypot(this.x - t.x, this.y - t.y);
+                    if (d < minDist) { minDist = d; nearest = t; }
                 });
-                let angle = Math.atan2(target.y - this.y, target.x - this.x);
-                this.vx += Math.cos(angle) * 0.25;
-                this.vy += Math.sin(angle) * 0.25;
+
+                let angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
+                this.vx += Math.cos(angle) * 0.3;
+                this.vy += Math.sin(angle) * 0.3;
             }
 
-            // Speed Cap
+            // Speed Governor
             let s = Math.hypot(this.vx, this.vy);
-            if (s > 5.5) { this.vx = (this.vx/s)*5.5; this.vy = (this.vy/s)*5.5; }
+            if (s > 6) { this.vx = (this.vx/s)*6; this.vy = (this.vy/s)*6; }
 
             this.x += this.vx; this.y += this.vy;
-            if(this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
+            if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
             
             this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
             this.el.innerText = Math.ceil(this.hp);
         }
     }
 
-    function deploy() { if(gameActive) entities.push(new Symbiote('good')); }
-
+    function deploy() { if(gameActive) entities.push(new Organism('good')); }
     function spawnEnemy() {
         if(gameActive) {
-            entities.push(new Symbiote('evil'));
+            entities.push(new Organism('evil'));
             setTimeout(spawnEnemy, 2500);
         }
     }
 
     function gameLoop() {
         if (!gameActive) return;
-        
+
         for (let i = entities.length - 1; i >= 0; i--) {
             let ent = entities[i];
-            let enemies = entities.filter(e => e.type !== ent.type);
-            ent.update(enemies);
+            let rivals = entities.filter(e => e.type !== ent.type);
+            ent.update(rivals);
 
-            // Combat Check
-            enemies.forEach(enemy => {
-                if (Math.hypot(ent.x - enemy.x, ent.y - enemy.y) < ent.radius + enemy.radius) {
-                    ent.hp -= 1.2; // Constant combat drain
+            rivals.forEach(rival => {
+                if (Math.hypot(ent.x - rival.x, ent.y - rival.y) < ent.radius + rival.radius) {
+                    ent.hp -= 1.5;
                     if (ent.hp <= 0) {
                         ent.el.remove();
                         entities.splice(i, 1);
-                        if(ent.type === 'evil') score += 1;
+                        if(ent.type === 'evil') score += 10;
                     }
                 }
             });
 
-            if (ent.y < -200 || ent.y > window.innerHeight + 200) {
+            if (ent.y < -300 || ent.y > window.innerHeight + 300) {
                 ent.el.remove();
                 entities.splice(i, 1);
             }
         }
-
-        document.getElementById('score').innerText = score;
+        document.getElementById('xp').innerText = score;
         requestAnimationFrame(gameLoop);
     }
 </script>
