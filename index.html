@@ -8,7 +8,6 @@
     <style>
         :root {
             --cyan: #00f2ff;
-            --gold: #d4af37;
             --virus-red: #ff2d55;
             --disease-green: #00ff9d;
             --glass: rgba(8, 8, 25, 0.85);
@@ -16,10 +15,7 @@
 
         * { 
             margin:0; padding:0; box-sizing:border-box; 
-            /* Fixes the Google Dictionary trigger and selection popups */
-            -webkit-user-select: none; 
-            -ms-user-select: none; 
-            user-select: none;
+            -webkit-user-select: none; user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
         
@@ -29,17 +25,15 @@
             color:var(--cyan); touch-action: none;
         }
 
+        /* Enforced Full Screen Video */
         #video-container {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            z-index: -1;
+            position: fixed; inset: 0; z-index: -1;
             background: #000;
         }
         #bg-video {
-            width: 100%; height: 100%;
+            width: 100vw; height: 100vh;
             object-fit: cover;
-            filter: brightness(0.5) contrast(1.2);
+            filter: brightness(0.4) contrast(1.2);
         }
 
         #landing-overlay {
@@ -48,31 +42,40 @@
             cursor: pointer; transition: opacity 0.8s ease-out;
         }
         #landing-overlay.hidden { opacity: 0; pointer-events: none; }
+        #rain-canvas { position: absolute; inset: 0; z-index: 1; opacity: 0.5; }
+        #landing-text { z-index: 2; text-shadow: 0 0 20px var(--cyan); font-weight: bold; }
+
+        /* Generators */
+        .generator {
+            position: fixed; left: 50%; transform: translateX(-50%);
+            width: 100px; height: 10px; z-index: 400;
+            border-radius: 5px; opacity: 0.6;
+        }
+        #pathogen-gen { top: 0; background: var(--virus-red); box-shadow: 0 0 20px var(--virus-red); }
+        #cell-gen { bottom: 0; background: var(--cyan); box-shadow: 0 0 20px var(--cyan); }
 
         #cannon {
-            position: fixed; bottom: 40px; left: 50%;
-            transform: translateX(-50%); width: 140px; height: 140px;
+            position: fixed; bottom: 30px; left: 50%;
+            transform: translateX(-50%); width: 130px; height: 130px;
             z-index: 500; background: radial-gradient(circle, #000, #111);
             border: 4px solid var(--cyan); border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             color: var(--cyan); font-weight: bold; cursor: pointer;
-            box-shadow: 0 0 20px var(--cyan);
+            box-shadow: 0 0 25px var(--cyan);
         }
-        #cannon:active { transform: translateX(-50%) scale(0.92); box-shadow: 0 0 40px var(--cyan); }
+        #cannon:active { transform: translateX(-50%) scale(0.9); }
 
         .cell-orb {
             position: absolute; border-radius: 50%;
             z-index: 100; pointer-events: none;
-            display: flex; align-items: center; justify-content: center;
         }
-        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.15); box-shadow: 0 0 10px var(--cyan); }
-        .cell-virus { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.15); box-shadow: 0 0 10px var(--virus-red); }
-        .cell-disease { border: 2px solid var(--disease-green); background: rgba(0, 255, 157, 0.15); box-shadow: 0 0 10px var(--disease-green); }
+        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.1); box-shadow: 0 0 8px var(--cyan); }
+        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.1); box-shadow: 0 0 8px var(--virus-red); }
 
         #ui-layer {
             position: fixed; top: 20px; left: 20px; z-index: 600;
-            background: var(--glass); padding: 12px 20px; border-radius: 8px;
-            border: 1px solid var(--cyan); pointer-events: none;
+            background: var(--glass); padding: 10px 15px; border-radius: 5px;
+            border: 1px solid var(--cyan); pointer-events: none; font-size: 0.8rem;
         }
     </style>
 </head>
@@ -86,18 +89,46 @@
 
 <div id="ytplayer" style="position: absolute; top: -9999px;"></div>
 
-<div id="landing-overlay" onclick="startExperience()">
-    <h2 style="text-shadow: 0 0 20px var(--cyan);">TAP TO INITIALIZE</h2>
+<div id="landing-overlay">
+    <canvas id="rain-canvas"></canvas>
+    <div id="landing-text">INITIALIZE SYSTEM</div>
 </div>
 
-<div id="ui-layer">
-    LVL <span id="level">1</span> • SCORE <span id="score">0</span>
-</div>
+<div id="ui-layer">SCORE: <span id="score">0</span></div>
+
+<div id="pathogen-gen" class="generator"></div>
+<div id="cell-gen" class="generator"></div>
 
 <div id="orbital-canvas"></div>
-<div id="cannon">SPAWN CELL</div>
+<div id="cannon">DEPLOY</div>
 
 <script>
+    // Digital Rain Logic
+    const rainCanvas = document.getElementById('rain-canvas');
+    const ctx = rainCanvas.getContext('2d');
+    let drops = [];
+    function initRain() {
+        rainCanvas.width = window.innerWidth;
+        rainCanvas.height = window.innerHeight;
+        drops = Array(Math.floor(window.innerWidth/20)).fill(1);
+    }
+    function drawRain() {
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.fillRect(0,0,rainCanvas.width, rainCanvas.height);
+        ctx.fillStyle = '#00f2ff';
+        ctx.font = '15px monospace';
+        drops.forEach((y, i) => {
+            const text = String.fromCharCode(0x30A0 + Math.random() * 96);
+            ctx.fillText(text, i * 20, y * 20);
+            if (y * 20 > rainCanvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        });
+    }
+    const rainTimer = setInterval(drawRain, 50);
+    window.addEventListener('resize', initRain);
+    initRain();
+
+    // YouTube Audio Logic
     let player;
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('ytplayer', {
@@ -107,27 +138,28 @@
         });
     }
 
+    // Game Logic
     const canvas = document.getElementById('orbital-canvas');
     const cannon = document.getElementById('cannon');
-    let cells = [], enemies = [], gameActive = false, score = 0, level = 1;
+    let entities = [], score = 0, gameActive = false;
 
-    function startExperience() {
+    document.getElementById('landing-overlay').addEventListener('click', () => {
         document.getElementById('landing-overlay').classList.add('hidden');
-        if (player) { player.unMute(); player.setVolume(70); player.playVideo(); }
+        clearInterval(rainTimer);
+        if (player) { player.unMute(); player.playVideo(); }
         gameActive = true;
-        spawnEnemyLoop();
+        autoSpawn();
         requestAnimationFrame(gameLoop);
-    }
+    });
 
     class Entity {
         constructor(x, y, type) {
             this.type = type;
             this.x = x; this.y = y;
-            this.radius = 22;
+            this.radius = 18;
             this.health = 100;
-            this.vx = (Math.random() - 0.5) * 5;
-            this.vy = type === 'good' ? -4 : 2;
-            
+            this.vx = (Math.random() - 0.5) * 4;
+            this.vy = type === 'good' ? -3 : 3;
             this.el = document.createElement('div');
             this.el.className = `cell-orb cell-${type}`;
             this.el.style.width = this.radius * 2 + 'px';
@@ -142,33 +174,40 @@
         }
     }
 
+    // Manual Deploy
     cannon.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // Critical for stopping browser behaviors
+        e.preventDefault();
         if(!gameActive) return;
-        for(let i=0; i<4; i++) cells.push(new Entity(window.innerWidth/2, window.innerHeight - 120, 'good'));
-    }, {passive: false});
+        entities.push(new Entity(window.innerWidth/2, window.innerHeight - 50, 'good'));
+    });
 
-    function spawnEnemyLoop() {
+    // Auto Spawning (Balanced)
+    function autoSpawn() {
         if(gameActive) {
-            enemies.push(new Entity(Math.random() * window.innerWidth, -50, Math.random() > 0.5 ? 'virus' : 'disease'));
+            // Spawn good cell from bottom gen
+            entities.push(new Entity(Math.random() * window.innerWidth, window.innerHeight + 20, 'good'));
+            // Spawn evil cell from top gen
+            entities.push(new Entity(Math.random() * window.innerWidth, -20, 'evil'));
         }
-        setTimeout(spawnEnemyLoop, 1500 / level);
+        setTimeout(autoSpawn, 800); // Comparable rates
     }
 
     function gameLoop() {
         if (!gameActive) return;
-        cells.forEach((c, ci) => {
-            c.update();
-            enemies.forEach((e, ei) => {
-                const dist = Math.hypot(c.x - e.x, c.y - e.y);
-                if (dist < c.radius + e.radius) {
-                    e.health -= 5; c.health -= 5;
-                    if (e.health <= 0) { e.el.remove(); enemies.splice(ei, 1); score += 20; document.getElementById('score').textContent = score; }
-                    if (c.health <= 0) { c.el.remove(); cells.splice(ci, 1); }
+        entities.forEach((a, i) => {
+            a.update();
+            entities.forEach((b, j) => {
+                if (a.type !== b.type) {
+                    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+                    if (dist < a.radius + b.radius) {
+                        a.health -= 10; b.health -= 10;
+                        if (a.health <= 0) { a.el.remove(); entities.splice(i, 1); if(b.type === 'good') score += 10; }
+                        if (b.health <= 0) { b.el.remove(); entities.splice(j, 1); if(a.type === 'good') score += 10; }
+                        document.getElementById('score').textContent = score;
+                    }
                 }
             });
         });
-        enemies.forEach(e => e.update());
         requestAnimationFrame(gameLoop);
     }
 </script>
