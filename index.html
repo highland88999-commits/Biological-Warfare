@@ -4,137 +4,138 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>Artemis • Protocol Fix</title>
+    <title>Artemis • Vercel Hybrid</title>
     <style>
-        :root { --glow: #00f2ff; --gold: #d4af37; --bg: #000; }
+        :root { --glow: #00f2ff; --gold: #d4af37; }
         * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; }
-        body, html { width:100%; height:100%; overflow:hidden; background:var(--bg); font-family: monospace; color:var(--glow); }
+        body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: monospace; color:var(--glow); }
 
-        /* VIDEO ENGINE - FORCED VISIBILITY */
-        #video-viewport {
-            position: fixed; inset: 0; z-index: -1;
+        /* VERCEL VIDEO ENGINE (Direct Stream) */
+        #video-container {
+            position: fixed; inset: 0; z-index: -100;
             background: #000; pointer-events: none;
         }
-        #yt-bg-player {
-            width: 100vw; height: 56.25vw; min-height: 100vh; min-width: 177.77vh;
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            filter: brightness(0.4); opacity: 0; transition: opacity 1s;
+        #bg-video {
+            width: 100%; height: 100%;
+            object-fit: cover; /* Perfectly fills any mobile screen */
+            filter: brightness(0.4) contrast(1.1);
+            opacity: 0; transition: opacity 2s;
         }
 
-        /* CONTROL INTERFACE */
-        #top-bar {
-            position: fixed; top: 0; width: 100%; padding: 20px;
-            display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 1000;
+        /* UI CONTROLS */
+        #top-deck {
+            position: fixed; top: 20px; width: 100%;
+            display: flex; justify-content: center; gap: 15px; z-index: 1000;
         }
-        .control-row { display: flex; gap: 10px; }
-        .btn {
-            background: rgba(0, 20, 30, 0.8); border: 1px solid var(--glow);
-            color: var(--glow); padding: 12px 20px; border-radius: 5px;
+        .control-btn {
+            background: rgba(0, 10, 20, 0.85); border: 1.5px solid var(--glow);
+            color: var(--glow); padding: 12px 18px; border-radius: 8px;
             font-size: 0.7rem; font-weight: bold; cursor: pointer;
-            text-transform: uppercase; backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px); text-transform: uppercase;
         }
-        .btn.active { border-color: var(--gold); color: var(--gold); }
-        
-        #api-status { font-size: 0.5rem; opacity: 0.6; letter-spacing: 1px; }
+        .active { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 15px var(--gold); }
 
         #cannon {
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 100px; height: 100px; border-radius: 50%; z-index: 500;
+            width: 120px; height: 120px; border-radius: 50%; z-index: 500;
             background: rgba(0, 10, 20, 0.9); border: 3px solid var(--gold);
             color: var(--gold); font-weight: bold; display: flex; align-items: center; justify-content: center;
         }
 
         .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
-        .cell-good { border: 1px solid var(--glow); box-shadow: 0 0 10px var(--glow); }
-        .cell-evil { border: 1px solid #ff2d55; box-shadow: 0 0 10px #ff2d55; }
+        .cell-good { border: 2px solid var(--glow); background: rgba(0, 242, 255, 0.1); }
+        .cell-evil { border: 2px solid #ff2d55; background: rgba(255, 45, 85, 0.1); }
     </style>
 </head>
 <body>
 
-<div id="video-viewport"><div id="yt-bg-player"></div></div>
+<div id="video-container">
+    <video id="bg-video" loop muted playsinline preload="auto">
+        <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
+    </video>
+</div>
+
 <div id="music-engine" style="position: absolute; top: -999px;"></div>
 
-<div id="top-bar">
-    <div id="api-status">SYSTEM: CONNECTING...</div>
-    <div class="control-row">
-        <div id="vid-btn" class="btn" onclick="forceVideo()">Video: OFF</div>
-        <div id="mus-btn" class="btn" onclick="forceMusic()">Music: OFF</div>
-    </div>
+<div id="top-deck">
+    <div id="vid-toggle" class="control-btn" onclick="activateVideo()">Video: OFF</div>
+    <div id="mus-toggle" class="control-btn" onclick="activateMusic()">Music: OFF</div>
+</div>
+
+<div id="stats" style="position:fixed; top:85px; left:20px; font-size:0.8rem;">
+    SCORE: <span id="score">0</span>
 </div>
 
 <div id="arena"></div>
-<div id="cannon" onclick="deployCell()">DEPLOY</div>
+<div id="cannon" onclick="deploy()">DEPLOY</div>
 
 <script>
-    let bgPlayer, musicPlayer;
-    let vidOn = false, musOn = false;
+    let musicPlayer, musicReady = false;
     let entities = [], score = 0;
 
-    // YOUTUBE API
+    // 1. YouTube API only for Music
     function onYouTubeIframeAPIReady() {
-        document.getElementById('api-status').innerText = "SYSTEM: READY";
-        
-        bgPlayer = new YT.Player('yt-bg-player', {
-            videoId: 'JBVeJ5ZYENc',
-            playerVars: { 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc', 'playsinline': 1, 'rel': 0 },
-            events: { 
-                'onReady': () => { document.getElementById('api-status').innerText = "SYSTEM: LINK STABLE"; },
-                'onStateChange': (e) => {
-                    if(e.data === 1) document.getElementById('yt-bg-player').style.opacity = '1';
-                }
-            }
-        });
-
         musicPlayer = new YT.Player('music-engine', {
             videoId: 'qwMz1wgXokk',
-            playerVars: { 'controls': 0, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1 }
+            playerVars: { 'controls': 0, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1 },
+            events: { 'onReady': () => { musicReady = true; } }
         });
     }
 
-    function forceVideo() {
-        if (!vidOn) {
-            bgPlayer.mute(); // Just in case
-            bgPlayer.playVideo();
-            // Critical Mobile Hack: Re-trigger play after 100ms
-            setTimeout(() => bgPlayer.playVideo(), 100);
-            document.getElementById('vid-btn').innerText = "Video: ON";
-            document.getElementById('vid-btn').classList.add('active');
-            vidOn = true;
+    // 2. Vercel Video Activation
+    function activateVideo() {
+        const v = document.getElementById('bg-video');
+        const btn = document.getElementById('vid-toggle');
+        
+        if (v.paused) {
+            v.play();
+            v.style.opacity = "1";
+            btn.innerText = "Video: ON";
+            btn.classList.add('active');
         } else {
-            bgPlayer.pauseVideo();
-            document.getElementById('vid-btn').innerText = "Video: OFF";
-            document.getElementById('vid-btn').classList.remove('active');
-            vidOn = false;
+            v.pause();
+            v.style.opacity = "0";
+            btn.innerText = "Video: OFF";
+            btn.classList.remove('active');
         }
     }
 
-    function forceMusic() {
-        if (!musOn) {
-            musicPlayer.unMute();
-            musicPlayer.playVideo();
-            document.getElementById('mus-btn').innerText = "Music: ON";
-            document.getElementById('mus-btn').classList.add('active');
-            musOn = true;
-        } else {
-            musicPlayer.pauseVideo();
-            document.getElementById('mus-btn').innerText = "Music: OFF";
-            document.getElementById('mus-btn').classList.remove('active');
-            musOn = false;
+    // 3. Music Activation
+    function activateMusic() {
+        const btn = document.getElementById('mus-toggle');
+        if (musicReady) {
+            // Check if playing by state (YT.PlayerState.PLAYING = 1)
+            if (musicPlayer.getPlayerState() !== 1) {
+                musicPlayer.unMute();
+                musicPlayer.playVideo();
+                btn.innerText = "Music: ON";
+                btn.classList.add('active');
+            } else {
+                musicPlayer.pauseVideo();
+                btn.innerText = "Music: OFF";
+                btn.classList.remove('active');
+            }
         }
     }
 
-    function deployCell() {
+    // 4. Combat Logic
+    function deploy() {
+        // Human gesture can also trigger video if user hasn't yet
+        const v = document.getElementById('bg-video');
+        if (v.paused && v.style.opacity === "1") v.play();
+
         entities.push(new Entity('good'));
-        if(score === 0) { score = 1; autoSpawn(); }
+        if (score === 0) { score = 1; spawnLoop(); }
     }
 
     class Entity {
         constructor(type) {
             this.type = type;
+            this.radius = 15;
             this.x = type === 'good' ? window.innerWidth/2 : Math.random() * window.innerWidth;
-            this.y = type === 'good' ? window.innerHeight - 100 : -20;
-            this.vx = (Math.random()-0.5)*4;
-            this.vy = type === 'good' ? -6 : 3;
+            this.y = type === 'good' ? window.innerHeight - 100 : -30;
+            this.vx = (Math.random()-0.5)*5;
+            this.vy = type === 'good' ? -7 : 3;
             this.el = document.createElement('div');
             this.el.className = `cell-orb cell-${type}`;
             this.el.style.width = '30px'; this.el.style.height = '30px';
@@ -147,18 +148,19 @@
         }
     }
 
-    function autoSpawn() {
+    function spawnLoop() {
         entities.push(new Entity('evil'));
-        setTimeout(autoSpawn, 1200);
+        setTimeout(spawnLoop, 1000);
     }
 
     function loop() {
         for(let i=entities.length-1; i>=0; i--) {
             entities[i].update();
-            if(entities[i].y < -50 || entities[i].y > window.innerHeight + 50) {
+            if(entities[i].y < -100 || entities[i].y > window.innerHeight + 100) {
                 entities[i].el.remove(); entities.splice(i, 1);
             }
         }
+        document.getElementById('score').innerText = score;
         requestAnimationFrame(loop);
     }
     loop();
