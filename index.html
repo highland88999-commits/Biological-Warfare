@@ -66,7 +66,12 @@
         }
 
         #engine-bg { position: fixed; inset: 0; z-index: 1; }
-        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.12) contrast(1.1); }
+        #bg-video { 
+            width: 100%; height: 100%; object-fit: cover; 
+            filter: brightness(0.10) contrast(1.15) saturate(0.8); 
+            animation: subtlePulse 20s infinite alternate; 
+        }
+        @keyframes subtlePulse { 0% { opacity: 0.85; } 100% { opacity: 1; } }
 
         #ytplayer { position: absolute; left: -9999px; top: 0; width: 0; height: 0; }
 
@@ -75,35 +80,58 @@
             width: min(260px, 50vw); height: min(260px, 50vw); 
             border-radius: 50%; border: 4px solid var(--gold); 
             box-shadow: var(--glow-c); z-index: 100; overflow: hidden; background: #000;
+            animation: nucleusPulse 8s infinite alternate;
         }
+        @keyframes nucleusPulse { 0% { transform: translate(-50%, -50%) scale(1); } 100% { transform: translate(-50%, -50%) scale(1.03); } }
+
         #oracle-video { width: 100%; height: 100%; object-fit: cover; }
 
         #orbital-canvas { position: fixed; inset: 0; z-index: 150; pointer-events: none; }
 
         .cell-orb { 
-            position: absolute; width: 44px; height: 44px; border-radius: 50%; 
+            position: absolute; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
             color: #fff; font-size: 0.6rem; font-weight: bold;
             backdrop-filter: blur(4px); z-index: 160; 
+            animation: cellPulse 4s infinite alternate ease-in-out;
         }
-        
+        @keyframes cellPulse { 0% { transform: scale(1); } 100% { transform: scale(1.08); } }
+
+        .cell-good { 
+            background: radial-gradient(circle, #00f2ff88, #001122); 
+            border: 2px solid var(--cyan); 
+        }
+        .cell-virus { 
+            background: radial-gradient(circle, #ff2d5588, #220000); 
+            border: 2px solid var(--virus-red); 
+            animation: virusWobble 3s infinite; 
+        }
+        @keyframes virusWobble { 0%,100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(8deg) scale(1.05); } }
+
+        .cell-disease { 
+            background: radial-gradient(circle, #00ff9d88, #002211); 
+            border: 2px solid var(--disease-green); 
+            animation: diseaseWave 6s infinite; 
+        }
+        @keyframes diseaseWave { 0%,100% { filter: hue-rotate(0deg); } 50% { filter: hue-rotate(30deg); } }
+
         .hp-bar { position: absolute; bottom: 4px; width: 25px; height: 3px; background: #111; border-radius: 2px; overflow: hidden; }
         .hp-fill { height: 100%; background: #0f0; width: 100%; }
 
-        .cell-good { background: radial-gradient(circle, #00f2ff66, #001122); border: 2px solid var(--cyan); }
-        .cell-virus { background: radial-gradient(circle, #ff2d5566, #220000); border: 2px solid var(--virus-red); }
-        .cell-disease { background: radial-gradient(circle, #00ff9d66, #002211); border: 2px solid var(--disease-green); }
-
         #cannon { 
             position: fixed; bottom: -10px; left: 50%; transform: translateX(-50%); 
-            width: 140px; height: 120px; z-index: 300; pointer-events: none; 
+            width: 140px; height: 120px; z-index: 300; pointer-events: auto; 
             background: linear-gradient(to top, #0a0a1f, #111); 
             border-radius: 70px 70px 0 0; border: 4px solid var(--gold); 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 1.1rem; color: var(--gold); cursor: pointer; transition: 0.2s;
+            font-size: 1.1rem; color: var(--gold); 
+            transition: transform 0.1s, box-shadow 0.1s; 
+            box-shadow: 0 0 20px var(--gold);
         }
-        #cannon.active { pointer-events: auto; }
-        #cannon:active { transform: translateX(-50%) scale(0.95); }
+        #cannon:active, #cannon.pressed { 
+            transform: translateX(-50%) scale(0.92); 
+            box-shadow: 0 0 60px var(--gold); 
+        }
 
         #ui-layer { position: fixed; inset: 0; z-index: 400; pointer-events: none; padding: 20px; color: var(--cyan); }
         .hud-box { background: var(--glass); border: 1px solid var(--cyan); padding: 12px; border-radius: 8px; backdrop-filter: blur(8px); pointer-events: auto; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.95rem; }
@@ -126,15 +154,309 @@
         <div class="btn" id="start-btn">⚡ ENTER THE RIFT</div>
     </div>
 
-    <!-- The rest of the HTML (transition-overlay, revive-overlay, rift-portal, engine-bg, ytplayer, oracle-nucleus, orbital-canvas, ui-layer, cannon) remains exactly the same as in the previous version -->
+    <div id="transition-overlay">
+        <h2 id="trans-text" style="color:var(--gold); margin-bottom: 30px; font-size: 1.8rem;">WARPING...</h2>
+        <div class="spinner"></div>
+    </div>
+
+    <div id="revive-overlay">
+        <h2 style="color:var(--gold); margin-bottom: 30px; font-size: 1.8rem;">SYMBIOTE LOST!</h2>
+        <div class="btn" id="revive-btn">REVIVE: Watch Ad</div>
+        <div class="btn" onclick="location.reload()">RESTART</div>
+    </div>
+
+    <div id="rift-portal"></div>
+    <div id="engine-bg">
+        <video id="bg-video" autoplay loop muted playsinline src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm"></video>
+    </div>
+
+    <div id="ytplayer"></div>
+
+    <div id="oracle-nucleus"><video id="oracle-video" autoplay loop muted playsinline src="https://files.catbox.moe/no2e76.mp4"></video></div>
+    <div id="orbital-canvas"></div>
+    
+    <div id="ui-layer">
+        <div class="hud-box">
+            LVL <span id="level">1</span>  •  SCORE <span id="score">0</span>/1000
+            <span id="music-toggle">[Music: OFF]</span>
+            <span id="pause-toggle">[PAUSE]</span>
+            <span id="boost-btn">BOOST: Watch Ad (x2 • 30s)</span>
+        </div>
+    </div>
+
+    <div id="cannon">⚡ DEPLOY</div>
 
     <script>
-        // ... All previous JavaScript code remains the same ...
+        const canvas = document.getElementById('orbital-canvas');
+        const startOverlay = document.getElementById('start-overlay');
+        const transitionOverlay = document.getElementById('transition-overlay');
+        const reviveOverlay = document.getElementById('revive-overlay');
+        const transText = document.getElementById('trans-text');
+        const musicToggle = document.getElementById('music-toggle');
+        const pauseToggle = document.getElementById('pause-toggle');
+        const boostBtn = document.getElementById('boost-btn');
+        const cannon = document.getElementById('cannon');
 
-        // Only change: lower frequency for forced ads
-        const adFrequency = 3; // Now every 3 levels instead of 5
+        let cells = [], enemies = [];
+        let score = 0, level = 1, isWarping = false, isPaused = false;
+        let gameStarted = false;
+        const MARGIN = 4;
+        let musicStarted = false;
+        let musicMuted = true;
+        let player;
+        let currentTrackIndex = 0;
+        const playlist = ["qwMz1wgXokk","9XvXF1LrWgA","XbGs_qK2PQA","Obim8BYGnOE","c2AhsySa-8E","2T15MMwaSEQ","4cmmB3z3j5o","5t9x0g5y2xA","5qap5aO4i9A","1wYNFfgrXTI","6Ejga4kJUts","9bZkp7q19f0","3m_QN8P93IA","SP00wB70D5g","1wYNFfgrXTI","SmBzqkgdH9I","r_0JjYUe5jo","ubCbHIWglSw","OiBSeGoc9FQ","DLzxrzFCyOs","3qFvCPmee8U","8CdcCD5V-d8","77DTr1csdp0","DlOMEMFkyIk","Q97alSBCAxw","ytQ5CYE1VZw","Qxw5xNqATko","YK7suWgs6NQ"];
+        let boostMultiplier = 1;
+        let boostTimer = null;
+        const adFrequency = 3;
+        const adZoneUrl = 'https://quge5.com/88/?zone=206119';
 
-        // Everything else (loadProgress, saveProgress, getGenCount, Entity class, fireCannon, spawnTick, startGame, showAd, nextLevel, checkFieldClear, boost logic, revive logic, YouTube setup, toggles, gameLoop, etc.) is unchanged from the last working version
+        // Cannon press feedback
+        cannon.addEventListener('pointerdown', () => {
+            cannon.classList.add('pressed');
+            fireCannon();
+        });
+        cannon.addEventListener('pointerup', () => cannon.classList.remove('pressed'));
+        cannon.addEventListener('pointercancel', () => cannon.classList.remove('pressed'));
+
+        function loadProgress() {
+            const savedLevel = localStorage.getItem('symbioteLevel');
+            const savedScore = localStorage.getItem('symbioteScore');
+            if (savedLevel && savedScore) {
+                level = parseInt(savedLevel, 10);
+                score = parseInt(savedScore, 10);
+                document.getElementById('level').textContent = level;
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        function saveProgress() {
+            localStorage.setItem('symbioteLevel', level);
+            localStorage.setItem('symbioteScore', score);
+        }
+
+        function getGenCount() {
+            return Math.min(level, 10) * boostMultiplier;
+        }
+
+        class Entity {
+            constructor(x, y, type) {
+                this.type = type; this.x = x; this.y = y;
+                this.radius = 40 + Math.random() * 8; // slight size variation for organic feel
+                this.health = 100;
+                this.el = document.createElement('div');
+                this.el.className = `cell-orb cell-${type}`;
+                this.el.innerHTML = `<div class="hp-bar"><div class="hp-fill"></div></div>`;
+                this.hpFill = this.el.querySelector('.hp-fill');
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = type === 'cell' ? -6 : (1.8 + level * 0.4);
+                canvas.appendChild(this.el);
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                if (this.x < this.radius + MARGIN || this.x > window.innerWidth - this.radius - MARGIN) this.vx *= -1;
+                if (this.y < this.radius + MARGIN || this.y > window.innerHeight - this.radius - MARGIN) this.vy *= -1;
+                this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
+            }
+            takeDamage(dmg) {
+                this.health -= dmg;
+                this.hpFill.style.width = Math.max(0, this.health) + '%';
+                return this.health <= 0;
+            }
+        }
+
+        function fireCannon() {
+            if (isWarping || !gameStarted || isPaused) return;
+            if (!musicStarted && player) {
+                player.unMute();
+                player.playVideo();
+                musicStarted = true;
+                musicMuted = false;
+                musicToggle.textContent = '[Music: ON]';
+            }
+            const count = getGenCount();
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    cells.push(new Entity(window.innerWidth / 2, window.innerHeight - 100, 'cell'));
+                }, i * 18);
+            }
+        }
+
+        function spawnTick() {
+            if (gameStarted && !isWarping && !isPaused) {
+                const spawnChance = 0.03 + (level * 0.008);
+                if (Math.random() < spawnChance) {
+                    const offsetX = (Math.random() - 0.5) * Math.min(200, window.innerWidth * 0.15);
+                    const spawnY = 40 + Math.random() * 40;
+                    const type = Math.random() > 0.5 ? 'virus' : 'disease';
+                    enemies.push(new Entity(window.innerWidth / 2 + offsetX, spawnY, type));
+                }
+            }
+            setTimeout(spawnTick, 700 + Math.random() * 500);
+        }
+
+        function startGame() {
+            loadProgress();
+            startOverlay.style.display = 'none';
+            gameStarted = true;
+            cannon.classList.add('active');
+            spawnTick();
+        }
+
+        function showAd() {
+            window.open(adZoneUrl, '_blank', 'noopener,noreferrer,width=400,height=500');
+        }
+
+        function nextLevel() {
+            isWarping = true;
+            transitionOverlay.classList.add('active');
+            
+            const nextLvl = level + 1;
+            if (nextLvl >= 100) {
+                transText.innerHTML = "OLYMPUS ASCENDED!<br><span onclick='resetGame()' style='color:var(--cyan);cursor:pointer;'>RETRY</span> | <a href='https://georgia-aquarium.vercel.app/#' target='_blank' style='color:var(--cyan)'>CLAIM HOODIE</a>";
+                for(let i = 0; i < 3; i++) {
+                    setTimeout(showAd, i * 2500 + 1500);
+                }
+                setTimeout(() => { isWarping = false; }, 10000);
+                localStorage.removeItem('symbioteLevel');
+                localStorage.removeItem('symbioteScore');
+                return;
+            }
+
+            transText.textContent = `WARPING TO LEVEL ${nextLvl}`;
+
+            if (level % adFrequency === 0) {
+                showAd();
+            }
+
+            setTimeout(() => {
+                cells.forEach(c => c.el.remove());
+                enemies.forEach(e => e.el.remove());
+                cells = []; enemies = [];
+                
+                level = nextLvl;
+                score = 0;
+                
+                document.getElementById('level').textContent = level;
+                document.getElementById('score').textContent = '0';
+                
+                transitionOverlay.classList.remove('active');
+                isWarping = false;
+                saveProgress();
+            }, 3000);
+        }
+
+        function checkFieldClear() {
+            if (cells.length === 0 && enemies.length === 0 && gameStarted && !isWarping && !isPaused) {
+                reviveOverlay.classList.add('active');
+            }
+        }
+
+        boostBtn.addEventListener('click', () => {
+            showAd();
+            boostMultiplier = 2;
+            boostBtn.textContent = 'BOOST ACTIVE: x2 (30s)';
+            boostBtn.classList.add('active');
+            clearTimeout(boostTimer);
+            boostTimer = setTimeout(() => {
+                boostMultiplier = 1;
+                boostBtn.textContent = 'BOOST: Watch Ad (x2 • 30s)';
+                boostBtn.classList.remove('active');
+            }, 30000);
+        });
+
+        document.getElementById('revive-btn').addEventListener('click', () => {
+            showAd();
+            reviveOverlay.classList.remove('active');
+            for(let i = 0; i < 12; i++) {
+                setTimeout(() => {
+                    cells.push(new Entity(window.innerWidth / 2 + (Math.random()-0.5)*300, window.innerHeight - 80, 'cell'));
+                }, i * 80);
+            }
+        });
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('ytplayer', {
+                height: '0',
+                width: '0',
+                videoId: playlist[0],
+                playerVars: { 'playsinline': 1, 'autoplay': 0 },
+                events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange }
+            });
+        }
+
+        function onPlayerReady(event) { event.target.mute(); }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.ENDED) {
+                currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+                player.loadVideoById(playlist[currentTrackIndex]);
+                if (!musicMuted) player.playVideo();
+            }
+        }
+
+        musicToggle.addEventListener('click', () => {
+            if (!player) return;
+            if (musicMuted) {
+                player.unMute();
+                musicMuted = false;
+                musicToggle.textContent = '[Music: ON]';
+            } else {
+                player.mute();
+                musicMuted = true;
+                musicToggle.textContent = '[Music: OFF]';
+            }
+        });
+
+        pauseToggle.addEventListener('click', () => {
+            isPaused = !isPaused;
+            pauseToggle.textContent = isPaused ? '[PLAY]' : '[PAUSE]';
+            if (player) {
+                if (isPaused) player.pauseVideo();
+                else if (!musicMuted) player.playVideo();
+            }
+        });
+
+        document.body.addEventListener('click', () => {
+            if (!musicStarted && player) {
+                player.unMute();
+                player.playVideo();
+                musicStarted = true;
+                musicMuted = false;
+                musicToggle.textContent = '[Music: ON]';
+            }
+        }, { once: true });
+
+        document.getElementById('start-btn').addEventListener('click', startGame);
+
+        function resetGame() { location.reload(); }
+
+        function gameLoop() {
+            if (gameStarted && !isWarping && !isPaused) {
+                cells.forEach((c, ci) => {
+                    c.update();
+                    enemies.forEach((e, ei) => {
+                        if (Math.hypot(c.x - e.x, c.y - e.y) < (c.radius + e.radius)/2) { // adjusted collision for varied sizes
+                            if (e.takeDamage(5)) {
+                                e.el.remove(); enemies.splice(ei, 1);
+                                score += 20;
+                                document.getElementById('score').textContent = score;
+                                if (score >= 1000) nextLevel();
+                            }
+                            if (c.takeDamage(5)) {
+                                c.el.remove(); cells.splice(ci, 1);
+                            }
+                        }
+                    });
+                });
+                enemies.forEach(e => e.update());
+                checkFieldClear();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+        gameLoop();
+
+        window.addEventListener('beforeunload', saveProgress);
     </script>
 </body>
 </html>
