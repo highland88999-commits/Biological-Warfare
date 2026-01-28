@@ -41,8 +41,12 @@
         @keyframes portalPulse { 0%,100% {opacity:0.6;} 50% {opacity:1; transform: translateX(-50%) scale(1.1);} }
 
         #engine-bg { position: fixed; inset: 0; z-index: 1; }
-        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.15); }
-        
+        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.12) contrast(1.1); }
+
+        #music-player {
+            position: absolute; width:1px; height:1px; left:-999px; top:-999px;
+        }
+
         #oracle-nucleus { 
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
             width: min(260px, 50vw); height: min(260px, 50vw); 
@@ -78,7 +82,8 @@
         #cannon:active { transform: translateX(-50%) scale(0.95); }
 
         #ui-layer { position: fixed; inset: 0; z-index: 400; pointer-events: none; padding: 20px; color: var(--cyan); }
-        .hud-box { background: var(--glass); border: 1px solid var(--cyan); padding: 10px; border-radius: 8px; backdrop-filter: blur(8px); }
+        .hud-box { background: var(--glass); border: 1px solid var(--cyan); padding: 10px; border-radius: 8px; backdrop-filter: blur(8px); pointer-events: auto; }
+        #music-toggle { font-size: 0.8rem; margin-left: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -88,13 +93,29 @@
     </div>
 
     <div id="rift-portal"></div>
-    <div id="engine-bg"><video id="bg-video" autoplay loop muted playsinline src="https://files.catbox.moe/jhxjmx.mp4"></video></div>
+    <div id="engine-bg">
+        <video id="bg-video" autoplay loop muted playsinline src="https://files.catbox.moe/b0261q.webm"></video>
+    </div>
+
+    <!-- Hidden YouTube player for audio (Venom loop) -->
+    <div id="music-player">
+        <iframe 
+            id="yt-audio" 
+            width="1" height="1" 
+            src="https://www.youtube.com/embed/qwMz1wgXokk?enablejsapi=1&autoplay=0&loop=1&playlist=qwMz1wgXokk&mute=1" 
+            frameborder="0" 
+            allow="autoplay; encrypted-media" 
+            allowfullscreen>
+        </iframe>
+    </div>
+
     <div id="oracle-nucleus"><video id="oracle-video" autoplay loop muted playsinline src="https://files.catbox.moe/no2e76.mp4"></video></div>
     <div id="orbital-canvas"></div>
     
     <div id="ui-layer">
         <div class="hud-box" style="width: fit-content;">
             LVL: <span id="level">1</span> | SCORE: <span id="score">0</span> / 1000
+            <span id="music-toggle">[Music: OFF]</span>
         </div>
     </div>
 
@@ -104,12 +125,16 @@
         const canvas = document.getElementById('orbital-canvas');
         const overlay = document.getElementById('transition-overlay');
         const transText = document.getElementById('trans-text');
+        const musicToggle = document.getElementById('music-toggle');
+        const ytPlayer = document.getElementById('yt-audio');
         
         let cells = [], enemies = [];
         let score = 0, level = 1, isWarping = false;
         const MARGIN = 4;
+        let musicStarted = false;
+        let musicMuted = true;
 
-        // PROGRESSIVE MULTIPLIER: 1, 2, 3, 6, 12, 24...
+        // Progressive generation count
         function getGenCount() {
             if (level === 1) return 1;
             if (level === 2) return 2;
@@ -125,7 +150,7 @@
                 this.el.innerHTML = `<div class="hp-bar"><div class="hp-fill"></div></div>`;
                 this.hpFill = this.el.querySelector('.hp-fill');
                 this.vx = (Math.random() - 0.5) * 8;
-                this.vy = type === 'cell' ? -6 : (2 + level * 0.5); // Enemies get faster
+                this.vy = type === 'cell' ? -6 : (1.8 + level * 0.4); // Slightly slower ramp-up
                 canvas.appendChild(this.el);
             }
             update() {
@@ -143,22 +168,32 @@
 
         function fireCannon() {
             if (isWarping) return;
+            // Start music on first cannon fire (user interaction)
+            if (!musicStarted) {
+                ytPlayer.src = ytPlayer.src.replace('&mute=1', '&mute=0'); // Unmute
+                musicStarted = true;
+                musicMuted = false;
+                musicToggle.textContent = '[Music: ON]';
+            }
             const count = getGenCount();
             for(let i=0; i<count; i++) {
                 setTimeout(() => {
                     cells.push(new Entity(window.innerWidth/2, window.innerHeight - 100, 'cell'));
-                }, i * 50);
+                }, i * 60);
             }
         }
 
-        // AUTO-PORTAL GENERATION
+        // Fairer enemy spawning: probability scales with level, but smoothed + random delay
         setInterval(() => {
             if (isWarping) return;
-            // Spawning becomes more aggressive with levels
-            if (Math.random() < 0.05 + (level * 0.01)) {
-                enemies.push(new Entity(window.innerWidth/2, 60, Math.random() > 0.5 ? 'virus' : 'disease'));
+            // Base chance 3-4% → up to ~18-20% at high levels, but not instant swarm
+            const spawnChance = 0.03 + (level * 0.008); 
+            if (Math.random() < spawnChance) {
+                const offsetX = (Math.random() - 0.5) * 200; // Spread spawn horizontally
+                const type = Math.random() > 0.5 ? 'virus' : 'disease';
+                enemies.push(new Entity(window.innerWidth/2 + offsetX, 40 + Math.random()*40, type));
             }
-        }, 500);
+        }, 800 + Math.random() * 400); // Variable interval ~800-1200ms
 
         async function nextLevel() {
             isWarping = true;
@@ -171,9 +206,8 @@
 
             // TRIGGER ADS HERE
             console.log("Calling Ad Zone 206119...");
-            // If your ad script has a manual trigger like: window.tag.showInterstitial(); call it here.
 
-            await new Promise(r => setTimeout(r, 6000)); // Ad/Warp break
+            await new Promise(r => setTimeout(r, 6000));
             
             level++;
             score = 0;
@@ -188,6 +222,19 @@
             overlay.classList.remove('active');
         }
 
+        // Music toggle
+        musicToggle.addEventListener('click', () => {
+            if (musicMuted) {
+                ytPlayer.src = ytPlayer.src.replace('&mute=1', '&mute=0').replace('&mute=0', '&mute=0'); // ensure unmuted
+                musicMuted = false;
+                musicToggle.textContent = '[Music: ON]';
+            } else {
+                ytPlayer.src = ytPlayer.src.replace('&mute=0', '&mute=1');
+                musicMuted = true;
+                musicToggle.textContent = '[Music: OFF]';
+            }
+        });
+
         function gameLoop() {
             if (!isWarping) {
                 cells.forEach((c, ci) => {
@@ -200,7 +247,9 @@
                                 document.getElementById('score').textContent = score;
                                 if (score >= 1000) nextLevel();
                             }
-                            if (c.takeDamage(5)) { c.el.remove(); cells.splice(ci, 1); }
+                            if (c.takeDamage(5)) { 
+                                c.el.remove(); cells.splice(ci, 1); 
+                            }
                         }
                     });
                 });
@@ -209,6 +258,16 @@
             requestAnimationFrame(gameLoop);
         }
         gameLoop();
+
+        // Optional: Start music muted on any first click (fallback)
+        document.body.addEventListener('click', () => {
+            if (!musicStarted) {
+                ytPlayer.src = ytPlayer.src.replace('&mute=1', '&mute=0');
+                musicStarted = true;
+                musicMuted = false;
+                musicToggle.textContent = '[Music: ON]';
+            }
+        }, { once: true });
     </script>
 </body>
 </html>
