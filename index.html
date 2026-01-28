@@ -10,15 +10,13 @@
             --glow: #00f2ff;
             --gold: #d4af37;
             --virus-red: #ff2d55;
-            --ui-bg: rgba(0, 10, 20, 0.85);
+            --ui-bg: rgba(0, 10, 20, 0.9);
         }
 
-        /* 1. RESET & GESTURE PROTECTION */
         * { 
             margin:0; padding:0; box-sizing:border-box; 
             -webkit-user-select: none; user-select: none;
             -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
         }
         
         body, html { 
@@ -27,30 +25,21 @@
             color:var(--glow); touch-action: none;
         }
 
-        /* 2. NEXUS VIDEO ENGINE (MIRRORED LOGIC) */
-        .video-engine {
-            position: fixed;
-            inset: 0;
-            width: 100vw; height: 100vh;
-            z-index: -100;
-            overflow: hidden;
-            pointer-events: none;
+        /* DIRECT VIDEO ENGINE - BYPASSES YOUTUBE IFRAME BLOCKS */
+        #bg-container {
+            position: fixed; inset: 0; z-index: -100;
+            background: #000; pointer-events: none;
+        }
+        #bg-video {
+            width: 100%; height: 100%;
+            object-fit: cover; /* This ensures it fills mobile screens perfectly */
+            filter: brightness(0.4) contrast(1.2);
         }
 
-        #yt-bg-player {
-            width: 100vw; height: 56.25vw; /* 16:9 Aspect Ratio */
-            min-height: 100vh; min-width: 177.77vh;
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            border: none;
-            filter: brightness(0.35) contrast(1.2) saturate(0.8);
-        }
-
-        /* 3. OVERLAYS & UI */
+        /* UI OVERLAYS */
         #landing-overlay, #start-overlay, #countdown-overlay, #win-overlay {
             position: fixed; inset: 0; z-index: 2000;
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(12px);
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(15px);
             display: flex; align-items: center; justify-content: center; 
             flex-direction: column; transition: opacity 0.8s ease-out;
         }
@@ -60,51 +49,49 @@
         #start-overlay, #countdown-overlay, #win-overlay { display: none; z-index: 2100; }
 
         .holo-frame {
-            width: min(400px, 90vw);
-            padding: 30px;
-            background: var(--ui-bg);
-            border: 2px solid var(--glow);
-            border-radius: 25px;
-            text-align: center;
+            width: min(400px, 90vw); padding: 35px;
+            background: var(--ui-bg); border: 1px solid var(--glow);
+            border-radius: 20px; text-align: center;
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.1);
         }
 
         .btn {
-            display: block; width: 100%; margin-top: 15px; padding: 15px;
-            text-decoration: none; border-radius: 50px; font-weight: bold;
-            font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px;
+            display: block; width: 100%; margin-top: 20px; padding: 18px;
+            border-radius: 50px; font-weight: bold; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 2px;
             border: 1px solid var(--gold); color: var(--gold);
-            background: rgba(212, 175, 55, 0.05); transition: 0.3s;
-            cursor: pointer;
+            background: transparent; cursor: pointer;
         }
-        .btn:active { transform: scale(0.95); background: var(--gold); color: #000; }
+        .btn:active { background: var(--gold); color: #000; }
 
+        /* HUD */
         #ui-hud {
             position: fixed; top: 20px; left: 20px; z-index: 600;
-            background: var(--ui-bg); padding: 12px 20px; border-radius: 10px;
+            background: var(--ui-bg); padding: 12px 20px; border-radius: 8px;
             border: 1px solid var(--glow); font-size: 0.75rem;
-            pointer-events: auto; display: flex; gap: 20px;
+            display: flex; gap: 20px;
         }
 
-        /* 4. COMBAT ELEMENTS */
         #cannon {
             position: fixed; bottom: 40px; left: 50%;
             transform: translateX(-50%); width: 120px; height: 120px;
             z-index: 500; background: var(--ui-bg);
             border: 3px solid var(--gold); border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            color: var(--gold); font-weight: bold; cursor: pointer;
-            box-shadow: 0 0 25px var(--gold);
+            color: var(--gold); font-weight: bold; box-shadow: 0 0 20px var(--gold);
         }
 
         .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
-        .cell-good { border: 2px solid var(--glow); background: rgba(0, 242, 255, 0.1); box-shadow: 0 0 10px var(--glow); }
-        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.1); box-shadow: 0 0 10px var(--virus-red); }
+        .cell-good { border: 2px solid var(--glow); background: rgba(0, 242, 255, 0.1); }
+        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.1); }
     </style>
 </head>
 <body>
 
-<div class="video-engine">
-    <div id="yt-bg-player"></div>
+<div id="bg-container">
+    <video id="bg-video" autoplay loop muted playsinline preload="auto">
+        <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
+    </video>
 </div>
 
 <div id="music-player" style="position: absolute; top: -9999px;"></div>
@@ -116,23 +103,23 @@
 
 <div id="start-overlay">
     <div class="holo-frame">
-        <h2 style="color:var(--gold); margin-bottom:15px; font-size: 1rem;">SYMBIOTE PROTOCOL</h2>
-        <p style="font-size: 0.7rem; color: #fff; margin-bottom: 20px; line-height: 1.5; opacity: 0.8;">
-            Development & Hardware funded by player support.<br>
-            Enter the rift to begin the sequence.
+        <h2 style="color:var(--gold); margin-bottom:15px;">SYMBIOTE PROTOCOL</h2>
+        <p style="font-size: 0.75rem; line-height: 1.6; opacity: 0.8; margin-bottom: 20px;">
+            Rift entry authorized. Proceed to the simulation.<br>
+            Player support funds physical merchandise.
         </p>
         <div class="btn" onclick="startCountdown()">⚡ ENTER RIFT</div>
     </div>
 </div>
 
 <div id="countdown-overlay">
-    <h1 id="count-num" style="font-size: 6rem; color: var(--gold); text-shadow: 0 0 30px var(--gold);">3</h1>
+    <h1 id="count-num" style="font-size: 6rem; color: var(--gold);">3</h1>
 </div>
 
 <div id="win-overlay">
     <div class="holo-frame">
-        <h1 style="color:var(--gold); font-size: 1.2rem;">OLYMPUS ASCENDED</h1>
-        <p style="margin: 20px 0; font-size: 0.7rem;">LEVEL 100 COMPLETE<br>CODE: <strong id="cert-code" style="color:var(--glow)"></strong></p>
+        <h1 style="color:var(--gold)">OLYMPUS ASCENDED</h1>
+        <p id="cert-code" style="margin:20px; color:var(--glow); font-family:monospace;"></p>
         <div class="btn" onclick="location.reload()">RE-INITIALIZE</div>
     </div>
 </div>
@@ -147,19 +134,10 @@
 <div id="cannon">DEPLOY</div>
 
 <script>
-    let bgPlayer, musicPlayer;
-    let score = 0, level = 1, gameActive = false;
-    let entities = [];
-    let musicStarted = false;
+    let musicPlayer, gameActive = false, score = 0, level = 1, entities = [];
 
-    // YOUTUBE API: MIRRORED FROM CONSOLE LOGIC
+    // Only one YouTube player (for music) to reduce mobile loading conflicts
     function onYouTubeIframeAPIReady() {
-        bgPlayer = new YT.Player('yt-bg-player', {
-            videoId: 'JBVeJ5ZYENc',
-            playerVars: { 'autoplay': 1, 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc', 'rel': 0, 'modestbranding': 1 },
-            events: { 'onReady': (e) => e.target.playVideo() }
-        });
-
         musicPlayer = new YT.Player('music-player', {
             videoId: 'qwMz1wgXokk',
             playerVars: { 'autoplay': 1, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'mute': 1, 'controls': 0 },
@@ -167,7 +145,6 @@
         });
     }
 
-    // MATRIX RAIN
     const rainCanvas = document.getElementById('rain-canvas');
     const rCtx = rainCanvas.getContext('2d');
     let drops = [];
@@ -191,16 +168,18 @@
     const rainInterval = setInterval(drawRain, 50);
     initRain();
 
-    // FLOW CONTROL
     function showDisclaimer() {
+        // Force the raw video to play on first user tap
+        const video = document.getElementById('bg-video');
+        video.play();
+
         document.getElementById('landing-overlay').classList.add('hidden');
         clearInterval(rainInterval);
         document.getElementById('start-overlay').style.display = 'flex';
-        // Unmute music on first real interaction
-        if(musicPlayer && !musicStarted) {
+        
+        if(musicPlayer) {
             musicPlayer.unMute();
-            musicPlayer.setVolume(70);
-            musicStarted = true;
+            musicPlayer.setVolume(60);
             document.getElementById('music-btn').textContent = 'AUDIO: ON';
         }
     }
@@ -222,7 +201,6 @@
         }, 1000);
     }
 
-    // PREDATOR ENGINE
     class Entity {
         constructor(x, y, type) {
             this.type = type;
@@ -232,14 +210,12 @@
             this.speed = (type === 'evil' ? 2 : 3.5) + (level * 0.3);
             this.vx = (Math.random() - 0.5) * 6;
             this.vy = type === 'good' ? -this.speed : this.speed;
-            
             this.el = document.createElement('div');
             this.el.className = `cell-orb cell-${type}`;
             this.el.style.width = this.radius * 2 + 'px';
             this.el.style.height = this.radius * 2 + 'px';
             document.getElementById('orbital-canvas').appendChild(this.el);
         }
-
         update(targets) {
             if (this.type === 'evil' && targets.length > 0) {
                 let target = targets[0];
@@ -249,9 +225,8 @@
                     if (d < minDist) { minDist = d; target = t; }
                 });
                 const angle = Math.atan2(target.y - this.y, target.x - this.x);
-                const force = 0.2 + (level * 0.05);
-                this.vx += Math.cos(angle) * force;
-                this.vy += Math.sin(angle) * force;
+                this.vx += Math.cos(angle) * 0.25;
+                this.vy += Math.sin(angle) * 0.25;
                 const s = Math.hypot(this.vx, this.vy);
                 const max = 4 + (level * 0.5);
                 if (s > max) { this.vx = (this.vx / s) * max; this.vy = (this.vy / s) * max; }
@@ -264,7 +239,6 @@
         }
     }
 
-    // COMBAT & LOOP
     document.getElementById('cannon').addEventListener('touchstart', (e) => {
         e.preventDefault();
         if(gameActive) entities.push(new Entity(window.innerWidth/2, window.innerHeight - 80, 'good'));
@@ -285,9 +259,8 @@
             ent.update(ent.type === 'evil' ? goods : []);
             entities.forEach((other, j) => {
                 if (ent.type !== other.type) {
-                    const d = Math.hypot(ent.x - other.x, ent.y - other.y);
-                    if (d < ent.radius + other.radius) {
-                        ent.health -= 34; other.health -= 34;
+                    if (Math.hypot(ent.x - other.x, ent.y - other.y) < ent.radius + other.radius) {
+                        ent.health -= 35; other.health -= 35;
                         if (ent.health <= 0) { ent.el.remove(); entities.splice(i, 1); if(other.type === 'good') addScore(); }
                         if (other.health <= 0) { other.el.remove(); entities.splice(j, 1); if(ent.type === 'good') addScore(); }
                     }
@@ -302,25 +275,12 @@
         document.getElementById('score').textContent = score;
         level = Math.floor(score / 500) + 1;
         document.getElementById('level').textContent = level;
-        if(level >= 100) triggerWin();
-    }
-
-    function triggerWin() {
-        gameActive = false;
-        document.getElementById('cert-code').textContent = 'ARTEMIS-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-        document.getElementById('win-overlay').style.display = 'flex';
-    }
-
-    document.getElementById('music-btn').onclick = (e) => {
-        e.stopPropagation();
-        if(musicPlayer.isMuted()) {
-            musicPlayer.unMute();
-            document.getElementById('music-btn').textContent = 'AUDIO: ON';
-        } else {
-            musicPlayer.mute();
-            document.getElementById('music-btn').textContent = 'AUDIO: OFF';
+        if(level >= 100) {
+            gameActive = false;
+            document.getElementById('cert-code').textContent = 'CODE: ARTEMIS-WIN-' + Math.floor(Math.random()*99999);
+            document.getElementById('win-overlay').style.display = 'flex';
         }
-    };
+    }
 </script>
 </body>
 </html>
