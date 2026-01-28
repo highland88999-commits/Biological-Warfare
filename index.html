@@ -24,19 +24,17 @@
             color:var(--cyan); touch-action: none;
         }
 
-        /* Full Screen Muted Background Video */
-        #video-container {
-            position: fixed; 
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            z-index: -100;
-            background: #000;
-            overflow: hidden;
+        /* YouTube Background Layer */
+        #bg-container {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -100; pointer-events: none; overflow: hidden;
         }
-        #bg-video {
-            width: 100%; height: 100%;
-            object-fit: cover;
-            filter: brightness(0.5) contrast(1.1);
+        #bg-container iframe {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 100vw; height: 100vh;
+            transform: translate(-50%, -50%) scale(1.5); /* Scale to ensure 'cover' effect */
+            pointer-events: none;
         }
 
         #landing-overlay {
@@ -67,19 +65,12 @@
             color: var(--cyan); font-weight: bold; cursor: pointer;
             box-shadow: 0 0 30px var(--cyan);
         }
-        #cannon:active { transform: translateX(-50%) scale(0.9); background: var(--cyan); color: #000; }
-
-        .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
-        .cell-good { border: 2px solid var(--cyan); background: rgba(0, 242, 255, 0.15); box-shadow: 0 0 10px var(--cyan); }
-        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.15); box-shadow: 0 0 10px var(--virus-red); }
     </style>
 </head>
 <body>
 
-<div id="video-container">
-    <video id="bg-video" autoplay loop muted playsinline preload="auto">
-        <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
-    </video>
+<div id="bg-container">
+    <div id="visual-player"></div>
 </div>
 
 <div id="music-player" style="position: absolute; top: -9999px;"></div>
@@ -97,26 +88,26 @@
 <div id="cannon">DEPLOY</div>
 
 <script>
-    let musicPlayer;
+    let visualPlayer, musicPlayer;
     let score = 0, level = 1, gameActive = false;
     let entities = [];
 
-    // YouTube Iframe API for the music playlist
     function onYouTubeIframeAPIReady() {
+        // Visual Background Player
+        visualPlayer = new YT.Player('visual-player', {
+            videoId: 'JBVeJ5ZYENc',
+            playerVars: { 'autoplay': 1, 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc', 'rel': 0, 'showinfo': 0 },
+            events: { 'onReady': (e) => e.target.playVideo() }
+        });
+
+        // Music Playlist Player
         musicPlayer = new YT.Player('music-player', {
             videoId: 'qwMz1wgXokk',
-            playerVars: { 
-                'autoplay': 1, 
-                'loop': 1, 
-                'playlist': 'qwMz1wgXokk', 
-                'mute': 1,
-                'controls': 0
-            },
+            playerVars: { 'autoplay': 1, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'mute': 1, 'controls': 0 },
             events: { 'onReady': (e) => e.target.playVideo() }
         });
     }
 
-    // Digital Rain Effect for Landing
     const rainCanvas = document.getElementById('rain-canvas');
     const rCtx = rainCanvas.getContext('2d');
     let drops = [];
@@ -141,15 +132,10 @@
     initRain();
 
     function startExperience() {
-        // Trigger background video (must be muted for reliability)
-        const v = document.getElementById('bg-video');
-        v.muted = true;
-        v.play().catch(() => {});
-
         document.getElementById('landing-overlay').classList.add('hidden');
         clearInterval(rainTimer);
         
-        // Unmute the YouTube Music specifically
+        if (visualPlayer) visualPlayer.playVideo();
         if (musicPlayer) { 
             musicPlayer.unMute(); 
             musicPlayer.setVolume(80);
@@ -172,40 +158,46 @@
             this.vy = type === 'good' ? -this.speed : this.speed;
             
             this.el = document.createElement('div');
-            this.el.className = `cell-orb cell-${type}`;
+            this.el.style.position = 'absolute';
+            this.el.style.borderRadius = '50%';
+            this.el.style.zIndex = '100';
+            this.el.style.pointerEvents = 'none';
             this.el.style.width = this.radius * 2 + 'px';
             this.el.style.height = this.radius * 2 + 'px';
+            
+            if (type === 'good') {
+                this.el.style.border = '2px solid var(--cyan)';
+                this.el.style.background = 'rgba(0, 242, 255, 0.15)';
+                this.el.style.boxShadow = '0 0 10px var(--cyan)';
+            } else {
+                this.el.style.border = '2px solid var(--virus-red)';
+                this.el.style.background = 'rgba(255, 45, 85, 0.15)';
+                this.el.style.boxShadow = '0 0 10px var(--virus-red)';
+            }
+            
             document.getElementById('orbital-canvas').appendChild(this.el);
         }
 
         update(targets) {
             if (this.type === 'evil' && targets.length > 0) {
-                // Predator AI
                 let target = targets[0];
                 let minDist = Math.hypot(this.x - target.x, this.y - target.y);
                 targets.forEach(t => {
                     let d = Math.hypot(this.x - t.x, this.y - t.y);
                     if (d < minDist) { minDist = d; target = t; }
                 });
-
                 const angle = Math.atan2(target.y - this.y, target.x - this.x);
                 const accel = 0.2 + (level * 0.08);
                 this.vx += Math.cos(angle) * accel;
                 this.vy += Math.sin(angle) * accel;
-                
-                // Speed Cap increases with level
                 const s = Math.hypot(this.vx, this.vy);
                 const max = 4 + (level * 0.7);
                 if (s > max) { this.vx = (this.vx / s) * max; this.vy = (this.vy / s) * max; }
             }
-
             this.x += this.vx; this.y += this.vy;
             if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
-            
-            // Loop evil cells if they miss targets
             if (this.type === 'evil' && this.y > window.innerHeight + 50) this.y = -50;
             if (this.type === 'good' && this.y < -50) this.y = window.innerHeight + 50;
-
             this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
         }
     }
@@ -214,7 +206,7 @@
         e.preventDefault();
         if(!gameActive) return;
         entities.push(new Entity(window.innerWidth/2, window.innerHeight - 80, 'good'));
-    }, {passive: false});
+    });
 
     function autoSpawner() {
         if(gameActive) {
@@ -228,23 +220,15 @@
     function gameLoop() {
         if (!gameActive) return;
         const goods = entities.filter(e => e.type === 'good');
-        
         entities.forEach((ent, i) => {
             ent.update(ent.type === 'evil' ? goods : []);
-            
             entities.forEach((other, j) => {
                 if (ent.type !== other.type) {
                     const dist = Math.hypot(ent.x - other.x, ent.y - other.y);
                     if (dist < ent.radius + other.radius) {
                         ent.health -= 25; other.health -= 25;
-                        if (ent.health <= 0) {
-                            ent.el.remove(); entities.splice(i, 1);
-                            if(other.type === 'good') { score += 10; updateLevel(); }
-                        }
-                        if (other.health <= 0) {
-                            other.el.remove(); entities.splice(j, 1);
-                            if(ent.type === 'good') { score += 10; updateLevel(); }
-                        }
+                        if (ent.health <= 0) { ent.el.remove(); entities.splice(i, 1); if(other.type === 'good') { score += 10; updateLevel(); } }
+                        if (other.health <= 0) { other.el.remove(); entities.splice(j, 1); if(ent.type === 'good') { score += 10; updateLevel(); } }
                         document.getElementById('score').textContent = score;
                     }
                 }
@@ -255,10 +239,7 @@
 
     function updateLevel() {
         const next = Math.floor(score / 500) + 1;
-        if(next !== level) {
-            level = next;
-            document.getElementById('level').textContent = level;
-        }
+        if(next !== level) { level = next; document.getElementById('level').textContent = level; }
     }
 </script>
 </body>
