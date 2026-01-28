@@ -4,92 +4,100 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>Artemis • Predator Prime</title>
+    <title>Artemis • Sequential Prime</title>
     <style>
-        :root { --glow: #00f2ff; --gold: #d4af37; --red: #ff2d55; --ui: rgba(0, 10, 20, 0.9); }
+        :root { --glow: #00f2ff; --gold: #d4af37; --red: #ff2d55; --ui: rgba(0, 8, 15, 0.95); }
         * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; touch-action:none; }
         body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: 'Courier New', monospace; color:var(--glow); }
 
-        /* MULTI-ENGINE VIDEO WRAPPER */
+        /* VIDEO LAYER */
         #video-viewport { position: fixed; inset: 0; z-index: -100; background: #000; }
-        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.35); opacity: 0; transition: opacity 2s; }
-        #yt-backup { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 2s; }
+        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); opacity: 0; transition: opacity 1.5s; }
 
-        /* BOOT INTERFACE */
-        #boot-screen {
+        /* INTERFACE */
+        #boot-overlay {
             position: fixed; inset: 0; z-index: 1000; background: #000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
         .boot-btn {
-            border: 2px solid var(--glow); color: var(--glow); padding: 30px 60px;
-            background: rgba(0, 242, 255, 0.05); cursor: pointer; letter-spacing: 5px; font-weight: bold;
+            border: 2px solid var(--glow); color: var(--glow); padding: 25px 50px;
+            background: rgba(0, 242, 255, 0.05); cursor: pointer; letter-spacing: 4px; font-weight: bold;
         }
+        #status-log { margin-top: 20px; font-size: 0.7rem; color: var(--gold); height: 1.5rem; text-transform: uppercase; }
 
-        #hud { position: fixed; top: 20px; left: 20px; z-index: 500; font-size: 0.8rem; padding: 10px; border: 1px solid var(--glow); background: var(--ui); }
+        #hud { position: fixed; top: 20px; left: 20px; z-index: 500; font-size: 0.8rem; padding: 10px; border: 1px solid var(--glow); background: var(--ui); border-radius: 4px; }
         #cannon {
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 120px; height: 120px; border-radius: 50%; z-index: 500;
+            width: 115px; height: 115px; border-radius: 50%; z-index: 500;
             background: var(--ui); border: 4px solid var(--gold);
             color: var(--gold); font-weight: bold; display: none; align-items: center; justify-content: center;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
         }
 
         .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; pointer-events: none; }
-        .cell-good { border: 2px solid var(--glow); box-shadow: 0 0 10px var(--glow); color: var(--glow); }
-        .cell-evil { border: 2px solid var(--red); box-shadow: 0 0 10px var(--red); color: var(--red); }
+        .cell-good { border: 2px solid var(--glow); box-shadow: 0 0 12px var(--glow); color: var(--glow); }
+        .cell-evil { border: 2px solid var(--red); box-shadow: 0 0 12px var(--red); color: var(--red); }
     </style>
 </head>
 <body>
 
 <div id="video-viewport">
-    <video id="bg-video" loop muted playsinline><source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm"></video>
-    <div id="yt-backup"></div>
+    <video id="bg-video" loop muted playsinline preload="auto">
+        <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
+    </video>
 </div>
 
 <div id="music-engine" style="position: absolute; top: -999px;"></div>
 
-<div id="boot-screen" onclick="protocolStart()">
-    <div class="boot-btn">INITIALIZE SYSTEM</div>
+<div id="boot-overlay" onclick="startSequence()">
+    <div class="boot-btn">INITIALIZE CORE</div>
+    <div id="status-log">AWAITING HANDSHAKE</div>
 </div>
 
-<div id="hud">SYMBIOTE COUNT: <span id="count">0</span> | XP: <span id="xp">0</span></div>
+<div id="hud">STABILITY: <span id="score">0</span>%</div>
 <div id="arena"></div>
 <div id="cannon" onpointerdown="deploy()">DEPLOY</div>
 
 <script>
-    let musicPlayer, bgBackupPlayer, musicReady = false, gameActive = false;
+    let musicPlayer, musicReady = false, gameActive = false;
     let entities = [], score = 0;
 
     function onYouTubeIframeAPIReady() {
         musicPlayer = new YT.Player('music-engine', {
             videoId: 'qwMz1wgXokk',
-            playerVars: { 'controls': 0, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1 }
-        });
-        bgBackupPlayer = new YT.Player('yt-backup', {
-            videoId: 'JBVeJ5ZYENc',
-            playerVars: { 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc', 'playsinline': 1 }
+            playerVars: { 'controls': 0, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1 },
+            events: { 'onReady': () => { musicReady = true; } }
         });
     }
 
-    async function protocolStart() {
+    async function startSequence() {
+        const log = document.getElementById('status-log');
         const v = document.getElementById('bg-video');
-        const yt = document.getElementById('yt-backup');
-        
-        // Attempt Vercel Play
-        v.play().then(() => {
-            v.style.opacity = "1";
-        }).catch(() => {
-            // Backup Play if Vercel blocked
-            bgBackupPlayer.playVideo();
-            yt.style.opacity = "1";
-        });
 
-        // Force Music
-        if (musicPlayer && musicPlayer.playVideo) {
-            musicPlayer.unMute();
-            musicPlayer.playVideo();
+        // PHASE 1: VIDEO FIRST
+        log.innerText = "STREAMING VIDEO ENGINE...";
+        try {
+            await v.play();
+            v.style.opacity = "1";
+            log.innerText = "VIDEO STABLE";
+        } catch(e) {
+            log.innerText = "VIDEO BYPASS ENGAGED";
         }
 
-        document.getElementById('boot-screen').style.display = 'none';
+        // PHASE 2: DELAY FOR STABILITY
+        await new Promise(r => setTimeout(r, 1200));
+
+        // PHASE 3: TRIGGER MUSIC
+        log.innerText = "CONNECTING AUDIO UPLINK...";
+        if (musicReady && musicPlayer) {
+            musicPlayer.unMute();
+            musicPlayer.playVideo();
+            log.innerText = "AUDIO SYNCED";
+        }
+
+        // PHASE 4: ENGAGE GAME
+        await new Promise(r => setTimeout(r, 800));
+        document.getElementById('boot-overlay').style.display = 'none';
         document.getElementById('cannon').style.display = 'flex';
         gameActive = true;
         spawnEnemy();
@@ -103,8 +111,8 @@
             this.radius = 18;
             this.x = type === 'good' ? window.innerWidth / 2 : Math.random() * window.innerWidth;
             this.y = type === 'good' ? window.innerHeight - 150 : -50;
-            this.vx = (Math.random() - 0.5) * 2;
-            this.vy = type === 'good' ? -2 : 2;
+            this.vx = (Math.random() - 0.5) * 3;
+            this.vy = type === 'good' ? -3 : 3;
             
             this.el = document.createElement('div');
             this.el.className = `cell cell-${type}`;
@@ -114,7 +122,7 @@
         }
 
         update(enemies) {
-            // PREDATOR AI
+            // PREDATOR AI: Attack opposition
             if (enemies.length > 0) {
                 let target = enemies[0];
                 let min = Math.hypot(this.x - target.x, this.y - target.y);
@@ -123,13 +131,13 @@
                     if (d < min) { min = d; target = e; }
                 });
                 let angle = Math.atan2(target.y - this.y, target.x - this.x);
-                this.vx += Math.cos(angle) * 0.3;
-                this.vy += Math.sin(angle) * 0.3;
+                this.vx += Math.cos(angle) * 0.25;
+                this.vy += Math.sin(angle) * 0.25;
             }
 
             // Speed Cap
             let s = Math.hypot(this.vx, this.vy);
-            if (s > 6) { this.vx = (this.vx/s)*6; this.vy = (this.vy/s)*6; }
+            if (s > 5.5) { this.vx = (this.vx/s)*5.5; this.vy = (this.vy/s)*5.5; }
 
             this.x += this.vx; this.y += this.vy;
             if(this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
@@ -140,10 +148,11 @@
     }
 
     function deploy() { if(gameActive) entities.push(new Symbiote('good')); }
+
     function spawnEnemy() {
         if(gameActive) {
             entities.push(new Symbiote('evil'));
-            setTimeout(spawnEnemy, Math.max(500, 3000 - (score * 50)));
+            setTimeout(spawnEnemy, 2500);
         }
     }
 
@@ -155,27 +164,25 @@
             let enemies = entities.filter(e => e.type !== ent.type);
             ent.update(enemies);
 
-            // Combat
+            // Combat Check
             enemies.forEach(enemy => {
                 if (Math.hypot(ent.x - enemy.x, ent.y - enemy.y) < ent.radius + enemy.radius) {
-                    ent.hp -= 1.5; // Damage per frame
+                    ent.hp -= 1.2; // Constant combat drain
                     if (ent.hp <= 0) {
                         ent.el.remove();
                         entities.splice(i, 1);
-                        if(ent.type === 'evil') score += 10;
+                        if(ent.type === 'evil') score += 1;
                     }
                 }
             });
 
-            // Boundary Cleanup
-            if (ent.y < -300 || ent.y > window.innerHeight + 300) {
+            if (ent.y < -200 || ent.y > window.innerHeight + 200) {
                 ent.el.remove();
                 entities.splice(i, 1);
             }
         }
 
-        document.getElementById('xp').innerText = score;
-        document.getElementById('count').innerText = entities.length;
+        document.getElementById('score').innerText = score;
         requestAnimationFrame(gameLoop);
     }
 </script>
