@@ -34,6 +34,7 @@
             cursor: pointer;
             transition: opacity 1.2s ease-out;
         }
+        #landing-overlay.hidden { opacity: 0; pointer-events: none; }
         #landing-text { 
             text-shadow: 0 0 30px var(--cyan); 
             animation: pulseText 3s infinite alternate; 
@@ -101,7 +102,6 @@
         #cannon.active { pointer-events: auto; }
         #cannon:active, #cannon.pressed { transform: translateX(-50%) scale(0.92); box-shadow: 0 0 60px var(--gold); }
 
-        /* Keep your cell-orb, hud-box, etc. styles here */
         .cell-orb { 
             position: absolute; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
@@ -153,7 +153,27 @@
         <div class="spinner"></div>
     </div>
 
-    <!-- Add your transition-overlay, revive-overlay, win-overlay here with display:none; as needed -->
+    <div id="transition-overlay">
+        <h2 id="trans-text" style="color:var(--gold); margin-bottom: 30px; font-size: 1.8rem;">WARPING...</h2>
+        <div class="spinner"></div>
+    </div>
+
+    <div id="revive-overlay">
+        <h2 style="color:var(--gold); margin-bottom: 30px; font-size: 1.8rem;">SYMBIOTE LOST!</h2>
+        <div class="btn" id="revive-btn">REVIVE (Free)</div>
+        <div class="btn" onclick="location.reload()">RESTART</div>
+    </div>
+
+    <div id="win-overlay">
+        <h2 style="color:var(--gold); margin-bottom: 20px; font-size: 2rem;">OLYMPUS ASCENDED!</h2>
+        <p style="max-width: 80%; text-align: center; font-size: 1.1rem; margin: 20px;">
+            Congratulations! You've reached Level 100.<br><br>
+            <strong>Certificate Code:</strong> <span id="cert-code" style="font-family: monospace; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;"></span><br><br>
+            Email this code + your email address to <strong>your-email@example.com</strong><br>
+            We will verify your completion and send hoodie claim instructions.
+        </p>
+        <div class="btn" onclick="location.reload()">PLAY AGAIN</div>
+    </div>
 
     <div id="rift-portal"></div>
     <div id="engine-bg">
@@ -162,7 +182,6 @@
 
     <div id="ytplayer"></div>
 
-    <div id="oracle-nucleus"><video id="oracle-video" autoplay loop muted playsinline src="https://files.catbox.moe/no2e76.mp4"></video></div>
     <div id="orbital-canvas"></div>
     
     <div id="ui-layer">
@@ -214,7 +233,7 @@
 
         const rainInterval = setInterval(drawRain, 50);
 
-        // LANDING CLICK - HIDE LANDING, SHOW DISCLAIMER
+        // LANDING CLICK - HIDE LANDING + RAIN → SHOW DISCLAIMER
         const landing = document.getElementById('landing-overlay');
         const startOverlay = document.getElementById('start-overlay');
 
@@ -223,22 +242,82 @@
             setTimeout(() => {
                 landing.style.display = 'none';
                 clearInterval(rainInterval);
-                rainCanvas.remove(); // fully remove canvas to stop any residual draw
+                rainCanvas.remove();
                 startOverlay.style.display = 'flex';
-            }, 1200); // fade time
-        }, { once: true }); // prevent multiple triggers
+            }, 1200);
+        }, { once: true });
 
-        // === GAME LOGIC ===
+        // AUTO MUSIC + UNMUTE ON FIRST INTERACTION
+        let player, musicStarted = false, musicMuted = true;
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('ytplayer', {
+                height: '0',
+                width: '0',
+                videoId: 'qwMz1wgXokk', // first track
+                playerVars: {
+                    'playsinline': 1,
+                    'autoplay': 1, // auto start (muted)
+                    'loop': 1,
+                    'playlist': 'qwMz1wgXokk' // loop same track for now
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            event.target.mute(); // start muted (browser policy)
+            event.target.playVideo();
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.ENDED) {
+                player.playVideo(); // loop
+            }
+        }
+
+        // Unmute on first click anywhere
+        document.body.addEventListener('click', () => {
+            if (!musicStarted && player) {
+                player.unMute();
+                musicStarted = true;
+                musicMuted = false;
+                document.getElementById('music-toggle').textContent = '[Music: ON]';
+            }
+        }, { once: true });
+
+        musicToggle.addEventListener('click', () => {
+            if (!player) return;
+            if (musicMuted) {
+                player.unMute();
+                musicMuted = false;
+                musicToggle.textContent = '[Music: ON]';
+            } else {
+                player.mute();
+                musicMuted = true;
+                musicToggle.textContent = '[Music: OFF]';
+            }
+        });
+
+        // GAME LOGIC (rest unchanged from previous working version)
         const canvas = document.getElementById('orbital-canvas');
         const countdownOverlay = document.getElementById('countdown-overlay');
+        const transitionOverlay = document.getElementById('transition-overlay');
+        const reviveOverlay = document.getElementById('revive-overlay');
+        const winOverlay = document.getElementById('win-overlay');
+        const transText = document.getElementById('trans-text');
+        const countdownText = document.getElementById('countdown-text');
+        const certCodeEl = document.getElementById('cert-code');
+        const pauseToggle = document.getElementById('pause-toggle');
+        const boostBtn = document.getElementById('boost-btn');
         const cannon = document.getElementById('cannon');
 
         let cells = [], enemies = [];
         let score = 0, level = 1, isWarping = false, isPaused = false, gameActive = false;
         const MARGIN = 4;
-        let musicStarted = false;
-        let musicMuted = true;
-        let player;
         let boostMultiplier = 1;
         let boostTimer = null;
 
@@ -267,11 +346,11 @@
             countdownOverlay.style.display = 'flex';
             cannon.classList.remove('active');
             let timeLeft = 10;
-            document.getElementById('countdown-text').textContent = timeLeft;
+            countdownText.textContent = timeLeft;
 
             const timer = setInterval(() => {
                 timeLeft--;
-                document.getElementById('countdown-text').textContent = timeLeft;
+                countdownText.textContent = timeLeft;
                 if (timeLeft <= 0) {
                     clearInterval(timer);
                     countdownOverlay.style.display = 'none';
@@ -285,8 +364,192 @@
 
         document.getElementById('start-btn').addEventListener('click', startCountdown);
 
-        // ... rest of your game code: Entity class, fireCannon, spawnTick, gameLoop, music, etc. ...
-        // Paste the remaining functions from your previous working version here (loadProgress, saveProgress, nextLevel, checkFieldClear, boost logic, revive logic, YouTube setup, gameLoop, etc.)
+        function loadProgress() {
+            const savedLevel = localStorage.getItem('symbioteLevel');
+            const savedScore = localStorage.getItem('symbioteScore');
+            if (savedLevel && savedScore) {
+                level = parseInt(savedLevel, 10);
+                score = parseInt(savedScore, 10);
+                document.getElementById('level').textContent = level;
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        function saveProgress() {
+            localStorage.setItem('symbioteLevel', level);
+            localStorage.setItem('symbioteScore', score);
+        }
+
+        function getGenCount() {
+            return Math.min(level, 10) * boostMultiplier;
+        }
+
+        class Entity {
+            constructor(x, y, type) {
+                this.type = type; this.x = x; this.y = y;
+                this.radius = 40 + Math.random() * 8;
+                this.health = 100;
+                this.el = document.createElement('div');
+                this.el.className = `cell-orb cell-${type}`;
+                this.el.innerHTML = `<div class="hp-bar"><div class="hp-fill"></div></div>`;
+                this.hpFill = this.el.querySelector('.hp-fill');
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = type === 'cell' ? -6 : (1.8 + level * 0.4);
+                canvas.appendChild(this.el);
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                if (this.x < this.radius + MARGIN || this.x > window.innerWidth - this.radius - MARGIN) this.vx *= -1;
+                if (this.y < this.radius + MARGIN || this.y > window.innerHeight - this.radius - MARGIN) this.vy *= -1;
+                this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
+            }
+            takeDamage(dmg) {
+                this.health -= dmg;
+                this.hpFill.style.width = Math.max(0, this.health) + '%';
+                return this.health <= 0;
+            }
+        }
+
+        function fireCannon() {
+            if (!gameActive || isWarping || isPaused) return;
+            const count = getGenCount();
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    cells.push(new Entity(window.innerWidth / 2, window.innerHeight - 100, 'cell'));
+                }, i * 18);
+            }
+        }
+
+        function spawnTick() {
+            if (gameActive && !isWarping && !isPaused) {
+                const spawnChance = 0.03 + (level * 0.008);
+                if (Math.random() < spawnChance) {
+                    const offsetX = (Math.random() - 0.5) * Math.min(200, window.innerWidth * 0.15);
+                    const spawnY = 40 + Math.random() * 40;
+                    const type = Math.random() > 0.5 ? 'virus' : 'disease';
+                    enemies.push(new Entity(window.innerWidth / 2 + offsetX, spawnY, type));
+                }
+            }
+            setTimeout(spawnTick, 700 + Math.random() * 500);
+        }
+
+        function nextLevel() {
+            isWarping = true;
+            transitionOverlay.style.display = 'flex';
+            
+            const nextLvl = level + 1;
+            if (nextLvl >= 100) {
+                const timestamp = new Date().toISOString();
+                const randomSalt = Math.random().toString(36).slice(2, 10);
+                const certCode = btoa(timestamp + randomSalt).slice(0, 16);
+                certCodeEl.textContent = certCode;
+
+                winOverlay.style.display = 'flex';
+                transitionOverlay.style.display = 'none';
+                localStorage.removeItem('symbioteLevel');
+                localStorage.removeItem('symbioteScore');
+                return;
+            }
+
+            transText.textContent = `WARPING TO LEVEL ${nextLvl}`;
+
+            setTimeout(() => {
+                cells.forEach(c => c.el.remove());
+                enemies.forEach(e => e.el.remove());
+                cells = []; enemies = [];
+                
+                level = nextLvl;
+                score = 0;
+                
+                document.getElementById('level').textContent = level;
+                document.getElementById('score').textContent = '0';
+                
+                transitionOverlay.style.display = 'none';
+                isWarping = false;
+                saveProgress();
+            }, 3000);
+        }
+
+        function checkFieldClear() {
+            if (cells.length === 0 && enemies.length === 0 && gameActive && !isWarping && !isPaused) {
+                reviveOverlay.style.display = 'flex';
+            }
+        }
+
+        boostBtn.addEventListener('click', () => {
+            boostMultiplier = 2;
+            boostBtn.textContent = 'BOOST ACTIVE: x2 (30s)';
+            boostBtn.classList.add('active');
+            clearTimeout(boostTimer);
+            boostTimer = setTimeout(() => {
+                boostMultiplier = 1;
+                boostBtn.textContent = 'BOOST: x2 (30s)';
+                boostBtn.classList.remove('active');
+            }, 30000);
+        });
+
+        document.getElementById('revive-btn').addEventListener('click', () => {
+            reviveOverlay.style.display = 'none';
+            for(let i = 0; i < 12; i++) {
+                setTimeout(() => {
+                    cells.push(new Entity(window.innerWidth / 2 + (Math.random()-0.5)*300, window.innerHeight - 80, 'cell'));
+                }, i * 80);
+            }
+        });
+
+        pauseToggle.addEventListener('click', () => {
+            isPaused = !isPaused;
+            pauseToggle.textContent = isPaused ? '[PLAY]' : '[PAUSE]';
+            if (player) {
+                if (isPaused) player.pauseVideo();
+                else if (!musicMuted) player.playVideo();
+            }
+        });
+
+        function resetGame() { location.reload(); }
+
+        function gameLoop() {
+            if (gameActive && !isWarping && !isPaused) {
+                cells.forEach((c, ci) => {
+                    c.update();
+                    enemies.forEach((e, ei) => {
+                        if (Math.hypot(c.x - e.x, c.y - e.y) < (c.radius + e.radius)/2) {
+                            if (e.takeDamage(5)) {
+                                e.el.remove(); enemies.splice(ei, 1);
+                                score += 20;
+                                document.getElementById('score').textContent = score;
+                                if (score >= 1000) nextLevel();
+                            }
+                            if (c.takeDamage(5)) {
+                                c.el.remove(); cells.splice(ci, 1);
+                            }
+                        }
+                    });
+                });
+                enemies.forEach(e => e.update());
+                checkFieldClear();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function loadProgress() {
+            const savedLevel = localStorage.getItem('symbioteLevel');
+            const savedScore = localStorage.getItem('symbioteScore');
+            if (savedLevel && savedScore) {
+                level = parseInt(savedLevel, 10);
+                score = parseInt(savedScore, 10);
+                document.getElementById('level').textContent = level;
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        function saveProgress() {
+            localStorage.setItem('symbioteLevel', level);
+            localStorage.setItem('symbioteScore', score);
+        }
+
+        window.addEventListener('beforeunload', saveProgress);
+        gameLoop();
     </script>
 </body>
 </html>
