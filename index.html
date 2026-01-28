@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://quge5.com/88/tag.min.js" data-zone="206119" async data-cfasync="false"></script>
+    <!-- No Monetag script - removed as requested -->
     <script src="https://www.youtube.com/iframe_api"></script>
     
     <meta charset="UTF-8" />
@@ -24,7 +24,7 @@
             color:var(--cyan); touch-action: none; 
         }
 
-        #start-overlay, #transition-overlay, #revive-overlay {
+        #start-overlay, #transition-overlay, #revive-overlay, #countdown-overlay, #win-overlay {
             position: fixed; inset: 0; z-index: 1000;
             background: radial-gradient(circle, #1a0033 0%, #000 90%);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -41,8 +41,10 @@
             font-size: 0.95rem; 
             color: #ffcc00; 
         }
-        #transition-overlay, #revive-overlay { opacity: 0; transition: opacity 1s; pointer-events: none; }
-        #transition-overlay.active, #revive-overlay.active { opacity: 1; pointer-events: auto; }
+        #countdown-overlay { opacity: 0; pointer-events: none; transition: opacity 0.5s; }
+        #countdown-overlay.active { opacity: 1; pointer-events: auto; }
+        #win-overlay { opacity: 0; pointer-events: none; transition: opacity 0.5s; }
+        #win-overlay.active { opacity: 1; pointer-events: auto; }
 
         .btn { 
             width: 220px; height: 80px; margin: 20px;
@@ -97,10 +99,7 @@
         }
         @keyframes cellPulse { 0% { transform: scale(1); } 100% { transform: scale(1.08); } }
 
-        .cell-good { 
-            background: radial-gradient(circle, #00f2ff88, #001122); 
-            border: 2px solid var(--cyan); 
-        }
+        .cell-good { background: radial-gradient(circle, #00f2ff88, #001122); border: 2px solid var(--cyan); }
         .cell-virus { 
             background: radial-gradient(circle, #ff2d5588, #220000); 
             border: 2px solid var(--virus-red); 
@@ -120,7 +119,7 @@
 
         #cannon { 
             position: fixed; bottom: -10px; left: 50%; transform: translateX(-50%); 
-            width: 140px; height: 120px; z-index: 300; pointer-events: auto; 
+            width: 140px; height: 120px; z-index: 300; pointer-events: none; 
             background: linear-gradient(to top, #0a0a1f, #111); 
             border-radius: 70px 70px 0 0; border: 4px solid var(--gold); 
             display: flex; align-items: center; justify-content: center; 
@@ -128,6 +127,7 @@
             transition: transform 0.1s, box-shadow 0.1s; 
             box-shadow: 0 0 20px var(--gold);
         }
+        #cannon.active { pointer-events: auto; }
         #cannon:active, #cannon.pressed { 
             transform: translateX(-50%) scale(0.92); 
             box-shadow: 0 0 60px var(--gold); 
@@ -137,6 +137,8 @@
         .hud-box { background: var(--glass); border: 1px solid var(--cyan); padding: 12px; border-radius: 8px; backdrop-filter: blur(8px); pointer-events: auto; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.95rem; }
         #music-toggle, #pause-toggle, #boost-btn { cursor: pointer; padding: 6px 14px; background: rgba(0,242,255,0.1); border: 1px solid var(--cyan); border-radius: 6px; }
         #boost-btn.active { background: var(--cyan); color: #000; font-weight: bold; }
+
+        #countdown-text { font-size: 4rem; color: var(--gold); margin: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -144,14 +146,19 @@
         <h2 style="color:var(--gold); margin-bottom: 20px; font-size: 2rem;">Artemis • Prime Symbiote</h2>
         
         <div id="disclaimer">
-            <strong>Heads up:</strong> This game is completely free, but hoodies and ongoing development are funded 100% through ad views.<br>
-            By pressing "ENTER THE RIFT", you're helping make real hoodies possible via ad impressions.<br>
-            Expect ads during level ups (every few levels), when using boosts/revives, and at the final hoodie claim.<br>
-            No credit card needed — your gameplay supports the prizes! 🚀
+            <strong>Heads up:</strong> This game is completely free, but hoodies and ongoing development are funded through player support and future features.<br>
+            By playing, you're part of the journey to make real hoodies possible!<br>
+            No purchases needed — enjoy the grind! 🚀
         </div>
 
         <div class="spinner" style="margin: 30px 0;"></div>
         <div class="btn" id="start-btn">⚡ ENTER THE RIFT</div>
+    </div>
+
+    <div id="countdown-overlay">
+        <h2 style="color:var(--gold); margin-bottom: 20px;">PREPARING RIFT...</h2>
+        <div id="countdown-text">10</div>
+        <div class="spinner"></div>
     </div>
 
     <div id="transition-overlay">
@@ -161,8 +168,20 @@
 
     <div id="revive-overlay">
         <h2 style="color:var(--gold); margin-bottom: 30px; font-size: 1.8rem;">SYMBIOTE LOST!</h2>
-        <div class="btn" id="revive-btn">REVIVE: Watch Ad</div>
+        <div class="btn" id="revive-btn">REVIVE (Free)</div>
         <div class="btn" onclick="location.reload()">RESTART</div>
+    </div>
+
+    <div id="win-overlay">
+        <h2 style="color:var(--gold); margin-bottom: 20px; font-size: 2rem;">OLYMPUS ASCENDED!</h2>
+        <p style="max-width: 80%; text-align: center; font-size: 1.1rem; margin: 20px;">
+            Congratulations! You've reached Level 100.<br><br>
+            <strong>Certificate Code:</strong> <span id="cert-code" style="font-family: monospace; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;"></span><br><br>
+            Email this code + your email address to <strong>your-email@example.com</strong><br>
+            We will verify your completion and send hoodie claim instructions.<br>
+            (Verification includes IP and timestamp matching — only real winners qualify!)
+        </p>
+        <div class="btn" onclick="location.reload()">PLAY AGAIN</div>
     </div>
 
     <div id="rift-portal"></div>
@@ -180,7 +199,7 @@
             LVL <span id="level">1</span>  •  SCORE <span id="score">0</span>/1000
             <span id="music-toggle">[Music: OFF]</span>
             <span id="pause-toggle">[PAUSE]</span>
-            <span id="boost-btn">BOOST: Watch Ad (x2 • 30s)</span>
+            <span id="boost-btn">BOOST: x2 (30s)</span>
         </div>
     </div>
 
@@ -189,17 +208,20 @@
     <script>
         const canvas = document.getElementById('orbital-canvas');
         const startOverlay = document.getElementById('start-overlay');
+        const countdownOverlay = document.getElementById('countdown-overlay');
         const transitionOverlay = document.getElementById('transition-overlay');
         const reviveOverlay = document.getElementById('revive-overlay');
+        const winOverlay = document.getElementById('win-overlay');
         const transText = document.getElementById('trans-text');
+        const countdownText = document.getElementById('countdown-text');
+        const certCodeEl = document.getElementById('cert-code');
         const musicToggle = document.getElementById('music-toggle');
         const pauseToggle = document.getElementById('pause-toggle');
         const boostBtn = document.getElementById('boost-btn');
         const cannon = document.getElementById('cannon');
 
         let cells = [], enemies = [];
-        let score = 0, level = 1, isWarping = false, isPaused = false;
-        let gameStarted = false;
+        let score = 0, level = 1, isWarping = false, isPaused = false, gameActive = false;
         const MARGIN = 4;
         let musicStarted = false;
         let musicMuted = true;
@@ -208,16 +230,48 @@
         const playlist = ["qwMz1wgXokk","9XvXF1LrWgA","XbGs_qK2PQA","Obim8BYGnOE","c2AhsySa-8E","2T15MMwaSEQ","4cmmB3z3j5o","5t9x0g5y2xA","5qap5aO4i9A","1wYNFfgrXTI","6Ejga4kJUts","9bZkp7q19f0","3m_QN8P93IA","SP00wB70D5g","1wYNFfgrXTI","SmBzqkgdH9I","r_0JjYUe5jo","ubCbHIWglSw","OiBSeGoc9FQ","DLzxrzFCyOs","3qFvCPmee8U","8CdcCD5V-d8","77DTr1csdp0","DlOMEMFkyIk","Q97alSBCAxw","ytQ5CYE1VZw","Qxw5xNqATko","YK7suWgs6NQ"];
         let boostMultiplier = 1;
         let boostTimer = null;
-        const adFrequency = 3;
-        const adZoneUrl = 'https://quge5.com/88/?zone=206119';
 
-        // Cannon press feedback
         cannon.addEventListener('pointerdown', () => {
-            cannon.classList.add('pressed');
-            fireCannon();
+            if (gameActive) {
+                cannon.classList.add('pressed');
+                fireCannon();
+            }
         });
         cannon.addEventListener('pointerup', () => cannon.classList.remove('pressed'));
         cannon.addEventListener('pointercancel', () => cannon.classList.remove('pressed'));
+
+        function spawnStarterCells() {
+            for (let i = 0; i < 10; i++) {
+                const offsetX = (Math.random() - 0.5) * 400;
+                const offsetY = Math.random() * 100;
+                cells.push(new Entity(
+                    window.innerWidth / 2 + offsetX,
+                    window.innerHeight - 150 - offsetY,
+                    'cell'
+                ));
+            }
+        }
+
+        function startCountdown() {
+            startOverlay.style.display = 'none';
+            countdownOverlay.classList.add('active');
+            cannon.classList.remove('active');
+            let timeLeft = 10;
+            countdownText.textContent = timeLeft;
+
+            const timer = setInterval(() => {
+                timeLeft--;
+                countdownText.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    countdownOverlay.classList.remove('active');
+                    gameActive = true;
+                    cannon.classList.add('active');
+                    spawnStarterCells(); // Give defense
+                    spawnTick(); // Start enemies
+                }
+            }, 1000);
+        }
 
         function loadProgress() {
             const savedLevel = localStorage.getItem('symbioteLevel');
@@ -242,7 +296,7 @@
         class Entity {
             constructor(x, y, type) {
                 this.type = type; this.x = x; this.y = y;
-                this.radius = 40 + Math.random() * 8; // slight size variation for organic feel
+                this.radius = 40 + Math.random() * 8;
                 this.health = 100;
                 this.el = document.createElement('div');
                 this.el.className = `cell-orb cell-${type}`;
@@ -266,7 +320,7 @@
         }
 
         function fireCannon() {
-            if (isWarping || !gameStarted || isPaused) return;
+            if (!gameActive || isWarping || isPaused) return;
             if (!musicStarted && player) {
                 player.unMute();
                 player.playVideo();
@@ -283,7 +337,7 @@
         }
 
         function spawnTick() {
-            if (gameStarted && !isWarping && !isPaused) {
+            if (gameActive && !isWarping && !isPaused) {
                 const spawnChance = 0.03 + (level * 0.008);
                 if (Math.random() < spawnChance) {
                     const offsetX = (Math.random() - 0.5) * Math.min(200, window.innerWidth * 0.15);
@@ -297,14 +351,7 @@
 
         function startGame() {
             loadProgress();
-            startOverlay.style.display = 'none';
-            gameStarted = true;
-            cannon.classList.add('active');
-            spawnTick();
-        }
-
-        function showAd() {
-            window.open(adZoneUrl, '_blank', 'noopener,noreferrer,width=400,height=500');
+            startCountdown(); // 10s delay before full start
         }
 
         function nextLevel() {
@@ -313,21 +360,19 @@
             
             const nextLvl = level + 1;
             if (nextLvl >= 100) {
-                transText.innerHTML = "OLYMPUS ASCENDED!<br><span onclick='resetGame()' style='color:var(--cyan);cursor:pointer;'>RETRY</span> | <a href='https://georgia-aquarium.vercel.app/#' target='_blank' style='color:var(--cyan)'>CLAIM HOODIE</a>";
-                for(let i = 0; i < 3; i++) {
-                    setTimeout(showAd, i * 2500 + 1500);
-                }
-                setTimeout(() => { isWarping = false; }, 10000);
+                const timestamp = new Date().toISOString();
+                const randomSalt = Math.random().toString(36).slice(2, 10);
+                const certCode = btoa(timestamp + randomSalt).slice(0, 16); // simple unique code
+                certCodeEl.textContent = certCode;
+
+                winOverlay.classList.add('active');
+                transitionOverlay.classList.remove('active');
                 localStorage.removeItem('symbioteLevel');
                 localStorage.removeItem('symbioteScore');
                 return;
             }
 
             transText.textContent = `WARPING TO LEVEL ${nextLvl}`;
-
-            if (level % adFrequency === 0) {
-                showAd();
-            }
 
             setTimeout(() => {
                 cells.forEach(c => c.el.remove());
@@ -347,26 +392,25 @@
         }
 
         function checkFieldClear() {
-            if (cells.length === 0 && enemies.length === 0 && gameStarted && !isWarping && !isPaused) {
+            if (cells.length === 0 && enemies.length === 0 && gameActive && !isWarping && !isPaused) {
                 reviveOverlay.classList.add('active');
             }
         }
 
         boostBtn.addEventListener('click', () => {
-            showAd();
+            // No ad - just free boost for now
             boostMultiplier = 2;
             boostBtn.textContent = 'BOOST ACTIVE: x2 (30s)';
             boostBtn.classList.add('active');
             clearTimeout(boostTimer);
             boostTimer = setTimeout(() => {
                 boostMultiplier = 1;
-                boostBtn.textContent = 'BOOST: Watch Ad (x2 • 30s)';
+                boostBtn.textContent = 'BOOST: x2 (30s)';
                 boostBtn.classList.remove('active');
             }, 30000);
         });
 
         document.getElementById('revive-btn').addEventListener('click', () => {
-            showAd();
             reviveOverlay.classList.remove('active');
             for(let i = 0; i < 12; i++) {
                 setTimeout(() => {
@@ -432,11 +476,11 @@
         function resetGame() { location.reload(); }
 
         function gameLoop() {
-            if (gameStarted && !isWarping && !isPaused) {
+            if (gameActive && !isWarping && !isPaused) {
                 cells.forEach((c, ci) => {
                     c.update();
                     enemies.forEach((e, ei) => {
-                        if (Math.hypot(c.x - e.x, c.y - e.y) < (c.radius + e.radius)/2) { // adjusted collision for varied sizes
+                        if (Math.hypot(c.x - e.x, c.y - e.y) < (c.radius + e.radius)/2) {
                             if (e.takeDamage(5)) {
                                 e.el.remove(); enemies.splice(ei, 1);
                                 score += 20;
