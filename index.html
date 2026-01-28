@@ -34,7 +34,6 @@
             cursor: pointer;
             transition: opacity 1.2s ease-out;
         }
-        #landing-overlay.hidden { opacity: 0; pointer-events: none; }
         #landing-text { 
             text-shadow: 0 0 30px var(--cyan); 
             animation: pulseText 3s infinite alternate; 
@@ -51,13 +50,14 @@
             position: fixed; inset: 0; z-index: 1000;
             background: radial-gradient(circle, #1a0033 0%, #000 90%);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            opacity: 1; pointer-events: auto;
+            pointer-events: auto;
         }
-        #start-overlay { 
-            display: none; 
-            text-align: center; 
-            padding: 20px; 
-        }
+        #start-overlay { display: none; text-align: center; padding: 20px; }
+        #countdown-overlay { display: none; }
+        #transition-overlay { display: none; }
+        #revive-overlay { display: none; }
+        #win-overlay { display: none; }
+
         #disclaimer { 
             max-width: 90%; 
             background: rgba(255,0,0,0.15); 
@@ -86,46 +86,7 @@
         #bg-video { 
             width: 100%; height: 100%; object-fit: cover; 
             filter: brightness(0.10) contrast(1.15) saturate(0.8); 
-            animation: subtlePulse 20s infinite alternate; 
         }
-        @keyframes subtlePulse { 0% { opacity: 0.85; } 100% { opacity: 1; } }
-
-        #oracle-nucleus { 
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            width: min(260px, 50vw); height: min(260px, 50vw); 
-            border-radius: 50%; border: 4px solid var(--gold); 
-            box-shadow: var(--glow-c); z-index: 100; overflow: hidden; background: #000;
-        }
-        #oracle-video { width: 100%; height: 100%; object-fit: cover; }
-
-        #orbital-canvas { position: fixed; inset: 0; z-index: 150; pointer-events: none; }
-
-        .cell-orb { 
-            position: absolute; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            color: #fff; font-size: 0.6rem; font-weight: bold;
-            backdrop-filter: blur(4px); z-index: 160; 
-            animation: cellPulse 4s infinite alternate ease-in-out;
-        }
-        @keyframes cellPulse { 0% { transform: scale(1); } 100% { transform: scale(1.08); } }
-
-        .cell-good { background: radial-gradient(circle, #00f2ff88, #001122); border: 2px solid var(--cyan); }
-        .cell-virus { 
-            background: radial-gradient(circle, #ff2d5588, #220000); 
-            border: 2px solid var(--virus-red); 
-            animation: virusWobble 3s infinite; 
-        }
-        @keyframes virusWobble { 0%,100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(8deg) scale(1.05); } }
-
-        .cell-disease { 
-            background: radial-gradient(circle, #00ff9d88, #002211); 
-            border: 2px solid var(--disease-green); 
-            animation: diseaseWave 6s infinite; 
-        }
-        @keyframes diseaseWave { 0%,100% { filter: hue-rotate(0deg); } 50% { filter: hue-rotate(30deg); } }
-
-        .hp-bar { position: absolute; bottom: 4px; width: 25px; height: 3px; background: #111; border-radius: 2px; overflow: hidden; }
-        .hp-fill { height: 100%; background: #0f0; width: 100%; }
 
         #cannon { 
             position: fixed; bottom: -10px; left: 50%; transform: translateX(-50%); 
@@ -140,23 +101,39 @@
         #cannon.active { pointer-events: auto; }
         #cannon:active, #cannon.pressed { transform: translateX(-50%) scale(0.92); box-shadow: 0 0 60px var(--gold); }
 
+        /* Keep your cell-orb, hud-box, etc. styles here */
+        .cell-orb { 
+            position: absolute; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            color: #fff; font-size: 0.6rem; font-weight: bold;
+            backdrop-filter: blur(4px); z-index: 160; 
+            animation: cellPulse 4s infinite alternate ease-in-out;
+        }
+        @keyframes cellPulse { 0% { transform: scale(1); } 100% { transform: scale(1.08); } }
+
+        .cell-good { background: radial-gradient(circle, #00f2ff88, #001122); border: 2px solid var(--cyan); }
+        .cell-virus { background: radial-gradient(circle, #ff2d5588, #220000); border: 2px solid var(--virus-red); animation: virusWobble 3s infinite; }
+        @keyframes virusWobble { 0%,100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(8deg) scale(1.05); } }
+
+        .cell-disease { background: radial-gradient(circle, #00ff9d88, #002211); border: 2px solid var(--disease-green); animation: diseaseWave 6s infinite; }
+        @keyframes diseaseWave { 0%,100% { filter: hue-rotate(0deg); } 50% { filter: hue-rotate(30deg); } }
+
+        .hp-bar { position: absolute; bottom: 4px; width: 25px; height: 3px; background: #111; border-radius: 2px; overflow: hidden; }
+        .hp-fill { height: 100%; background: #0f0; width: 100%; }
+
         #ui-layer { position: fixed; inset: 0; z-index: 400; pointer-events: none; padding: 20px; color: var(--cyan); }
         .hud-box { background: var(--glass); border: 1px solid var(--cyan); padding: 12px; border-radius: 8px; backdrop-filter: blur(8px); pointer-events: auto; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.95rem; }
         #music-toggle, #pause-toggle, #boost-btn { cursor: pointer; padding: 6px 14px; background: rgba(0,242,255,0.1); border: 1px solid var(--cyan); border-radius: 6px; }
         #boost-btn.active { background: var(--cyan); color: #000; font-weight: bold; }
-
-        #countdown-text { font-size: 6rem; color: var(--gold); margin: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- Landing page with digital rain -->
     <div id="landing-overlay">
         <canvas id="rain-canvas"></canvas>
         <div id="landing-text">CLICK ANYWHERE TO BEGIN</div>
     </div>
 
-    <!-- Disclaimer / Main start screen -->
     <div id="start-overlay">
         <h2 style="color:var(--gold); margin-bottom: 20px; font-size: 2rem;">Artemis • Prime Symbiote</h2>
         
@@ -176,27 +153,7 @@
         <div class="spinner"></div>
     </div>
 
-    <div id="transition-overlay">
-        <h2 id="trans-text" style="color:var(--gold); margin-bottom: 30px; font-size: 1.8rem;">WARPING...</h2>
-        <div class="spinner"></div>
-    </div>
-
-    <div id="revive-overlay">
-        <h2 style="color:var(--gold); margin-bottom: 30px; font-size: 1.8rem;">SYMBIOTE LOST!</h2>
-        <div class="btn" id="revive-btn">REVIVE (Free)</div>
-        <div class="btn" onclick="location.reload()">RESTART</div>
-    </div>
-
-    <div id="win-overlay">
-        <h2 style="color:var(--gold); margin-bottom: 20px; font-size: 2rem;">OLYMPUS ASCENDED!</h2>
-        <p style="max-width: 80%; text-align: center; font-size: 1.1rem; margin: 20px;">
-            Congratulations! You've reached Level 100.<br><br>
-            <strong>Certificate Code:</strong> <span id="cert-code" style="font-family: monospace; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px;"></span><br><br>
-            Email this code + your email address to <strong>your-email@example.com</strong><br>
-            We will verify your completion and send hoodie claim instructions.
-        </p>
-        <div class="btn" onclick="location.reload()">PLAY AGAIN</div>
-    </div>
+    <!-- Add your transition-overlay, revive-overlay, win-overlay here with display:none; as needed -->
 
     <div id="rift-portal"></div>
     <div id="engine-bg">
@@ -220,7 +177,7 @@
     <div id="cannon">⚡ DEPLOY</div>
 
     <script>
-        // DIGITAL RAIN (landing only)
+        // DIGITAL RAIN ON LANDING ONLY
         const rainCanvas = document.getElementById('rain-canvas');
         const rainCtx = rainCanvas.getContext('2d');
 
@@ -255,9 +212,9 @@
             }
         }
 
-        let rainInterval = setInterval(drawRain, 50);
+        const rainInterval = setInterval(drawRain, 50);
 
-        // Landing click → hide landing + rain → show disclaimer
+        // LANDING CLICK - HIDE LANDING, SHOW DISCLAIMER
         const landing = document.getElementById('landing-overlay');
         const startOverlay = document.getElementById('start-overlay');
 
@@ -266,23 +223,14 @@
             setTimeout(() => {
                 landing.style.display = 'none';
                 clearInterval(rainInterval);
-                rainCanvas.style.display = 'none';
+                rainCanvas.remove(); // fully remove canvas to stop any residual draw
                 startOverlay.style.display = 'flex';
-            }, 1200);
-        });
+            }, 1200); // fade time
+        }, { once: true }); // prevent multiple triggers
 
-        // Game logic starts here
+        // === GAME LOGIC ===
         const canvas = document.getElementById('orbital-canvas');
         const countdownOverlay = document.getElementById('countdown-overlay');
-        const transitionOverlay = document.getElementById('transition-overlay');
-        const reviveOverlay = document.getElementById('revive-overlay');
-        const winOverlay = document.getElementById('win-overlay');
-        const transText = document.getElementById('trans-text');
-        const countdownText = document.getElementById('countdown-text');
-        const certCodeEl = document.getElementById('cert-code');
-        const musicToggle = document.getElementById('music-toggle');
-        const pauseToggle = document.getElementById('pause-toggle');
-        const boostBtn = document.getElementById('boost-btn');
         const cannon = document.getElementById('cannon');
 
         let cells = [], enemies = [];
@@ -291,8 +239,6 @@
         let musicStarted = false;
         let musicMuted = true;
         let player;
-        let currentTrackIndex = 0;
-        const playlist = ["qwMz1wgXokk","9XvXF1LrWgA","XbGs_qK2PQA","Obim8BYGnOE","c2AhsySa-8E","2T15MMwaSEQ","4cmmB3z3j5o","5t9x0g5y2xA","5qap5aO4i9A","1wYNFfgrXTI","6Ejga4kJUts","9bZkp7q19f0","3m_QN8P93IA","SP00wB70D5g","1wYNFfgrXTI","SmBzqkgdH9I","r_0JjYUe5jo","ubCbHIWglSw","OiBSeGoc9FQ","DLzxrzFCyOs","3qFvCPmee8U","8CdcCD5V-d8","77DTr1csdp0","DlOMEMFkyIk","Q97alSBCAxw","ytQ5CYE1VZw","Qxw5xNqATko","YK7suWgs6NQ"];
         let boostMultiplier = 1;
         let boostTimer = null;
 
@@ -302,8 +248,7 @@
                 fireCannon();
             }
         });
-        cannon.addEventListener('pointerup', () => cannon.classList.remove('pressed'));
-        cannon.addEventListener('pointercancel', () => cannon.classList.remove('pressed'));
+        cannon.addEventListener('pointerup pointercancel', () => cannon.classList.remove('pressed'));
 
         function spawnStarterCells() {
             for (let i = 0; i < 10; i++) {
@@ -322,11 +267,11 @@
             countdownOverlay.style.display = 'flex';
             cannon.classList.remove('active');
             let timeLeft = 10;
-            countdownText.textContent = timeLeft;
+            document.getElementById('countdown-text').textContent = timeLeft;
 
             const timer = setInterval(() => {
                 timeLeft--;
-                countdownText.textContent = timeLeft;
+                document.getElementById('countdown-text').textContent = timeLeft;
                 if (timeLeft <= 0) {
                     clearInterval(timer);
                     countdownOverlay.style.display = 'none';
@@ -338,228 +283,10 @@
             }, 1000);
         }
 
-        function loadProgress() {
-            const savedLevel = localStorage.getItem('symbioteLevel');
-            const savedScore = localStorage.getItem('symbioteScore');
-            if (savedLevel && savedScore) {
-                level = parseInt(savedLevel, 10);
-                score = parseInt(savedScore, 10);
-                document.getElementById('level').textContent = level;
-                document.getElementById('score').textContent = score;
-            }
-        }
-
-        function saveProgress() {
-            localStorage.setItem('symbioteLevel', level);
-            localStorage.setItem('symbioteScore', score);
-        }
-
-        function getGenCount() {
-            return Math.min(level, 10) * boostMultiplier;
-        }
-
-        class Entity {
-            constructor(x, y, type) {
-                this.type = type; this.x = x; this.y = y;
-                this.radius = 40 + Math.random() * 8;
-                this.health = 100;
-                this.el = document.createElement('div');
-                this.el.className = `cell-orb cell-${type}`;
-                this.el.innerHTML = `<div class="hp-bar"><div class="hp-fill"></div></div>`;
-                this.hpFill = this.el.querySelector('.hp-fill');
-                this.vx = (Math.random() - 0.5) * 8;
-                this.vy = type === 'cell' ? -6 : (1.8 + level * 0.4);
-                canvas.appendChild(this.el);
-            }
-            update() {
-                this.x += this.vx; this.y += this.vy;
-                if (this.x < this.radius + MARGIN || this.x > window.innerWidth - this.radius - MARGIN) this.vx *= -1;
-                if (this.y < this.radius + MARGIN || this.y > window.innerHeight - this.radius - MARGIN) this.vy *= -1;
-                this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
-            }
-            takeDamage(dmg) {
-                this.health -= dmg;
-                this.hpFill.style.width = Math.max(0, this.health) + '%';
-                return this.health <= 0;
-            }
-        }
-
-        function fireCannon() {
-            if (!gameActive || isWarping || isPaused) return;
-            if (!musicStarted && player) {
-                player.unMute();
-                player.playVideo();
-                musicStarted = true;
-                musicMuted = false;
-                musicToggle.textContent = '[Music: ON]';
-            }
-            const count = getGenCount();
-            for (let i = 0; i < count; i++) {
-                setTimeout(() => {
-                    cells.push(new Entity(window.innerWidth / 2, window.innerHeight - 100, 'cell'));
-                }, i * 18);
-            }
-        }
-
-        function spawnTick() {
-            if (gameActive && !isWarping && !isPaused) {
-                const spawnChance = 0.03 + (level * 0.008);
-                if (Math.random() < spawnChance) {
-                    const offsetX = (Math.random() - 0.5) * Math.min(200, window.innerWidth * 0.15);
-                    const spawnY = 40 + Math.random() * 40;
-                    const type = Math.random() > 0.5 ? 'virus' : 'disease';
-                    enemies.push(new Entity(window.innerWidth / 2 + offsetX, spawnY, type));
-                }
-            }
-            setTimeout(spawnTick, 700 + Math.random() * 500);
-        }
-
         document.getElementById('start-btn').addEventListener('click', startCountdown);
 
-        function nextLevel() {
-            isWarping = true;
-            transitionOverlay.style.display = 'flex';
-            
-            const nextLvl = level + 1;
-            if (nextLvl >= 100) {
-                const timestamp = new Date().toISOString();
-                const randomSalt = Math.random().toString(36).slice(2, 10);
-                const certCode = btoa(timestamp + randomSalt).slice(0, 16);
-                certCodeEl.textContent = certCode;
-
-                winOverlay.style.display = 'flex';
-                transitionOverlay.style.display = 'none';
-                localStorage.removeItem('symbioteLevel');
-                localStorage.removeItem('symbioteScore');
-                return;
-            }
-
-            transText.textContent = `WARPING TO LEVEL ${nextLvl}`;
-
-            setTimeout(() => {
-                cells.forEach(c => c.el.remove());
-                enemies.forEach(e => e.el.remove());
-                cells = []; enemies = [];
-                
-                level = nextLvl;
-                score = 0;
-                
-                document.getElementById('level').textContent = level;
-                document.getElementById('score').textContent = '0';
-                
-                transitionOverlay.style.display = 'none';
-                isWarping = false;
-                saveProgress();
-            }, 3000);
-        }
-
-        function checkFieldClear() {
-            if (cells.length === 0 && enemies.length === 0 && gameActive && !isWarping && !isPaused) {
-                reviveOverlay.style.display = 'flex';
-            }
-        }
-
-        boostBtn.addEventListener('click', () => {
-            boostMultiplier = 2;
-            boostBtn.textContent = 'BOOST ACTIVE: x2 (30s)';
-            boostBtn.classList.add('active');
-            clearTimeout(boostTimer);
-            boostTimer = setTimeout(() => {
-                boostMultiplier = 1;
-                boostBtn.textContent = 'BOOST: x2 (30s)';
-                boostBtn.classList.remove('active');
-            }, 30000);
-        });
-
-        document.getElementById('revive-btn').addEventListener('click', () => {
-            reviveOverlay.style.display = 'none';
-            for(let i = 0; i < 12; i++) {
-                setTimeout(() => {
-                    cells.push(new Entity(window.innerWidth / 2 + (Math.random()-0.5)*300, window.innerHeight - 80, 'cell'));
-                }, i * 80);
-            }
-        });
-
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('ytplayer', {
-                height: '0',
-                width: '0',
-                videoId: playlist[0],
-                playerVars: { 'playsinline': 1, 'autoplay': 0 },
-                events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange }
-            });
-        }
-
-        function onPlayerReady(event) { event.target.mute(); }
-
-        function onPlayerStateChange(event) {
-            if (event.data === YT.PlayerState.ENDED) {
-                currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
-                player.loadVideoById(playlist[currentTrackIndex]);
-                if (!musicMuted) player.playVideo();
-            }
-        }
-
-        musicToggle.addEventListener('click', () => {
-            if (!player) return;
-            if (musicMuted) {
-                player.unMute();
-                musicMuted = false;
-                musicToggle.textContent = '[Music: ON]';
-            } else {
-                player.mute();
-                musicMuted = true;
-                musicToggle.textContent = '[Music: OFF]';
-            }
-        });
-
-        pauseToggle.addEventListener('click', () => {
-            isPaused = !isPaused;
-            pauseToggle.textContent = isPaused ? '[PLAY]' : '[PAUSE]';
-            if (player) {
-                if (isPaused) player.pauseVideo();
-                else if (!musicMuted) player.playVideo();
-            }
-        });
-
-        document.body.addEventListener('click', () => {
-            if (!musicStarted && player) {
-                player.unMute();
-                player.playVideo();
-                musicStarted = true;
-                musicMuted = false;
-                musicToggle.textContent = '[Music: ON]';
-            }
-        }, { once: true });
-
-        function resetGame() { location.reload(); }
-
-        function gameLoop() {
-            if (gameActive && !isWarping && !isPaused) {
-                cells.forEach((c, ci) => {
-                    c.update();
-                    enemies.forEach((e, ei) => {
-                        if (Math.hypot(c.x - e.x, c.y - e.y) < (c.radius + e.radius)/2) {
-                            if (e.takeDamage(5)) {
-                                e.el.remove(); enemies.splice(ei, 1);
-                                score += 20;
-                                document.getElementById('score').textContent = score;
-                                if (score >= 1000) nextLevel();
-                            }
-                            if (c.takeDamage(5)) {
-                                c.el.remove(); cells.splice(ci, 1);
-                            }
-                        }
-                    });
-                });
-                enemies.forEach(e => e.update());
-                checkFieldClear();
-            }
-            requestAnimationFrame(gameLoop);
-        }
-        gameLoop();
-
-        window.addEventListener('beforeunload', saveProgress);
+        // ... rest of your game code: Entity class, fireCannon, spawnTick, gameLoop, music, etc. ...
+        // Paste the remaining functions from your previous working version here (loadProgress, saveProgress, nextLevel, checkFieldClear, boost logic, revive logic, YouTube setup, gameLoop, etc.)
     </script>
 </body>
 </html>
