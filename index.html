@@ -4,41 +4,36 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>Artemis • Final</title>
+    <title>Artemis • Oracle</title>
     <style>
         :root { --glow: #00f2ff; --gold: #d4af37; --red: #ff2d55; }
         * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; touch-action:none; }
         body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: 'Courier New', monospace; }
 
-        /* LAYER 1: VIDEO (THE BASE) */
-        #video-container { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
-        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); opacity: 0; transition: opacity 2s; }
+        /* THE ORACLE WINDOW */
+        #oracle-container {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 280px; height: 280px; border-radius: 50%;
+            border: 4px solid var(--gold); box-shadow: 0 0 30px rgba(212, 175, 55, 0.4);
+            z-index: 5; overflow: hidden; background: #000;
+        }
+        #bg-video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.2); opacity: 0; transition: opacity 2s; }
 
-        /* LAYER 2: GAMEPLAY OVERLAY */
+        /* UI & GAMEPLAY */
         #arena { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
-
-        /* LAYER 3: UI & HUD */
-        #ui-layer { position: fixed; inset: 0; z-index: 100; pointer-events: none; color: var(--glow); }
-        #hud { position: fixed; top: 20px; left: 20px; font-size: 0.8rem; padding: 10px; border: 1px solid var(--glow); background: rgba(0,0,0,0.8); }
+        #hud { position: fixed; top: 20px; left: 20px; color: var(--glow); font-size: 0.7rem; z-index: 100; border: 1px solid var(--glow); padding: 8px; background: rgba(0,0,0,0.8); }
         
+        #boot-screen {
+            position: fixed; inset: 0; z-index: 500; background: #000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .boot-btn { border: 2px solid var(--glow); color: var(--glow); padding: 25px 50px; background: rgba(0,242,255,0.1); cursor: pointer; font-weight: bold; }
+
         #cannon {
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 120px; height: 120px; border-radius: 50%;
-            background: rgba(0, 8, 15, 0.95); border: 4px solid var(--gold);
-            color: var(--gold); font-weight: bold; display: none; 
-            align-items: center; justify-content: center; pointer-events: auto;
-        }
-
-        /* INITIALIZER */
-        #boot-screen {
-            position: fixed; inset: 0; z-index: 500;
-            background: #000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; pointer-events: auto;
-        }
-        .boot-btn {
-            border: 2px solid var(--glow); color: var(--glow);
-            padding: 30px 60px; background: rgba(0, 242, 255, 0.1);
-            font-weight: bold; letter-spacing: 5px;
+            width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--gold);
+            z-index: 100; display: none; align-items: center; justify-content: center;
+            color: var(--gold); background: rgba(0,0,0,0.8); pointer-events: auto;
         }
 
         .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; }
@@ -48,7 +43,7 @@
 </head>
 <body>
 
-<div id="video-container">
+<div id="oracle-container">
     <video id="bg-video" loop muted playsinline preload="auto">
         <source src="https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm" type="video/webm">
     </video>
@@ -56,21 +51,18 @@
 
 <div id="music-engine" style="position: absolute; top: -9999px;"></div>
 
-<div id="boot-screen" onclick="forceBoot()">
-    <div class="boot-btn">FORCE INITIALIZE</div>
-    <p style="color:var(--gold); font-size:0.6rem; margin-top:20px;">[ TAP TO CRACK ENCRYPTION ]</p>
+<div id="boot-screen" onclick="initializeOracle()">
+    <div class="boot-btn">OPEN ORACLE</div>
 </div>
 
-<div id="ui-layer">
-    <div id="hud">CORE XP: <span id="xp">0</span></div>
-    <div id="cannon" onpointerdown="deploy()">DEPLOY</div>
-</div>
-
+<div id="hud">STABILITY: <span id="xp">0</span> | DEGENERATE PROTOCOL: ACTIVE</div>
+<div id="cannon" onpointerdown="deploy()">DEPLOY</div>
 <div id="arena"></div>
 
 <script>
     let musicPlayer, musicReady = false, gameActive = false;
     let entities = [], score = 0;
+    const ORACLE_RADIUS = 140; // 280 / 2
 
     function onYouTubeIframeAPIReady() {
         musicPlayer = new YT.Player('music-engine', {
@@ -80,24 +72,18 @@
         });
     }
 
-    // THE FORCE BOOT: The only way to bypass mobile "Dicks"
-    function forceBoot() {
+    function initializeOracle() {
         const v = document.getElementById('bg-video');
-        
-        // 1. Kick Video
         v.play();
         v.style.opacity = "1";
 
-        // 2. Kick Music
         if (musicReady) {
             musicPlayer.unMute();
             musicPlayer.playVideo();
         }
 
-        // 3. Kick UI
         document.getElementById('boot-screen').style.display = 'none';
         document.getElementById('cannon').style.display = 'flex';
-        
         gameActive = true;
         spawnEnemy();
         requestAnimationFrame(gameLoop);
@@ -107,7 +93,8 @@
         constructor(type) {
             this.type = type;
             this.hp = 100;
-            this.radius = 18;
+            this.radius = 15;
+            this.birthTime = Date.now();
             this.x = type === 'good' ? window.innerWidth / 2 : Math.random() * window.innerWidth;
             this.y = type === 'good' ? window.innerHeight - 150 : -50;
             this.vx = (Math.random() - 0.5) * 4;
@@ -115,42 +102,49 @@
             
             this.el = document.createElement('div');
             this.el.className = `cell cell-${type}`;
-            this.el.style.width = '36px'; this.el.style.height = '36px';
+            this.el.style.width = '30px'; this.el.style.height = '30px';
             document.getElementById('arena').appendChild(this.el);
         }
 
         update(rivals) {
-            // PREDATOR AI: Attack
-            if (rivals.length > 0) {
-                let target = rivals[0];
-                let min = Math.hypot(this.x - target.x, this.y - target.y);
-                rivals.forEach(r => {
-                    let d = Math.hypot(this.x - r.x, this.y - r.y);
-                    if (d < min) { min = d; target = r; }
-                });
-                let angle = Math.atan2(target.y - this.y, target.x - this.x);
-                this.vx += Math.cos(angle) * 0.3;
-                this.vy += Math.sin(angle) * 0.3;
+            // 20-Second Degeneration
+            let age = (Date.now() - this.birthTime) / 1000;
+            if (age > 20) { this.hp -= 0.5; } // Rapidly die after 20s
+
+            // Oracle Boundary Collision
+            let dx = this.x - (window.innerWidth / 2);
+            let dy = this.y - (window.innerHeight / 2);
+            let dist = Math.hypot(dx, dy);
+
+            if (dist < ORACLE_RADIUS + this.radius) {
+                let angle = Math.atan2(dy, dx);
+                this.vx = Math.cos(angle) * 5;
+                this.vy = Math.sin(angle) * 5;
+                // Move out of collision
+                this.x = (window.innerWidth / 2) + Math.cos(angle) * (ORACLE_RADIUS + this.radius + 1);
+                this.y = (window.innerHeight / 2) + Math.sin(angle) * (ORACLE_RADIUS + this.radius + 1);
             }
 
-            // Speed Limit
-            let s = Math.hypot(this.vx, this.vy);
-            if (s > 6) { this.vx = (this.vx/s)*6; this.vy = (this.vy/s)*6; }
+            // Predator AI
+            if (rivals.length > 0) {
+                let target = rivals[0];
+                let angle = Math.atan2(target.y - this.y, target.x - this.x);
+                this.vx += Math.cos(angle) * 0.2;
+                this.vy += Math.sin(angle) * 0.2;
+            }
 
             this.x += this.vx; this.y += this.vy;
             if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
-            
-            this.el.style.transform = `translate(${this.x - 18}px, ${this.y - 18}px)`;
+            this.el.style.transform = `translate(${this.x - 15}px, ${this.y - 15}px)`;
             this.el.innerText = Math.ceil(this.hp);
         }
     }
 
     function deploy() { if(gameActive) entities.push(new Symbiote('good')); }
-    
     function spawnEnemy() {
         if(gameActive) {
             entities.push(new Symbiote('evil'));
-            setTimeout(spawnEnemy, 2000);
+            setTimeout(spawnEnemy, 2500);
         }
     }
 
@@ -163,17 +157,17 @@
             ent.update(rivals);
 
             rivals.forEach(rival => {
-                if (Math.hypot(ent.x - rival.x, ent.y - rival.y) < 36) {
-                    ent.hp -= 2; // High intensity combat
+                if (Math.hypot(ent.x - rival.x, ent.y - rival.y) < 30) {
+                    ent.hp -= 1.5;
                     if (ent.hp <= 0) {
                         ent.el.remove();
                         entities.splice(i, 1);
-                        if(ent.type === 'evil') score += 100;
+                        if(ent.type === 'evil') score += 10;
                     }
                 }
             });
 
-            if (ent.y < -300 || ent.y > window.innerHeight + 300) {
+            if (ent.hp <= 0 || ent.y < -300 || ent.y > window.innerHeight + 300) {
                 ent.el.remove();
                 entities.splice(i, 1);
             }
