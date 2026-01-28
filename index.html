@@ -4,97 +4,85 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>Artemis • Prime Symbiote</title>
+    <title>Artemis • Protocol Fix</title>
     <style>
-        :root {
-            --glow: #00f2ff;
-            --gold: #d4af37;
-            --virus-red: #ff2d55;
-            --ui-bg: rgba(0, 10, 20, 0.9);
-        }
+        :root { --glow: #00f2ff; --gold: #d4af37; --bg: #000; }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; }
+        body, html { width:100%; height:100%; overflow:hidden; background:var(--bg); font-family: monospace; color:var(--glow); }
 
-        * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
-        body, html { width:100%; height:100%; overflow:hidden; background:#000; font-family: 'Courier New', monospace; color:var(--glow); }
-
-        /* VIDEO ENGINE */
+        /* VIDEO ENGINE - FORCED VISIBILITY */
         #video-viewport {
-            position: fixed; inset: 0; z-index: -100;
-            background: #000; pointer-events: none; overflow: hidden;
+            position: fixed; inset: 0; z-index: -1;
+            background: #000; pointer-events: none;
         }
         #yt-bg-player {
-            width: 100vw; height: 56.25vw;
-            min-height: 100vh; min-width: 177.77vh;
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            filter: brightness(0.4) contrast(1.2);
-            opacity: 0; transition: opacity 1.5s;
+            width: 100vw; height: 56.25vw; min-height: 100vh; min-width: 177.77vh;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            filter: brightness(0.4); opacity: 0; transition: opacity 1s;
         }
 
-        /* CONTROL DECK (TOP) */
-        #control-deck {
-            position: fixed; top: 20px; width: 100%;
-            display: flex; justify-content: center; gap: 10px; z-index: 1000;
+        /* CONTROL INTERFACE */
+        #top-bar {
+            position: fixed; top: 0; width: 100%; padding: 20px;
+            display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 1000;
         }
-        .deck-btn {
-            background: var(--ui-bg); border: 1px solid var(--glow);
-            color: var(--glow); padding: 10px 15px; border-radius: 5px;
-            font-size: 0.65rem; font-weight: bold; cursor: pointer;
-            text-transform: uppercase; letter-spacing: 1px;
-            backdrop-filter: blur(5px);
+        .control-row { display: flex; gap: 10px; }
+        .btn {
+            background: rgba(0, 20, 30, 0.8); border: 1px solid var(--glow);
+            color: var(--glow); padding: 12px 20px; border-radius: 5px;
+            font-size: 0.7rem; font-weight: bold; cursor: pointer;
+            text-transform: uppercase; backdrop-filter: blur(10px);
         }
-        .deck-btn.active { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 10px var(--gold); }
+        .btn.active { border-color: var(--gold); color: var(--gold); }
+        
+        #api-status { font-size: 0.5rem; opacity: 0.6; letter-spacing: 1px; }
 
-        /* HUD (SIDES) */
-        #stats {
-            position: fixed; top: 80px; left: 20px; z-index: 500;
-            font-size: 0.8rem; pointer-events: none;
-        }
-
-        /* DEPLOYMENT */
         #cannon {
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 110px; height: 110px; border-radius: 50%; z-index: 500;
-            background: var(--ui-bg); border: 3px solid var(--gold);
+            width: 100px; height: 100px; border-radius: 50%; z-index: 500;
+            background: rgba(0, 10, 20, 0.9); border: 3px solid var(--gold);
             color: var(--gold); font-weight: bold; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 20px var(--gold);
         }
 
         .cell-orb { position: absolute; border-radius: 50%; z-index: 100; pointer-events: none; }
-        .cell-good { border: 2px solid var(--glow); background: rgba(0, 242, 255, 0.1); }
-        .cell-evil { border: 2px solid var(--virus-red); background: rgba(255, 45, 85, 0.1); }
+        .cell-good { border: 1px solid var(--glow); box-shadow: 0 0 10px var(--glow); }
+        .cell-evil { border: 1px solid #ff2d55; box-shadow: 0 0 10px #ff2d55; }
     </style>
 </head>
 <body>
 
-<div id="video-viewport">
-    <div id="yt-bg-player"></div>
-</div>
-
+<div id="video-viewport"><div id="yt-bg-player"></div></div>
 <div id="music-engine" style="position: absolute; top: -999px;"></div>
 
-<div id="control-deck">
-    <div id="vid-toggle" class="deck-btn" onclick="toggleVideo()">Video: Off</div>
-    <div id="mus-toggle" class="deck-btn" onclick="toggleMusic()">Music: Off</div>
-</div>
-
-<div id="stats">
-    LVL <span id="lvl">1</span><br>
-    SCORE <span id="xp">0</span>
+<div id="top-bar">
+    <div id="api-status">SYSTEM: CONNECTING...</div>
+    <div class="control-row">
+        <div id="vid-btn" class="btn" onclick="forceVideo()">Video: OFF</div>
+        <div id="mus-btn" class="btn" onclick="forceMusic()">Music: OFF</div>
+    </div>
 </div>
 
 <div id="arena"></div>
-<div id="cannon">DEPLOY</div>
+<div id="cannon" onclick="deployCell()">DEPLOY</div>
 
 <script>
     let bgPlayer, musicPlayer;
-    let vidActive = false, musActive = false;
-    let entities = [], score = 0, level = 1;
+    let vidOn = false, musOn = false;
+    let entities = [], score = 0;
 
+    // YOUTUBE API
     function onYouTubeIframeAPIReady() {
+        document.getElementById('api-status').innerText = "SYSTEM: READY";
+        
         bgPlayer = new YT.Player('yt-bg-player', {
             videoId: 'JBVeJ5ZYENc',
-            playerVars: { 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc', 'playsinline': 1 },
-            events: { 'onStateChange': (e) => { if(e.data === 1) document.getElementById('yt-bg-player').style.opacity = '1'; } }
+            playerVars: { 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': 'JBVeJ5ZYENc', 'playsinline': 1, 'rel': 0 },
+            events: { 
+                'onReady': () => { document.getElementById('api-status').innerText = "SYSTEM: LINK STABLE"; },
+                'onStateChange': (e) => {
+                    if(e.data === 1) document.getElementById('yt-bg-player').style.opacity = '1';
+                }
+            }
         });
 
         musicPlayer = new YT.Player('music-engine', {
@@ -103,103 +91,77 @@
         });
     }
 
-    function toggleVideo() {
-        if (!vidActive) {
+    function forceVideo() {
+        if (!vidOn) {
+            bgPlayer.mute(); // Just in case
             bgPlayer.playVideo();
-            document.getElementById('vid-toggle').textContent = "Video: On";
-            document.getElementById('vid-toggle').classList.add('active');
-            vidActive = true;
+            // Critical Mobile Hack: Re-trigger play after 100ms
+            setTimeout(() => bgPlayer.playVideo(), 100);
+            document.getElementById('vid-btn').innerText = "Video: ON";
+            document.getElementById('vid-btn').classList.add('active');
+            vidOn = true;
         } else {
             bgPlayer.pauseVideo();
-            document.getElementById('vid-toggle').textContent = "Video: Off";
-            document.getElementById('vid-toggle').classList.remove('active');
-            vidActive = false;
+            document.getElementById('vid-btn').innerText = "Video: OFF";
+            document.getElementById('vid-btn').classList.remove('active');
+            vidOn = false;
         }
     }
 
-    function toggleMusic() {
-        if (!musActive) {
+    function forceMusic() {
+        if (!musOn) {
             musicPlayer.unMute();
             musicPlayer.playVideo();
-            document.getElementById('mus-toggle').textContent = "Music: On";
-            document.getElementById('mus-toggle').classList.add('active');
-            musActive = true;
+            document.getElementById('mus-btn').innerText = "Music: ON";
+            document.getElementById('mus-btn').classList.add('active');
+            musOn = true;
         } else {
             musicPlayer.pauseVideo();
-            document.getElementById('mus-toggle').textContent = "Music: Off";
-            document.getElementById('mus-toggle').classList.remove('active');
-            musActive = false;
+            document.getElementById('mus-btn').innerText = "Music: OFF";
+            document.getElementById('mus-btn').classList.remove('active');
+            musOn = false;
         }
     }
 
-    // GAMEPLAY
-    document.getElementById('cannon').addEventListener('touchstart', (e) => {
-        e.preventDefault();
+    function deployCell() {
         entities.push(new Entity('good'));
-        if (score === 0) autoSpawner(); // Start spawning on first shot
-    });
+        if(score === 0) { score = 1; autoSpawn(); }
+    }
 
     class Entity {
         constructor(type) {
             this.type = type;
-            this.radius = 16;
-            this.x = type === 'good' ? window.innerWidth / 2 : Math.random() * window.innerWidth;
-            this.y = type === 'good' ? window.innerHeight - 100 : -50;
-            this.health = 100;
-            this.vx = (Math.random() - 0.5) * 4;
-            this.vy = type === 'good' ? -6 : 2 + (level * 0.3);
+            this.x = type === 'good' ? window.innerWidth/2 : Math.random() * window.innerWidth;
+            this.y = type === 'good' ? window.innerHeight - 100 : -20;
+            this.vx = (Math.random()-0.5)*4;
+            this.vy = type === 'good' ? -6 : 3;
             this.el = document.createElement('div');
-            this.el.className = `cell-orb cell-${this.type}`;
-            this.el.style.width = this.radius * 2 + 'px';
-            this.el.style.height = this.radius * 2 + 'px';
+            this.el.className = `cell-orb cell-${type}`;
+            this.el.style.width = '30px'; this.el.style.height = '30px';
             document.getElementById('arena').appendChild(this.el);
         }
-        update(targets) {
-            if (this.type === 'evil' && targets.length > 0) {
-                let t = targets[0];
-                let angle = Math.atan2(t.y - this.y, t.x - this.x);
-                this.vx += Math.cos(angle) * 0.15;
-                this.vy += Math.sin(angle) * 0.15;
-            }
+        update() {
             this.x += this.vx; this.y += this.vy;
             if(this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
-            this.el.style.transform = `translate(${this.x - this.radius}px, ${this.y - this.radius}px)`;
+            this.el.style.transform = `translate(${this.x-15}px, ${this.y-15}px)`;
         }
     }
 
-    function autoSpawner() {
+    function autoSpawn() {
         entities.push(new Entity('evil'));
-        setTimeout(autoSpawner, Math.max(400, 1600 - (level * 100)));
+        setTimeout(autoSpawn, 1200);
     }
 
-    function gameLoop() {
-        let goods = entities.filter(e => e.type === 'good');
-        for(let i = entities.length - 1; i >= 0; i--) {
-            let ent = entities[i];
-            ent.update(ent.type === 'evil' ? goods : []);
-            for(let j = entities.length - 1; j >= 0; j--) {
-                let other = entities[j];
-                if(ent.type !== other.type) {
-                    if(Math.hypot(ent.x - other.x, ent.y - other.y) < ent.radius + other.radius) {
-                        ent.health -= 50; other.health -= 50;
-                        if(ent.health <= 0) {
-                            ent.el.remove(); entities.splice(i, 1);
-                            score += 10;
-                            document.getElementById('xp').textContent = score;
-                            level = Math.floor(score / 500) + 1;
-                            document.getElementById('lvl').textContent = level;
-                            break;
-                        }
-                    }
-                }
-            }
-            if(ent.y < -150 || ent.y > window.innerHeight + 150) {
-                ent.el.remove(); entities.splice(i, 1);
+    function loop() {
+        for(let i=entities.length-1; i>=0; i--) {
+            entities[i].update();
+            if(entities[i].y < -50 || entities[i].y > window.innerHeight + 50) {
+                entities[i].el.remove(); entities.splice(i, 1);
             }
         }
-        requestAnimationFrame(gameLoop);
+        requestAnimationFrame(loop);
     }
-    gameLoop();
+    loop();
 </script>
 </body>
 </html>
