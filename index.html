@@ -3,134 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Titan Siege: Interceptor</title>
+    <title>Titan Siege: Tactical Flight</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        :root { --blue: #00f2ff; --gold: #d4af37; --red: #ff2d55; --green: #39ff14; --bg: #000; }
+        :root { --blue: #00f2ff; --gold: #d4af37; --red: #ff2d55; --green: #39ff14; --yellow: #ffff00; }
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: #fff; }
         
-        /* HUD UI */
         #hud { position: fixed; top: 20px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
-        .stat-box { background: rgba(0,0,0,0.8); border: 1px solid var(--blue); padding: 10px; border-radius: 5px; text-align: center; min-width: 120px; }
+        .stat-box { background: rgba(0,0,0,0.8); border: 1px solid var(--blue); padding: 8px; border-radius: 4px; text-align: center; min-width: 100px; }
         
-        /* Proximity Alarm */
-        #proximity-alert { position: fixed; inset: 0; pointer-events: none; border: 0px solid var(--red); transition: border-width 0.2s; z-index: 40; }
-        .danger-pulse { border-width: 20px !important; animation: pulse 0.5s infinite; }
-        @keyframes pulse { 0% { opacity: 0.2; } 50% { opacity: 1; } 100% { opacity: 0.2; } }
+        /* Weapon Selection Buttons */
+        #weapon-dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 500; }
+        .w-btn { width: 70px; height: 70px; border: 2px solid #555; background: rgba(0,0,0,0.7); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #888; cursor: pointer; }
+        .w-btn.active { border-color: var(--blue); color: #fff; box-shadow: 0 0 15px var(--blue); background: rgba(0,242,255,0.2); }
+        .w-btn i { font-size: 18px; margin-bottom: 5px; font-style: normal; }
 
-        /* Mini Map */
-        #minimap { position: fixed; bottom: 20px; right: 20px; width: 150px; height: 150px; background: rgba(0,20,20,0.8); border: 2px solid var(--blue); border-radius: 50%; z-index: 100; overflow: hidden; }
-        #map-center { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; background: var(--green); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px var(--green); }
-        .map-dot { position: absolute; width: 4px; height: 4px; background: var(--red); border-radius: 50%; transform: translate(-50%, -50%); }
+        #joystick-zone { position: fixed; bottom: 40px; left: 40px; width: 110px; height: 110px; background: rgba(0,242,255,0.05); border: 1px solid var(--blue); border-radius: 50%; z-index: 200; }
+        #joystick-stick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.6; }
 
-        /* Cannon & Cockpit */
-        #cockpit { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; height: 250px; pointer-events: none; z-index: 50; display: flex; justify-content: center; align-items: flex-end; }
-        #cannon { width: 100px; height: 180px; background: linear-gradient(to top, #111, #333); border: 4px solid var(--green); border-bottom: none; border-radius: 15px 15px 0 0; box-shadow: 0 0 30px var(--green); transition: transform 0.05s; }
-        #cannon.recoil { transform: translateY(30px); }
+        #minimap { position: fixed; bottom: 20px; right: 20px; width: 120px; height: 120px; background: rgba(0,20,20,0.8); border: 1px solid var(--blue); border-radius: 50%; z-index: 100; }
+        .map-dot { position: absolute; width: 4px; height: 4px; background: var(--red); border-radius: 50%; }
 
-        /* Controls */
-        #joystick-zone { position: fixed; bottom: 40px; left: 40px; width: 100px; height: 100px; background: rgba(0,242,255,0.1); border-radius: 50%; z-index: 200; border: 2px solid var(--blue); }
-        #joystick-stick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); }
-
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .btn { padding: 20px 40px; margin-top: 20px; border: 2px solid var(--blue); background: none; color: #fff; font-weight: bold; cursor: pointer; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .btn { padding: 15px 30px; border: 2px solid var(--blue); background: none; color: #fff; font-weight: bold; cursor: pointer; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-    <div id="proximity-alert"></div>
     <div id="hud">
         <div class="stat-box"><small>STABILITY</small><br><b id="stability">100%</b></div>
-        <div class="stat-box"><small>MISSILES</small><br><b id="missile-status">READY</b></div>
+        <div class="stat-box"><small>WEAPON</small><br><b id="mode-text">STANDARD</b></div>
     </div>
 
-    <div id="minimap"><div id="map-center"></div></div>
-    <div id="cockpit"><div id="cannon"></div></div>
+    <div id="weapon-dock">
+        <div class="w-btn active" id="w-std" onclick="setWeapon('std')"><i>⚡</i>STD</div>
+        <div class="w-btn" id="w-burst" onclick="setWeapon('burst')"><i>Ξ</i>BURST</div>
+        <div class="w-btn" id="w-msl" onclick="setWeapon('msl')"><i>🚀</i>MSL</div>
+    </div>
 
+    <div id="minimap"></div>
     <div id="joystick-zone"><div id="joystick-stick"></div></div>
 
     <div id="start-menu" class="overlay">
-        <h1 style="color:var(--blue)">ARTEMIS-OS V2</h1>
-        <p>SYSTEM: BURST CANNON & SEEKER READY</p>
-        <button class="btn" onclick="initGame()">ENGAGE</button>
+        <h1 style="color:var(--blue)">TITAN SIEGE: FLIGHT</h1>
+        <button class="btn" onclick="initGame()">SYNC NEURAL LINK</button>
     </div>
 
     <script>
 let scene, camera, renderer, clock = new THREE.Clock();
-let enemies = [], missiles = [], weatherSystem;
-const state = {
-    active: false, stability: 100, level: 1,
+let ship, buildings = [], enemies = [], projectiles = [];
+const state = { 
+    active: false, stability: 100, 
     joy: { x: 0, y: 0 },
-    rotation: { y: 0, x: 0 },
-    missileCD: 0
+    weaponMode: 'std',
+    fireTimer: 0
 };
 
 function initGame() {
     state.active = true;
     document.getElementById('start-menu').style.display = 'none';
-    
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.0002);
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 20000);
-    
+    scene.fog = new THREE.FogExp2(0x000000, 0.0001);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 30000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    createShip();
     createWorld();
     setupControls();
-    
-    // Weapon Systems
-    setInterval(burstFire, 1500); // Burst every 1.5s
-    setInterval(launchSeeker, 3000); // Missile every 3s
-
     animate();
 }
 
+function setWeapon(mode) {
+    state.weaponMode = mode;
+    document.querySelectorAll('.w-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('w-' + mode).classList.add('active');
+    document.getElementById('mode-text').innerText = mode.toUpperCase();
+}
+
+function createShip() {
+    ship = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 60), new THREE.MeshStandardMaterial({color: 0x222222}));
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(70, 2, 25), new THREE.MeshStandardMaterial({color: 0x333333}));
+    ship.add(body, wing);
+    ship.position.set(0, 500, 0);
+    scene.add(ship);
+}
+
 function createWorld() {
-    scene.add(new THREE.GridHelper(20000, 40, 0xff00ff, 0x111111));
-    scene.add(new THREE.AmbientLight(0x4040ff, 0.6));
-    
-    // Buildings
-    for (let i = 0; i < 100; i++) {
+    scene.add(new THREE.GridHelper(40000, 60, 0x444444, 0x111111));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+    for (let i = 0; i < 150; i++) {
         const h = 500 + Math.random() * 3000;
         const b = new THREE.Mesh(new THREE.BoxGeometry(400, h, 400), new THREE.MeshStandardMaterial({color: 0x050508}));
-        b.position.set((Math.random()-0.5)*15000, h/2, (Math.random()-0.5)*15000);
+        b.position.set((Math.random()-0.5)*18000, h/2, (Math.random()-0.5)*18000);
         scene.add(b);
+        buildings.push(b);
     }
 }
 
-class Missile {
-    constructor(target) {
-        this.target = target;
-        this.mesh = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 40), new THREE.MeshBasicMaterial({color: 0xffff00}));
-        this.mesh.position.copy(camera.position);
-        this.mesh.rotation.copy(camera.rotation);
+class Projectile {
+    constructor(pos, rot, color, type, offset = new THREE.Vector3()) {
+        this.type = type;
+        const geo = type === 'msl' ? new THREE.CylinderGeometry(4,4,20) : new THREE.BoxGeometry(2,2,30);
+        this.mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color: color}));
+        this.mesh.position.copy(pos).add(offset.applyQuaternion(rot));
+        this.mesh.quaternion.copy(rot);
+        this.mesh.rotateX(Math.PI/2);
+        this.target = (type === 'msl' && enemies.length > 0) ? enemies[0] : null;
         scene.add(this.mesh);
-        missiles.push(this);
+        projectiles.push(this);
     }
     update() {
-        if (!this.target || !enemies.includes(this.target)) {
-            this.mesh.translateZ(-30);
-        } else {
+        if (this.type === 'msl' && this.target && enemies.includes(this.target)) {
             const dir = new THREE.Vector3().subVectors(this.target.mesh.position, this.mesh.position).normalize();
-            this.mesh.position.add(dir.multiplyScalar(40));
+            this.mesh.position.add(dir.multiplyScalar(35));
             this.mesh.lookAt(this.target.mesh.position);
-            if (this.mesh.position.distanceTo(this.target.mesh.position) < 100) {
-                this.target.hp -= 200;
+            this.mesh.rotateX(Math.PI/2);
+        } else {
+            this.mesh.translateY(this.type === 'msl' ? 30 : 50);
+        }
+        
+        enemies.forEach(e => {
+            if (this.mesh.position.distanceTo(e.mesh.position) < 80) {
+                e.hp -= (this.type === 'burst' ? 40 : 100);
                 this.destroy();
             }
-        }
-        if (this.mesh.position.length() > 10000) this.destroy();
+        });
+        if (this.mesh.position.distanceTo(ship.position) > 5000) this.destroy();
     }
-    destroy() { scene.remove(this.mesh); missiles = missiles.filter(m => m !== this); }
+    destroy() { scene.remove(this.mesh); projectiles = projectiles.filter(p => p !== this); }
 }
 
-class Drone {
+function handleFiring(delta) {
+    state.fireTimer += delta;
+    let rate = state.weaponMode === 'std' ? 0.15 : (state.weaponMode === 'burst' ? 0.4 : 0.8);
+    
+    if (state.fireTimer > rate) {
+        state.fireTimer = 0;
+        if (state.weaponMode === 'std') {
+            new Projectile(ship.position, ship.quaternion, 0xffff00, 'std');
+        } else if (state.weaponMode === 'burst') {
+            new Projectile(ship.position, ship.quaternion, 0x39ff14, 'burst', new THREE.Vector3(-30, 0, 0));
+            new Projectile(ship.position, ship.quaternion, 0x39ff14, 'burst', new THREE.Vector3(0, 0, 0));
+            new Projectile(ship.position, ship.quaternion, 0x39ff14, 'burst', new THREE.Vector3(30, 0, 0));
+        } else if (state.weaponMode === 'msl') {
+            new Projectile(ship.position, ship.quaternion, 0xffff00, 'msl');
+        }
+    }
+}
+
+class Enemy {
     constructor() {
-        this.mesh = new THREE.Mesh(new THREE.SphereGeometry(60, 8, 8), new THREE.MeshBasicMaterial({color: 0xff2d55, wireframe: true}));
-        const ang = Math.random() * Math.PI * 2;
-        this.mesh.position.set(Math.cos(ang)*8000, 500 + Math.random()*1000, Math.sin(ang)*8000);
+        this.mesh = new THREE.Mesh(new THREE.SphereGeometry(50, 8, 8), new THREE.MeshBasicMaterial({color: 0xff2d55, wireframe:true}));
+        const a = Math.random()*Math.PI*2;
+        this.mesh.position.set(ship.position.x + Math.cos(a)*4000, 500 + Math.random()*1000, ship.position.z + Math.sin(a)*4000);
         this.hp = 100;
         this.mapDot = document.createElement('div');
         this.mapDot.className = 'map-dot';
@@ -139,75 +167,52 @@ class Drone {
         enemies.push(this);
     }
     update() {
-        const dir = new THREE.Vector3().subVectors(camera.position, this.mesh.position).normalize();
-        this.mesh.position.add(dir.multiplyScalar(20));
-        
-        // Map Logic
-        const dx = (this.mesh.position.x - camera.position.x) / 100;
-        const dz = (this.mesh.position.z - camera.position.z) / 100;
-        this.mapDot.style.left = (75 + dx) + 'px';
-        this.mapDot.style.top = (75 + dz) + 'px';
-
-        const dist = this.mesh.position.distanceTo(camera.position);
-        if (dist < 1500) document.getElementById('proximity-alert').classList.add('danger-pulse');
-        if (dist < 200) { state.stability -= 5; this.destroy(); }
-    }
-    destroy() { 
-        this.mapDot.remove(); scene.remove(this.mesh); 
-        enemies = enemies.filter(e => e !== this); 
-        document.getElementById('proximity-alert').classList.remove('danger-pulse');
-    }
-}
-
-function burstFire() {
-    if (!state.active) return;
-    let shots = 0;
-    const interval = setInterval(() => {
-        document.getElementById('cannon').classList.add('recoil');
-        setTimeout(() => document.getElementById('cannon').classList.remove('recoil'), 50);
-        
-        const ray = new THREE.Raycaster();
-        ray.setFromCamera(new THREE.Vector2(0, -0.2), camera);
-        const hits = ray.intersectObjects(enemies.map(e => e.mesh));
-        if (hits.length > 0) {
-            const e = enemies.find(en => en.mesh === hits[0].object);
-            if (e) { e.hp -= 40; if(e.hp <= 0) e.destroy(); }
+        const d = new THREE.Vector3().subVectors(ship.position, this.mesh.position).normalize();
+        this.mesh.position.add(d.multiplyScalar(10));
+        const relX = (this.mesh.position.x - ship.position.x) / 100;
+        const relZ = (this.mesh.position.z - ship.position.z) / 100;
+        this.mapDot.style.left = (60 + relX) + 'px';
+        this.mapDot.style.top = (60 + relZ) + 'px';
+        if (this.hp <= 0 || this.mesh.position.distanceTo(ship.position) < 100) {
+            if(this.mesh.position.distanceTo(ship.position) < 100) state.stability -= 10;
+            this.destroy();
         }
-
-        if (++shots >= 3) clearInterval(interval);
-    }, 100);
-}
-
-function launchSeeker() {
-    if (!state.active || enemies.length === 0) return;
-    new Missile(enemies[0]);
+    }
+    destroy() { this.mapDot.remove(); scene.remove(this.mesh); enemies = enemies.filter(e => e !== this); }
 }
 
 function setupControls() {
     const jZone = document.getElementById('joystick-zone');
-    const jStick = document.getElementById('joystick-stick');
     jZone.addEventListener('pointermove', e => {
         const rect = jZone.getBoundingClientRect();
-        state.joy.x = (e.clientX - (rect.left + 50)) / 50;
-        state.joy.y = (e.clientY - (rect.top + 50)) / 50;
-        jStick.style.transform = `translate(calc(-50% + ${state.joy.x*25}px), calc(-50% + ${state.joy.y*25}px))`;
+        state.joy.x = (e.clientX - (rect.left + 55)) / 55;
+        state.joy.y = (e.clientY - (rect.top + 55)) / 55;
+        document.getElementById('joystick-stick').style.transform = `translate(calc(-50% + ${state.joy.x*25}px), calc(-50% + ${state.joy.y*25}px))`;
     });
-    jZone.addEventListener('pointerup', () => { state.joy = {x:0, y:0}; jStick.style.transform = 'translate(-50%, -50%)'; });
+    jZone.addEventListener('pointerup', () => { state.joy = {x:0, y:0}; document.getElementById('joystick-stick').style.transform = 'translate(-50%,-50%)'; });
 }
 
 function animate() {
     requestAnimationFrame(animate);
-    state.rotation.y -= state.joy.x * 0.04;
-    state.rotation.x = Math.max(-0.6, Math.min(0.6, state.rotation.x - state.joy.y * 0.03));
-    camera.rotation.set(state.rotation.x, state.rotation.y, 0, 'YXZ');
+    if (!state.active) return;
+    const delta = clock.getDelta();
 
-    if (Math.random() < 0.04) new Drone();
+    ship.rotateY(-state.joy.x * 0.04);
+    ship.rotateX(-state.joy.y * 0.04);
+    ship.rotation.z = -state.joy.x * 0.4;
+    const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(ship.quaternion);
+    ship.position.add(dir.multiplyScalar(20));
+
+    camera.position.lerp(ship.position.clone().add(new THREE.Vector3(0, 30, 120).applyQuaternion(ship.quaternion)), 0.1);
+    camera.lookAt(ship.position);
+
+    handleFiring(delta);
+    if (Math.random() < 0.03 && enemies.length < 15) new Enemy();
     enemies.forEach(e => e.update());
-    missiles.forEach(m => m.update());
+    projectiles.forEach(p => p.update());
 
-    document.getElementById('stability').innerText = Math.max(0, state.stability) + "%";
+    document.getElementById('stability').innerText = Math.ceil(state.stability) + "%";
     if (state.stability <= 0) location.reload();
-
     renderer.render(scene, camera);
 }
     </script>
