@@ -3,78 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Falcon OS - Precision Flight</title>
+    <title>Megacity - Tie Intercept</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        :root { --blue: #0ff; --red: #f0f; }
+        :root { --blue: #0ff; --red: #f00; --neon: #39ff14; }
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; touch-action: none; }
+        #hud { position: absolute; top: 20px; left: 20px; z-index: 100; border-left: 2px solid var(--blue); padding: 10px; background: rgba(0,0,0,0.7); pointer-events: none; }
+        .danger { color: var(--red); font-weight: bold; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         
-        /* Tactical HUD */
-        #hud { position: absolute; top: 20px; left: 20px; z-index: 100; border-left: 2px solid var(--blue); padding: 10px; background: rgba(0,0,0,0.7); pointer-events: none; font-size: 12px; }
-        .stat { color: var(--red); font-weight: bold; }
-
-        /* Floating Flight Joystick (Left) */
         #joy-left-zone { position: absolute; top: 0; left: 0; width: 50%; height: 100%; z-index: 200; }
-        #joy-left-container { position: absolute; width: 100px; height: 100px; border: 1px solid var(--blue); border-radius: 50%; display: none; pointer-events: none; transform: translate(-50%, -50%); }
-        #joy-left-stick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.5; }
-
-        /* Fixed Camera Joystick (Right) */
-        #cam-joy-container { position: fixed; bottom: 110px; right: 40px; width: 100px; height: 100px; border: 1px solid var(--red); border-radius: 50%; z-index: 200; background: rgba(255,0,255,0.05); }
-        #cam-joy-stick { position: absolute; top: 50%; left: 50%; width: 35px; height: 35px; background: var(--red); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.5; }
-
-        /* Weapon Dock */
+        #joy-left-container { position: absolute; width: 80px; height: 80px; border: 1px solid var(--blue); border-radius: 50%; display: none; pointer-events: none; transform: translate(-50%, -50%); }
+        #joy-left-stick { position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); }
+        
         #weapon-dock { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 8px; z-index: 500; }
         .w-btn { width: 50px; height: 50px; border: 1px solid #444; background: rgba(0,0,0,0.9); border-radius: 5px; color: #666; font-size: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .w-btn.active { border-color: var(--blue); color: var(--blue); box-shadow: 0 0 10px var(--blue); }
+        .w-btn.active { border-color: var(--blue); color: var(--blue); }
     </style>
 </head>
 <body>
 
     <div id="hud">
-        FALCON_OS_V3<br>
-        HULL: <span id="hull" class="stat">100%</span><br>
-        PHASE: <span id="phase" class="stat">...</span>
+        SYS_STATUS: <span class="danger">ENEMIES DETECTED</span><br>
+        HULL: <span id="hull" style="color:var(--neon)">100%</span><br>
+        TIE_COUNT: <span id="enemy-count" style="color:var(--red)">0</span>
     </div>
 
     <div id="joy-left-zone">
         <div id="joy-left-container"><div id="joy-left-stick"></div></div>
     </div>
 
-    <div id="cam-joy-container"><div id="cam-joy-stick"></div></div>
-
     <div id="weapon-dock">
         <div class="w-btn active" onclick="state.weapon='std'">STD</div>
         <div class="w-btn" onclick="state.weapon='burst'">BRST</div>
-        <div class="w-btn" onclick="state.weapon='msl'">MSL</div>
     </div>
 
 <script>
 let scene, camera, renderer, clock = new THREE.Clock();
-let playerShip, buildings = [], sunLight;
-const state = { 
-    hull: 100, 
-    joyL: { x: 0, y: 0, active: false }, 
-    joyR: { x: 0, y: 0 },
-    camOrbit: { x: 0, y: 0.2 },
-    speed: 25 
-};
+let playerShip, buildings = [], enemies = [], projectiles = [];
+const state = { hull: 100, joyL: { x: 0, y: 0, active: false }, weapon: 'std', speed: 40 };
 
 function init() {
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.0001);
     camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 1, 40000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-    sunLight = new THREE.DirectionalLight(0xffffff, 1);
-    sunLight.position.set(1000, 2000, 1000);
-    scene.add(sunLight);
+    const sun = new THREE.DirectionalLight(0xffffff, 1);
+    sun.position.set(1000, 2000, 1000);
+    scene.add(sun);
 
     createFalcon();
     createCity();
-    setupJoysticks();
+    setupControls();
+    
+    // Spawn TIEs periodically
+    setInterval(() => { if(enemies.length < 5) createTieFighter(); }, 3000);
+
     animate();
 }
 
@@ -85,103 +72,145 @@ function createFalcon() {
     const cockpit = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 16), mat);
     cockpit.position.set(22, 0, 10);
     playerShip.add(hull, cockpit);
-    
-    // Scale reduced for "City Fit"
-    playerShip.scale.set(1.5, 1.5, 1.5); 
+    playerShip.scale.set(0.5, 0.5, 0.5); // Scaled to fit streets
     playerShip.position.set(0, 500, 0);
     scene.add(playerShip);
     playerShip.userData.box = new THREE.Box3();
 }
 
-function createCity() {
-    scene.add(new THREE.GridHelper(30000, 60, 0xff00ff, 0x111111));
-    for (let i = 0; i < 200; i++) {
-        const h = 400 + Math.random() * 2000;
-        const b = new THREE.Mesh(new THREE.BoxGeometry(300, h, 300), new THREE.MeshStandardMaterial({ color: 0x050508 }));
-        b.position.set((Math.random()-0.5)*18000, h/2, (Math.random()-0.5)*18000);
-        b.userData.box = new THREE.Box3().setFromObject(b);
-        scene.add(b);
-        buildings.push(b);
-    }
+function createTieFighter() {
+    const tieGroup = new THREE.Group();
+    const blackMat = new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 0.9, roughness: 0.2 });
+    const wingPanelMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.2, roughness: 0.8 });
+    const engineGlow = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(6, 16, 16), blackMat);
+    tieGroup.add(ball);
+
+    const arms = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 20, 8), blackMat);
+    arms.rotation.z = Math.PI / 2;
+    tieGroup.add(arms);
+
+    const wingGeo = new THREE.CylinderGeometry(15, 15, 1, 6);
+    const lWing = new THREE.Mesh(wingGeo, wingPanelMat);
+    lWing.position.x = -10; lWing.rotation.z = Math.PI / 2;
+    const rWing = new THREE.Mesh(wingGeo, wingPanelMat);
+    rWing.position.x = 10; rWing.rotation.z = Math.PI / 2;
+    tieGroup.add(lWing, rWing);
+
+    // AI Stats
+    const side = Math.random() > 0.5 ? 1 : -1;
+    tieGroup.position.set(playerShip.position.x + (2000 * side), 500 + Math.random()*500, playerShip.position.z - 3000);
+    scene.add(tieGroup);
+    
+    const enemyObj = { 
+        mesh: tieGroup, 
+        hp: 100, 
+        lastFire: 0,
+        box: new THREE.Box3()
+    };
+    enemies.push(enemyObj);
 }
 
-function setupJoysticks() {
-    const lZone = document.getElementById('joy-left-zone');
-    const lCont = document.getElementById('joy-left-container');
-    const rZone = document.getElementById('cam-joy-container');
+function handleAI(dt) {
+    enemies.forEach((enemy, index) => {
+        // Simple Chase Physics
+        const targetPos = playerShip.position.clone();
+        enemy.mesh.lookAt(targetPos);
+        
+        // Move forward
+        const dir = new THREE.Vector3(0,0,1).applyQuaternion(enemy.mesh.quaternion);
+        enemy.mesh.position.add(dir.multiplyScalar(state.speed * 0.8));
 
-    // Left Joystick Logic (Free Floating)
-    lZone.addEventListener('pointerdown', e => {
-        state.joyL.active = true;
-        lCont.style.display = 'block';
-        lCont.style.left = e.clientX + 'px';
-        lCont.style.top = e.clientY + 'px';
-        state.joyL.originX = e.clientX;
-        state.joyL.originY = e.clientY;
-    });
-
-    window.addEventListener('pointermove', e => {
-        if (state.joyL.active) {
-            const dx = e.clientX - state.joyL.originX;
-            const dy = e.clientY - state.joyL.originY;
-            const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 50);
-            const angle = Math.atan2(dy, dx);
-            state.joyL.x = (Math.cos(angle) * dist) / 50;
-            state.joyL.y = (Math.sin(angle) * dist) / 50;
-            document.getElementById('joy-left-stick').style.transform = `translate(calc(-50% + ${state.joyL.x * 25}px), calc(-50% + ${state.joyL.y * 25}px))`;
+        // Combat Engagement
+        enemy.lastFire += dt;
+        if (enemy.lastFire > 2.0 && enemy.mesh.position.distanceTo(playerShip.position) < 3000) {
+            spawnLaser(enemy.mesh, 0xff0000, true);
+            enemy.lastFire = 0;
         }
-        // Right Joystick Logic (Fixed Position)
-        if (e.buttons === 1 && e.clientX > window.innerWidth/2) {
-            const rect = rZone.getBoundingClientRect();
-            state.joyR.x = (e.clientX - (rect.left + 50)) / 50;
-            state.joyR.y = (e.clientY - (rect.top + 50)) / 50;
-            document.getElementById('cam-joy-stick').style.transform = `translate(calc(-50% + ${state.joyR.x * 20}px), calc(-50% + ${state.joyR.y * 20}px))`;
+
+        if (enemy.hp <= 0) {
+            scene.remove(enemy.mesh);
+            enemies.splice(index, 1);
         }
     });
+}
 
-    window.addEventListener('pointerup', () => {
-        state.joyL.active = false;
-        state.joyL.x = state.joyL.y = 0;
-        lCont.style.display = 'none';
-        state.joyR.x = state.joyR.y = 0;
-        document.getElementById('cam-joy-stick').style.transform = 'translate(-50%, -50%)';
-    });
+function spawnLaser(source, color, isEnemy) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 40), new THREE.MeshBasicMaterial({color: color}));
+    p.position.copy(source.position);
+    p.quaternion.copy(source.quaternion);
+    p.userData = { isEnemy: isEnemy, age: 0 };
+    scene.add(p);
+    projectiles.push(p);
 }
 
 function animate() {
     requestAnimationFrame(animate);
-    
-    // 1. Flight Stability Logic
+    const dt = clock.getDelta();
+
+    // Player Flight & Stability
     playerShip.rotateY(-state.joyL.x * 0.04);
     playerShip.rotation.x = THREE.MathUtils.lerp(playerShip.rotation.x, -state.joyL.y * 0.8, 0.05);
     playerShip.rotation.z = THREE.MathUtils.lerp(playerShip.rotation.z, -state.joyL.x * 0.8, 0.05);
+    const pDir = new THREE.Vector3(0,0,1).applyQuaternion(playerShip.quaternion);
+    playerShip.position.add(pDir.multiplyScalar(state.speed));
 
-    const dir = new THREE.Vector3(0,0,1).applyQuaternion(playerShip.quaternion);
-    playerShip.position.add(dir.multiplyScalar(state.speed));
-
-    // 2. Camera Orbit Logic (Joystick R)
-    state.camOrbit.x += state.joyR.x * 0.05;
-    state.camOrbit.y = Math.max(0.1, Math.min(1.0, state.camOrbit.y + state.joyR.y * 0.02));
-
-    const camDist = 300;
-    camera.position.set(
-        playerShip.position.x - Math.sin(playerShip.rotation.y + state.camOrbit.x) * camDist,
-        playerShip.position.y + (state.camOrbit.y * 200),
-        playerShip.position.z - Math.cos(playerShip.rotation.y + state.camOrbit.x) * camDist
-    );
+    camera.position.lerp(playerShip.position.clone().add(new THREE.Vector3(0, 40, -150).applyQuaternion(playerShip.quaternion)), 0.1);
     camera.lookAt(playerShip.position);
 
-    // Collision Check
-    playerShip.userData.box.setFromObject(playerShip);
-    buildings.forEach(b => {
-        if (playerShip.userData.box.intersectsBox(b.userData.box)) {
-            state.hull -= 0.1;
-            playerShip.position.add(new THREE.Vector3().subVectors(playerShip.position, b.position).setLength(20));
+    handleAI(dt);
+
+    // Projectile Logic
+    projectiles.forEach((p, i) => {
+        p.translateZ(80);
+        p.userData.age += dt;
+        if (p.userData.age > 2) { scene.remove(p); projectiles.splice(i, 1); return; }
+
+        if (p.userData.isEnemy) {
+            if (p.position.distanceTo(playerShip.position) < 30) { state.hull -= 5; scene.remove(p); projectiles.splice(i, 1); }
+        } else {
+            enemies.forEach(e => {
+                if (p.position.distanceTo(e.mesh.position) < 40) { e.hp -= 40; scene.remove(p); projectiles.splice(i, 1); }
+            });
         }
     });
 
-    document.getElementById('hull').innerText = Math.ceil(state.hull) + "%";
+    document.getElementById('hull').innerText = Math.max(0, Math.ceil(state.hull)) + "%";
+    document.getElementById('enemy-count').innerText = enemies.length;
     renderer.render(scene, camera);
+}
+
+// Reuse previous setupControls/createCity logic here...
+function createCity() {
+    scene.add(new THREE.GridHelper(30000, 60, 0x444444, 0x111111));
+    for (let i = 0; i < 150; i++) {
+        const h = 400 + Math.random() * 2000;
+        const b = new THREE.Mesh(new THREE.BoxGeometry(300, h, 300), new THREE.MeshStandardMaterial({ color: 0x050508 }));
+        b.position.set((Math.random()-0.5)*15000, h/2, (Math.random()-0.5)*15000);
+        scene.add(b);
+    }
+}
+
+function setupControls() {
+    const lZone = document.getElementById('joy-left-zone');
+    const lCont = document.getElementById('joy-left-container');
+    lZone.addEventListener('pointerdown', e => {
+        state.joyL.active = true;
+        lCont.style.display = 'block';
+        lCont.style.left = e.clientX + 'px'; lCont.style.top = e.clientY + 'px';
+        state.joyL.originX = e.clientX; state.joyL.originY = e.clientY;
+    });
+    window.addEventListener('pointermove', e => {
+        if (!state.joyL.active) return;
+        const dx = e.clientX - state.joyL.originX; const dy = e.clientY - state.joyL.originY;
+        const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 40);
+        const angle = Math.atan2(dy, dx);
+        state.joyL.x = (Math.cos(angle) * dist) / 40;
+        state.joyL.y = (Math.sin(angle) * dist) / 40;
+        document.getElementById('joy-left-stick').style.transform = `translate(calc(-50% + ${state.joyL.x * 20}px), calc(-50% + ${state.joyL.y * 20}px))`;
+    });
+    window.addEventListener('pointerup', () => { state.joyL.active = false; lCont.style.display = 'none'; });
 }
 
 init();
