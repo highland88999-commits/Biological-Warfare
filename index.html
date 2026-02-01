@@ -3,105 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Biological Warfare</title>
+    <title>Biological Warfare | Artemis Prime</title>
     <style>
-        :root { --blue: #00f2ff; --gold: #d4af37; --red: #ff2d55; --green: #39ff14; }
+        :root { --blue: #00f2ff; --gold: #d4af37; --red: #ff2d55; --green: #39ff14; --bg: #050505; }
         * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; touch-action:none; }
-        body { background:#000; overflow:hidden; font-family: monospace; }
-
-        #landing {
-            position: fixed; inset: 0; z-index: 1000;
-            background: rgba(0,0,0,0.9);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            cursor: pointer; text-align: center;
-        }
-        #landing h1 { color: var(--blue); font-size: 2.5rem; letter-spacing: 5px; margin-bottom: 20px; text-shadow: 0 0 20px var(--blue); }
-        #landing p { color: var(--gold); animation: blink 2s infinite; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; overflow:hidden; }
         
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        /* UI OVERLAYS */
+        #hud { position: fixed; top: 20px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
+        .stat-box { background: rgba(0,0,0,0.7); border: 1px solid var(--blue); padding: 5px 15px; border-radius: 5px; text-align: center; }
+        .stat-label { font-size: 10px; color: var(--gold); text-transform: uppercase; }
+        .stat-val { font-size: 18px; font-weight: bold; font-family: monospace; }
 
-        #hud { display: none; position: fixed; top: 40px; width: 100%; text-align: center; color: var(--blue); z-index: 100; font-size: 1.2rem; text-shadow: 0 0 5px #000; }
+        /* UPGRADE NOTIFICATION */
+        #level-up { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--gold); font-size: 2rem; display: none; z-index: 200; text-shadow: 0 0 20px var(--gold); }
+
+        /* DEPLOYMENT ZONE */
         #cannon {
-            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
-            width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--gold);
-            z-index: 100; display: none; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.8); color: var(--gold); font-weight: bold; font-size: 12px;
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--gold);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, rgba(0,0,0,0.8) 70%);
+            box-shadow: 0 0 20px rgba(212,175,55,0.4); z-index: 100; cursor: pointer;
         }
-        
-        .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; z-index: 10; transition: border-width 0.1s; }
-        .blue { border: 2px solid var(--blue); box-shadow: 0 0 10px var(--blue); }
-        .red { border: 2px solid var(--red); box-shadow: 0 0 10px var(--red); }
-        .green { border: 2px solid var(--green); box-shadow: 0 0 10px var(--green); }
+        #cooldown-overlay { position: absolute; bottom: 0; width: 100%; background: rgba(212,175,55,0.3); height: 0%; transition: 0.1s; border-radius: 0 0 50% 50%; }
+
+        /* CELLS */
+        .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; pointer-events: none; }
+        .cell::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid inherit; opacity: 0.3; }
+        .blue { border: 2px solid var(--blue); box-shadow: 0 0 15px var(--blue); color: var(--blue); }
+        .red { border: 2px solid var(--red); box-shadow: 0 0 15px var(--red); color: var(--red); }
+        .green { border: 2px solid var(--green); box-shadow: 0 0 15px var(--green); color: var(--green); }
     </style>
 </head>
 <body>
 
-    <div id="landing" onclick="launch()">
-        <h1>BIOLOGICAL WARFARE</h1>
-        <p>TAP TO INITIALIZE DEPLOYMENT</p>
+    <div id="hud">
+        <div class="stat-box"><div class="stat-label">Stability</div><div id="stability" class="stat-val">100%</div></div>
+        <div class="stat-box"><div class="stat-label">Level</div><div id="lvl" class="stat-val">1</div></div>
+        <div class="stat-box" style="border-color: var(--gold);"><div class="stat-label">Best</div><div id="best" class="stat-val">0</div></div>
     </div>
 
-    <div id="hud">STABILITY: <span id="xp">100</span>%</div>
-    <div id="cannon" onpointerdown="spawnBlue()">DEPLOY</div>
+    <div id="level-up">UPGRADED!</div>
+
+    <div id="cannon" onpointerdown="triggerDeploy()">
+        <div id="cooldown-overlay"></div>
+        <span style="font-size: 10px; color: var(--gold);">DEPLOY</span>
+    </div>
+
     <div id="arena"></div>
 
     <script>
-        let stability = 100, entities = [], active = false;
-        const arena = document.getElementById('arena');
+        // Game State
+        let state = {
+            stability: 100, level: 1, best: localStorage.getItem('bw_best') || 1,
+            entities: [], active: true, cd: 0, maxCD: 50,
+            spawnRate: 2000, lastSpawn: 0
+        };
 
-        function launch() {
-            document.getElementById('landing').style.display = 'none';
-            document.getElementById('hud').style.display = 'block';
-            document.getElementById('cannon').style.display = 'flex';
-            active = true;
-            spawnEnemy();
-            gameLoop();
-        }
+        const arena = document.getElementById('arena');
+        const levelUpEl = document.getElementById('level-up');
 
         class Cell {
             constructor(type) {
                 this.type = type;
                 this.hp = 100;
-                this.size = 32;
                 this.x = (type === 'blue') ? window.innerWidth/2 : Math.random()*window.innerWidth;
                 this.y = (type === 'blue') ? window.innerHeight - 150 : -50;
                 this.vx = (Math.random() - 0.5) * 4;
-                this.vy = (type === 'blue') ? -3 : 2 + Math.random() * 3;
+                this.vy = (type === 'blue') ? -4 : 2 + (state.level * 0.05); // Speed scales with level
                 
                 this.el = document.createElement('div');
                 this.el.className = `cell ${type}`;
-                this.el.style.width = this.el.style.height = `${this.size}px`;
+                this.el.style.width = this.el.style.height = `32px`;
                 arena.appendChild(this.el);
             }
 
             update() {
-                // Movement
-                this.x += this.vx;
-                this.y += this.vy;
-                if(this.x < 0 || this.x > window.innerWidth - this.size) this.vx *= -1;
+                this.x += this.vx; this.y += this.vy;
+                if(this.x < 0 || this.x > window.innerWidth - 32) this.vx *= -1;
 
-                // Combat Logic: Find nearest enemy
-                entities.forEach(other => {
+                // Simple Combat Collision
+                state.entities.forEach(other => {
                     if (other.type !== this.type) {
-                        let dx = this.x - other.x;
-                        let dy = this.y - other.y;
-                        let dist = Math.sqrt(dx*dx + dy*dy);
-                        if (dist < 50) { // Attack Range
-                            other.hp -= 0.5; // Damage per frame
-                            this.el.style.borderWidth = '4px'; // Visual feedback
-                        } else {
-                            this.el.style.borderWidth = '2px';
-                        }
+                        let d = Math.hypot(this.x - other.x, this.y - other.y);
+                        if (d < 40) other.hp -= 1.5;
                     }
                 });
 
-                // Scoring / Penalty Logic
-                if (this.type === 'blue' && this.y < -30) {
-                    penalty('enemy'); // You scored on them
-                    this.hp = 0; 
-                } else if ((this.type === 'red' || this.type === 'green') && this.y > window.innerHeight) {
-                    penalty('player'); // They scored on you
-                    this.hp = 0;
+                // Crossing the Line logic
+                if (this.type === 'blue' && this.y < -40) {
+                    this.hp = 0; scoreLevel(); 
+                } else if (this.type !== 'blue' && this.y > window.innerHeight) {
+                    this.hp = 0; state.stability -= 10; // Stability penalty
                 }
 
                 this.el.style.transform = `translate(${this.x}px,${this.y}px)`;
@@ -109,42 +103,64 @@
             }
         }
 
-        function penalty(target) {
-            if (target === 'player') stability -= 5;
-            // Immediate deletion of 2 cells from the "scored on" team
-            let count = 0;
-            for (let i = entities.length - 1; i >= 0; i--) {
-                if (count < 2 && ((target === 'player' && entities[i].type === 'blue') || 
-                    (target === 'enemy' && (entities[i].type === 'red' || entities[i].type === 'green')))) {
-                    entities[i].hp = 0;
-                    count++;
-                }
+        function triggerDeploy() {
+            if (state.cd <= 0) {
+                state.entities.push(new Cell('blue'));
+                state.cd = state.maxCD;
             }
         }
 
-        function spawnBlue() { if(active) entities.push(new Cell('blue')); }
-        
-        function spawnEnemy() { 
-            if(active) { 
-                const type = Math.random() > 0.5 ? 'red' : 'green';
-                entities.push(new Cell(type)); 
-                setTimeout(spawnEnemy, 2000); 
+        function scoreLevel() {
+            state.level++;
+            if(state.level > state.best) {
+                state.best = state.level;
+                localStorage.setItem('bw_best', state.best);
             }
+            levelUpEl.style.display = 'block';
+            setTimeout(() => levelUpEl.style.display = 'none', 1000);
+            // Dynamic Difficulty Adjustment
+            state.spawnRate = Math.max(500, 2000 - (state.level * 20));
         }
 
-        function gameLoop() {
-            for(let i = entities.length - 1; i >= 0; i--) {
-                let c = entities[i];
+        function gameLoop(time) {
+            if (!state.active) return;
+
+            // Handle Cooldown
+            if (state.cd > 0) {
+                state.cd--;
+                document.getElementById('cooldown-overlay').style.height = `${(state.cd/state.maxCD)*100}%`;
+            }
+
+            // Enemy Spawning
+            if (time - state.lastSpawn > state.spawnRate) {
+                state.entities.push(new Cell(Math.random() > 0.5 ? 'red' : 'green'));
+                state.lastSpawn = time;
+            }
+
+            // Update Cells
+            for(let i = state.entities.length - 1; i >= 0; i--) {
+                let c = state.entities[i];
                 c.update();
                 if(c.hp <= 0) {
                     c.el.remove();
-                    entities.splice(i, 1);
+                    state.entities.splice(i, 1);
                 }
             }
-            document.getElementById('xp').innerText = stability;
-            if (stability > 0) requestAnimationFrame(gameLoop);
-            else alert("SYSTEM COLLAPSED - GAME OVER");
+
+            // Update UI
+            document.getElementById('stability').innerText = `${state.stability}%`;
+            document.getElementById('lvl').innerText = state.level;
+            document.getElementById('best').innerText = state.best;
+
+            if (state.stability <= 0) {
+                alert(`GAME OVER. RECREATING BIO-DENSITY. LEVEL REACHED: ${state.level}`);
+                location.reload();
+            } else {
+                requestAnimationFrame(gameLoop);
+            }
         }
+
+        requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
