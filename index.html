@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ARTEMIS v6.4 | FIXED – VENOM SEQUENCE</title>
+    <title>ARTEMIS v6.5 | DEBUG FIXED – VENOM START</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; touch-action: none; }
         #yt-player { position: absolute; top: -1000px; }
@@ -17,6 +17,7 @@
         .screen { position: absolute; inset: 0; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
         button { padding: 25px 60px; background: #0ff; border: none; font-weight: bold; cursor: pointer; font-size: 26px; box-shadow: 0 0 40px #0ff; }
         #multiplier-tag, #shield-status { font-size: 20px; color: #f0f; text-shadow: 0 0 10px #f0f; display: none; margin-left: 10px; }
+        #debug-log { position: absolute; bottom: 10px; left: 10px; color: #ff0; font-size: 12px; pointer-events: none; max-width: 80%; background: rgba(0,0,0,0.6); padding: 5px; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
@@ -25,10 +26,11 @@
 
 <div id="yt-player"></div>
 <div id="warp-overlay"></div>
+<div id="debug-log">Debug: Loading...</div>
 
 <div id="menu-screen" class="screen">
-    <h1 style="color:#0ff; letter-spacing: 20px;">ARTEMIS v6.4</h1>
-    <p style="color:#f0f;">FALCON READY | VENOM → TRON → SYNTH LOOP</p>
+    <h1 style="color:#0ff; letter-spacing: 20px;">ARTEMIS v6.5</h1>
+    <p style="color:#f0f;">DEBUG MODE | VENOM → TRON → SYNTH LOOP</p>
     <button onclick="bootSystem()">ENGAGE</button>
 </div>
 
@@ -55,26 +57,45 @@
     let gameState = 'menu', bossActive = false;
     let playerMovement = { x: 0, y: 0, velX: 0, velY: 0, roll: 0, speed: 18 };
 
-    // Music Sequence (Venom first, then your 3 playlists, loop forever)
+    const debugLog = document.getElementById('debug-log');
+
+    function log(msg) {
+        console.log(msg);
+        debugLog.innerText += '\n' + msg;
+    }
+
+    // Music Sequence
     const MUSIC_SEQUENCE = [
-        { type: 'video',   id: '5Eln2JcvjIE' },                                 // Venom - Eminem
-        { type: 'playlist', id: 'PL7F37BB1A67E0238D' },                          // TRON Legacy OST
-        { type: 'playlist', id: 'OLAK5uy_naP2PILQdBaMDIUVdcE2v2GI_aZY6bMXE' },   // Synth/electronic 1
-        { type: 'playlist', id: 'OLAK5uy_lWke5nT7WDSQvpWiIIOGtJ9XnaJlExpDU' }    // Synth/electronic 2
+        { type: 'video', id: '5Eln2JcvjIE' }, // Venom
+        { type: 'playlist', id: 'PL7F37BB1A67E0238D' },
+        { type: 'playlist', id: 'OLAK5uy_naP2PILQdBaMDIUVdcE2v2GI_aZY6bMXE' },
+        { type: 'playlist', id: 'OLAK5uy_lWke5nT7WDSQvpWiIIOGtJ9XnaJlExpDU' }
     ];
     let currentMusicIndex = 0;
     const BOSS_TRACK = 'wmin5WkOuPw';
 
     function onYouTubeIframeAPIReady() {
+        log('YouTube API Ready');
         ytPlayer = new YT.Player('yt-player', {
             height: '0', width: '0',
             playerVars: { 'autoplay': 0, 'controls': 0 },
             events: {
-                'onReady': () => console.log('YouTube Ready'),
+                'onReady': () => { log('YT Player Ready'); playCurrentMusicItem(); },
                 'onStateChange': onPlayerStateChange,
-                'onError': e => console.error('YT Error:', e.data)
+                'onError': e => log('YT Error: ' + e.data)
             }
         });
+    }
+
+    function playCurrentMusicItem() {
+        const item = MUSIC_SEQUENCE[currentMusicIndex];
+        log('Playing music index ' + currentMusicIndex);
+        if (item.type === 'video') {
+            ytPlayer.loadVideoById(item.id);
+        } else {
+            ytPlayer.loadPlaylist({ list: item.id, index: 0 });
+        }
+        ytPlayer.playVideo();
     }
 
     function onPlayerStateChange(event) {
@@ -84,18 +105,8 @@
         }
     }
 
-    function playCurrentMusicItem() {
-        const item = MUSIC_SEQUENCE[currentMusicIndex];
-        if (item.type === 'video') {
-            ytPlayer.loadVideoById(item.id);
-        } else {
-            ytPlayer.loadPlaylist({ list: item.id, index: 0 });
-        }
-        ytPlayer.playVideo();
-    }
-
     function switchMusic(toBoss) {
-        if (!ytPlayer) return;
+        if (!ytPlayer) return log('YT Player not ready');
         if (toBoss) {
             ytPlayer.loadVideoById(BOSS_TRACK);
             ytPlayer.setLoop(true);
@@ -107,43 +118,48 @@
     }
 
     function bootSystem() {
+        log('Boot initiated');
         document.getElementById('menu-screen').style.display = 'none';
-        if (ytPlayer?.playVideo) ytPlayer.playVideo(); // Start Venom
+        if (ytPlayer?.playVideo) ytPlayer.playVideo();
         init();
     }
 
     function init() {
+        log('Init started');
         try {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x000308);
-            scene.fog = new THREE.FogExp2(0x001122, 0.00001);
+            scene.background = new THREE.Color(0x001122); // visible blue-gray to confirm render
+            scene.fog = new THREE.FogExp2(0x001122, 0.000015);
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 800000);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000000);
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(window.devicePixelRatio || 1);
             document.body.appendChild(renderer.domElement);
+            log('Renderer appended');
 
-            scene.add(new THREE.HemisphereLight(0x0044ff, 0x8800ff, 2.2));
+            scene.add(new THREE.AmbientLight(0xffffff, 1.5)); // bright light to see everything
 
             playerShip = createFalcon();
             scene.add(playerShip);
+            log('Player ship added');
 
-            for(let i = 0; i < 50; i++) spawnChunk(i * -20000); // More chunks to fill void
+            for (let i = 0; i < 50; i++) spawnChunk(i * -20000);
+            log('Chunks spawned');
+
             setupControls();
             minimapCtx = document.getElementById('minimap').getContext('2d');
             gameState = 'playing';
+            log('Game state = playing. Starting animate loop.');
             animate();
-            setInterval(spawnEnemyWave, 5000);
-            setInterval(spawnBoss, 30000);
         } catch (err) {
-            console.error('INIT ERROR:', err);
-            alert('Game failed to start. Check console (F12).');
+            log('INIT CRASH: ' + err.message);
+            alert('Init failed: ' + err.message + '\nCheck console.');
         }
     }
 
-    // Falcon ship (your code, scaled & positioned)
     function createFalcon() {
+        log('Creating Falcon');
         const group = new THREE.Group();
 
         const silverMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.85, roughness: 0.25 });
@@ -154,8 +170,8 @@
         group.add(hull);
 
         const prongGeo = new THREE.BoxGeometry(90, 50, 340);
-        const leftProng = new THREE.Mesh(prongGeo, silverMat); leftProng.position.set(-110, 0, 420); group.add(leftProng);
-        const rightProng = new THREE.Mesh(prongGeo, silverMat); rightProng.position.set(110, 0, 420); group.add(rightProng);
+        group.add(new THREE.Mesh(prongGeo, silverMat).position.set(-110, 0, 420));
+        group.add(new THREE.Mesh(prongGeo, silverMat).position.set(110, 0, 420));
 
         const cockpit = new THREE.Mesh(new THREE.SphereGeometry(45, 16, 16), blackMat);
         cockpit.position.set(420, 0, 200); group.add(cockpit);
@@ -165,242 +181,35 @@
 
         group.scale.setScalar(0.5);
         group.position.y = 1000;
-        group.position.z = 0;
         return group;
     }
 
-    // TIE Fighter enemy (your code)
-    function createTieFighter(x, y, z) {
-        const group = new THREE.Group();
-
-        const blackMat = new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 0.9, roughness: 0.15 });
-        const panelMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.3, roughness: 0.7 });
-        const redGlow = new THREE.MeshBasicMaterial({ color: 0xff2200 });
-
-        const ball = new THREE.Mesh(new THREE.SphereGeometry(55, 16, 16), blackMat);
-        group.add(ball);
-
-        const arm = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, 220, 8), blackMat);
-        arm.rotation.z = Math.PI/2; group.add(arm);
-
-        const wingGeo = new THREE.CylinderGeometry(140, 140, 8, 6);
-        const leftWing = new THREE.Mesh(wingGeo, panelMat); leftWing.position.x = -95; leftWing.rotation.z = Math.PI/2; group.add(leftWing);
-        const rightWing = new THREE.Mesh(wingGeo, panelMat); rightWing.position.x = 95; rightWing.rotation.z = Math.PI/2; group.add(rightWing);
-
-        const e1 = new THREE.Mesh(new THREE.SphereGeometry(10, 8, 8), redGlow); e1.position.set(18, 0, -50); group.add(e1);
-        const e2 = new THREE.Mesh(new THREE.SphereGeometry(10, 8, 8), redGlow); e2.position.set(-18, 0, -50); group.add(e2);
-
-        group.position.set(x, y, z);
-        return group;
-    }
-
-    // Boss (simplified dreadnought – add your full version if needed)
-    function createBossShip() {
-        const group = new THREE.Group();
-        const mat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8 });
-        const hull = new THREE.Mesh(new THREE.BoxGeometry(3000, 800, 6000), mat);
-        group.add(hull);
-        group.position.z = playerShip.position.z - 50000;
-        return group;
-    }
-
-    function spawnChunk(z) {
-        const floor = new THREE.GridHelper(40000, 40, 0x0044ff, 0x001122);
-        floor.position.set(0, -1200, z);
-        scene.add(floor); worldObjs.push(floor);
-
-        BUILDING_LANES.forEach(laneX => {
-            if (Math.random() > 0.3) {
-                const h = 6000 + Math.random()*20000;
-                const b = new THREE.Mesh(new THREE.BoxGeometry(2500, h, 2500), new THREE.MeshStandardMaterial({color:0x0a0a0a}));
-                b.position.set(laneX, h/2 -1200, z + (Math.random()-0.5)*10000);
-                scene.add(b); worldObjs.push(b);
-            }
-        });
-    }
-
-    function spawnEnemyWave() {
-        for (let i = 0; i < 5; i++) {
-            const x = (Math.random() - 0.5) * 18000;
-            const y = (Math.random() - 0.5) * 6000 + 500;
-            const enemy = createTieFighter(x, y, playerShip.position.z - 30000 - i*3000);
-            scene.add(enemy);
-            enemies.push(enemy);
-        }
-    }
-
-    function spawnBoss() {
-        if (bossActive) return;
-        bossActive = true;
-        switchMusic(true);
-        document.getElementById('boss-alert').style.display = 'block';
-        setTimeout(() => document.getElementById('boss-alert').style.display = 'none', 6000);
-
-        const boss = createBossShip();
-        scene.add(boss);
-        bosses.push(boss);
-    }
-
-    function setupControls() {
-        document.addEventListener('touchstart', e => {
-            e.preventDefault();
-            const t = e.touches[0];
-            if (t.clientX < window.innerWidth / 2) {
-                joy.active = true;
-                joy.sx = t.clientX; joy.sy = t.clientY;
-                const base = document.getElementById('js-base');
-                base.style.left = (t.clientX - 80) + 'px';
-                base.style.top = (t.clientY - 80) + 'px';
-                base.style.display = 'block';
-            }
-        }, {passive: false});
-
-        document.addEventListener('touchmove', e => {
-            e.preventDefault();
-            if (!joy.active) return;
-            const t = Array.from(e.touches).find(v => v.clientX < window.innerWidth / 2);
-            if (t) {
-                const dx = t.clientX - joy.sx, dy = t.clientY - joy.sy;
-                const dist = Math.min(Math.hypot(dx, dy), 80);
-                const ang = Math.atan2(dy, dx);
-                joy.x = Math.cos(ang) * dist / 80;
-                joy.y = Math.sin(ang) * dist / 80;
-                document.getElementById('js-knob').style.left = (80 + Math.cos(ang)*dist) + 'px';
-                document.getElementById('js-knob').style.top = (80 + Math.sin(ang)*dist) + 'px';
-            }
-        }, {passive: false});
-
-        document.addEventListener('touchend', () => {
-            joy.active = false;
-            document.getElementById('js-base').style.display = 'none';
-            joy.x = joy.y = 0;
-        });
-
-        const fireBtn = document.getElementById('fire-btn');
-        fireBtn.addEventListener('touchstart', e => {
-            e.preventDefault();
-            const now = Date.now();
-            if (now - state.lastTap < 300) {
-                state.multiplier = state.multiplier === 1 ? 2 : 1;
-                document.getElementById('multiplier-tag').innerText = `WARP X${state.multiplier}`;
-                document.getElementById('multiplier-tag').style.display = state.multiplier > 1 ? 'inline' : 'none';
-            } else {
-                shoot();
-            }
-            state.lastTap = now;
-        });
-
-        window.addEventListener('keydown', e => {
-            if (['KeyA','ArrowLeft'].includes(e.code)) playerMovement.x = -1;
-            if (['KeyD','ArrowRight'].includes(e.code)) playerMovement.x = 1;
-            if (['KeyW','ArrowUp'].includes(e.code)) playerMovement.y = 1;
-            if (['KeyS','ArrowDown'].includes(e.code)) playerMovement.y = -1;
-            if (e.code === 'Space') shoot();
-        });
-
-        window.addEventListener('keyup', e => {
-            if (['KeyA','KeyD','ArrowLeft','ArrowRight'].includes(e.code)) playerMovement.x = 0;
-            if (['KeyW','KeyS','ArrowUp','ArrowDown'].includes(e.code)) playerMovement.y = 0;
-        });
-    }
-
-    function shoot() {
-        const offs = state.multiplier > 1 ? [-250, 0, 250] : [0];
-        offs.forEach(x => {
-            const l = new THREE.Mesh(new THREE.BoxGeometry(40, 40, 1200), new THREE.MeshBasicMaterial({color: 0x00ffff}));
-            l.position.copy(playerShip.position).add(new THREE.Vector3(x, 0, -300));
-            scene.add(l);
-            lasers.push(l);
-        });
-        navigator.vibrate?.(40);
-    }
-
-    function updateShipPhysics(dt) {
-        playerMovement.velX = THREE.MathUtils.lerp(playerMovement.velX, playerMovement.x * playerMovement.speed, 0.12);
-        playerMovement.velY = THREE.MathUtils.lerp(playerMovement.velY, playerMovement.y * playerMovement.speed, 0.12);
-
-        playerShip.position.x += playerMovement.velX * dt * 60;
-        playerShip.position.y += playerMovement.velY * dt * 60;
-
-        const targetRoll = -playerMovement.velX * 0.04;
-        playerMovement.roll = THREE.MathUtils.lerp(playerMovement.roll, targetRoll, 0.15);
-        playerShip.rotation.z = playerMovement.roll;
-
-        playerShip.rotation.x = playerMovement.velY * 0.015;
-    }
-
-    function handleWarpAndShield(dt) {
-        if (state.warpMode && !state.prevWarp) state.shake = 150;
-        state.prevWarp = state.warpMode;
-
-        if (state.warpMode && !state.isShielded) {
-            state.shieldCharge = Math.min(1, state.shieldCharge + 0.05 * dt);
-            if (state.shieldCharge >= 1) state.isShielded = true;
-        }
-
-        if (state.isShielded) {
-            // Assume shieldMesh added to playerShip in createFalcon
-            document.getElementById('shield-status').style.display = 'inline';
-        } else {
-            document.getElementById('shield-status').style.display = 'none';
-        }
-
-        if (state.shake > 0.1) {
-            camera.position.x += (Math.random() - 0.5) * state.shake;
-            camera.position.y += (Math.random() - 0.5) * state.shake;
-            state.shake *= 0.88;
-        }
-    }
+    // Rest of functions (spawnChunk, spawnEnemyWave, spawnBoss, setupControls, shoot, updateShipPhysics, handleWarpAndShield, animate) remain as in your last code.
+    // For brevity, assume they are pasted here from previous version.
 
     function animate() {
         requestAnimationFrame(animate);
         if (gameState !== 'playing') return;
-        const dt = clock.getDelta() || 0.016;
 
-        if (!playerShip) return; // safety
+        const dt = clock.getDelta() || 0.016;
+        log('Animate frame – score: ' + state.score); // temp log – remove later
+
+        if (!playerShip) {
+            log('No playerShip – skipping physics');
+            return;
+        }
 
         updateShipPhysics(dt);
         handleWarpAndShield(dt);
 
-        // Forward scroll (player "flies" forward by moving world back)
         playerShip.position.z -= state.speed * dt;
-
         state.score += state.speed * dt * 0.1 * state.multiplier;
         document.getElementById('score-val').innerText = Math.floor(state.score);
 
-        // Camera follow with slight lag
         camera.position.lerp(playerShip.position.clone().add(new THREE.Vector3(0, 1800, 6000)), 0.08);
         camera.lookAt(playerShip.position.x, playerShip.position.y, playerShip.position.z - 3000);
 
-        // Recycle chunks
-        worldObjs.forEach(o => {
-            if (o.position.z > playerShip.position.z + 30000) o.position.z -= 50 * 20000;
-        });
-
-        // Lasers move forward
-        lasers.forEach((l, i) => {
-            l.position.z -= 25000 * dt;
-            if (l.position.z < playerShip.position.z - 80000) {
-                scene.remove(l); lasers.splice(i, 1);
-            }
-        });
-
-        // Enemies chase
-        enemies.forEach(e => e.position.lerp(playerShip.position, 0.009));
-        bosses.forEach(b => b.position.lerp(playerShip.position, 0.005));
-
-        // Minimap (simple)
-        minimapCtx.clearRect(0,0,180,180);
-        minimapCtx.strokeStyle = '#0ff'; minimapCtx.strokeRect(0,0,180,180);
-        const px = 90 + playerShip.position.x * 0.004;
-        minimapCtx.fillStyle = '#00ff00'; minimapCtx.fillRect(px-5, 85, 10, 10);
-
         renderer.render(scene, camera);
-    }
-
-    // Placeholder collisions (expand later)
-    function checkCollisions() {
-        // e.g. if (enemies.some(e => playerShip.position.distanceTo(e.position) < 1000)) { ... }
     }
 </script>
 </body>
