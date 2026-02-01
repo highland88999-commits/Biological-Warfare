@@ -2,64 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MEGACITY OS: ARTEMIS PROTOCOL</title>
+    <title>MEGACITY OS: ARTEMIS SYNC</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
-        
-        /* --- HUD & UI --- */
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: #0ff; }
         #hud {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            display: flex; flex-direction: column; justify-content: space-between;
+            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
         }
-        .top-bar { display: flex; justify-content: space-between; padding: 20px; color: #00ffff; font-size: 20px; text-shadow: 0 0 5px #00ffff; }
+        .top-bar { display: flex; justify-content: space-between; padding: 20px; background: rgba(0,0,0,0.5); border-bottom: 1px solid #0ff; }
+        .stat { color: #f0f; font-weight: bold; text-shadow: 0 0 5px #f0f; }
         
         #crosshair {
             position: absolute; top: 50%; left: 50%; width: 40px; height: 40px;
-            transform: translate(-50%, -50%);
-            border: 2px solid rgba(0, 255, 255, 0.5);
-            border-radius: 50%;
-            transition: all 0.1s;
+            transform: translate(-50%, -50%); border: 2px solid rgba(0, 255, 255, 0.5);
+            border-radius: 50%; transition: all 0.1s;
         }
-        #crosshair.locked {
-            border-color: #ff0000; width: 60px; height: 60px; box-shadow: 0 0 15px #ff0000;
-            border-style: dashed; animation: spin 4s linear infinite;
-        }
-        @keyframes spin { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+        #crosshair.locked { border-color: #ff0000; width: 60px; height: 60px; box-shadow: 0 0 15px #ff0000; border-style: dashed; }
         
         #boss-ui {
-            display: none; position: absolute; top: 10%; left: 50%; 
-            transform: translateX(-50%); width: 60%; 
-            flex-direction: column; align-items: center;
+            display: none; position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
+            width: 60%; flex-direction: column; align-items: center;
         }
-        #boss-bar-container {
-            width: 100%; height: 20px; border: 2px solid #ff0000; background: rgba(50, 0, 0, 0.5);
-        }
-        #boss-health {
-            width: 100%; height: 100%; background: #ff0000; transition: width 0.2s; box-shadow: 0 0 20px #ff0000;
-        }
-        #boss-label { color: #ff0000; font-size: 24px; margin-bottom: 5px; text-shadow: 0 0 10px #ff0000; font-weight: bold; letter-spacing: 2px; }
+        #boss-bar { width: 100%; height: 10px; border: 1px solid #f00; background: rgba(50,0,0,0.5); margin-top: 5px; }
+        #boss-hp { width: 100%; height: 100%; background: #f00; transition: width 0.2s; }
 
         .screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center;
-            pointer-events: auto; z-index: 100;
+            background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 1000;
         }
-        h1 { color: #00ffff; font-size: 60px; margin: 0; text-shadow: 0 0 20px #00ffff; }
-        p { color: #fff; font-size: 18px; margin-top: 20px; max-width: 600px; text-align: center; line-height: 1.5; }
         button {
-            margin-top: 40px; padding: 15px 40px; font-size: 24px;
-            background: transparent; color: #00ffff; border: 2px solid #00ffff;
-            cursor: pointer; font-family: inherit; transition: 0.2s;
+            padding: 15px 30px; background: transparent; color: #0ff; border: 2px solid #0ff;
+            cursor: pointer; font-family: inherit; font-size: 20px; margin-top: 20px;
         }
-        button:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
-        
-        #vignette {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 10;
-            box-shadow: inset 0 0 0px rgba(255,0,0,0); transition: box-shadow 0.3s;
-        }
-
+        button:hover { background: #0ff; color: #000; }
         .hidden { display: none !important; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -67,499 +43,286 @@
 </head>
 <body>
 
-    <div id="vignette"></div>
-    <div id="crosshair"></div>
-    
     <div id="hud">
         <div class="top-bar">
-            <div>HULL: <span id="hull-stat">100</span>%</div>
-            <div>KILLS: <span id="kill-stat">0</span></div>
+            <div>HULL: <span id="hull-stat" class="stat">100</span>%</div>
+            <div>MODE: <span id="fire-mode" class="stat" style="color:#0ff">DUAL BOLT</span></div>
+            <div>KILLS: <span id="kill-stat" class="stat">0</span></div>
         </div>
         <div id="boss-ui">
-            <div id="boss-label">⚠ CAPITAL CLASS DETECTED ⚠</div>
-            <div id="boss-bar-container"><div id="boss-health"></div></div>
+            <div style="color:#f00; font-weight:bold; letter-spacing:3px;">⚠ CAPITAL SHIP DETECTED ⚠</div>
+            <div id="boss-bar"><div id="boss-hp"></div></div>
         </div>
     </div>
 
     <div id="start-screen" class="screen">
-        <h1>ARTEMIS PROTOCOL</h1>
-        <p>
-            PILOT INSTRUCTIONS:<br>
-            [W/S] Pitch & Speed | [A/D] Bank & Turn<br>
-            [SPACE] Laser Cannons | [SHIFT] Hyperdrive Boost<br>
-            <br>
-            - Flank enemies to avoid head-on collisions.<br>
-            - Destroy 15 Interceptors to draw out the Capital Ship.<br>
-            - Target the RED Vulnerability Markers to destroy the Boss.
-        </p>
-        <button onclick="startGame()">INITIATE LAUNCH</button>
+        <h1 style="font-size: 50px; text-shadow: 0 0 20px #0ff;">ARTEMIS PROTOCOL: MEGACITY</h1>
+        <p>[W,A,S,D] Pilot | [SPACE] Fire | [F] Toggle Fire Mode | [V] Camera</p>
+        <button onclick="startGame()">INITIATE SYNC</button>
     </div>
 
     <div id="game-over" class="screen hidden">
-        <h1 style="color: #ff0000; text-shadow: 0 0 20px #ff0000;">SIGNAL LOST</h1>
-        <p>FINAL KILL COUNT: <span id="final-kills">0</span></p>
-        <button onclick="location.reload()">REBOOT SYSTEM</button>
+        <h1 style="color:#f00">SIGNAL LOST</h1>
+        <button onclick="location.reload()">REBOOT</button>
     </div>
 
-    <div id="hidden-player" style="position:absolute; top:-9999px; left:-9999px; width:0; height:0;"></div>
+    <div id="hidden-player" style="position:absolute; top:-9999px;"></div>
 
 <script>
-    /* =========================================
-       AUDIO SYSTEM
-       ========================================= */
-    const BOSS_PLAYLIST = [
-        "lEDxJfr4YJQ", "8CdcCD5V-d8", "er416Ad3R1g" // Cyberpunk/Synthwave tracks
-    ];
-    let ytPlayer, lastPlayedId = null;
-    let audioContext;
+    let scene, camera, renderer, clock = new THREE.Clock();
+    let playerShip, starField, boss;
+    let enemies = [], lasers = [], particles = [], buildings = [];
+    let isFirstPerson = false, fireMode = 0; // 0: Dual, 1: Spread
+    let stats = { hull: 100, kills: 0, inBoss: false, bossHP: 3000 };
+    let input = { x: 0, y: 0, velX: 0, velY: 0 };
+    let ytPlayer, audioContext;
 
+    /* --- Audio & YouTube Setup --- */
     function onYouTubeIframeAPIReady() {
         ytPlayer = new YT.Player('hidden-player', {
-            height: '0', width: '0', videoId: '',
-            playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1 }
+            height: '0', width: '0', videoId: 'lEDxJfr4YJQ',
+            playerVars: { 'autoplay': 0, 'controls': 0 }
         });
     }
 
-    function triggerBossMusic() {
-        if (!ytPlayer || !ytPlayer.loadVideoById) return;
-        playRadioStatic(1.5);
-        const available = BOSS_PLAYLIST.filter(id => id !== lastPlayedId);
-        const nextSong = available[Math.floor(Math.random() * available.length)];
-        lastPlayedId = nextSong;
-        setTimeout(() => {
-            ytPlayer.loadVideoById(nextSong);
-            ytPlayer.setVolume(70);
-            ytPlayer.playVideo();
-        }, 1000);
-    }
-
-    function stopBossMusic() {
-        if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
-    }
-
-    function initAudio() {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-
-    function playRadioStatic(duration) {
-        if (!audioContext) return;
-        const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-        const noise = audioContext.createBufferSource();
-        noise.buffer = buffer;
-        const gain = audioContext.createGain();
-        gain.gain.value = 0.15;
-        noise.connect(gain);
-        gain.connect(audioContext.destination);
-        noise.start();
-    }
-
-    function playLaserSound() {
-        if (!audioContext) return;
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(880, audioContext.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(110, audioContext.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.start();
-        osc.stop(audioContext.currentTime + 0.2);
-    }
-
-    let lastLockBeep = 0;
-    function updateLockOnAudio(alignment) {
-        if (!audioContext) return;
-        const now = audioContext.currentTime;
-        const interval = 0.8 - (alignment * 0.75);
-        if (now - lastLockBeep > interval) {
-            const osc = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-            const pitch = 800 + (alignment * 800); 
-            osc.frequency.setValueAtTime(pitch, now);
-            osc.type = 'square';
-            gain.gain.setValueAtTime(0.05, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-            osc.connect(gain);
-            gain.connect(audioContext.destination);
-            osc.start();
-            osc.stop(now + 0.1);
-            lastLockBeep = now;
-        }
-    }
-
-    /* =========================================
-       GAME ENGINE & ASSETS
-       ========================================= */
-    let scene, camera, renderer, clock, playerShip, starField;
-    const enemies = [];
-    const lasers = [];
-    const particles = [];
-    let boss = null;
-    const bossMarkers = [];
-
-    const stats = { hull: 100, kills: 0, inBoss: false, bossHP: 2000, bossMaxHP: 2000, lastDamageTime: 0 };
-    const input = { x: 0, y: 0, velX: 0, velY: 0, hyper: false };
-
     function startGame() {
         document.getElementById('start-screen').classList.add('hidden');
-        initAudio();
-        if(audioContext && audioContext.state === 'suspended') audioContext.resume();
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
         init3D();
         animate();
     }
 
+    /* --- Asset Creation --- */
     function createFalcon() {
         const ship = new THREE.Group();
+        const mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7 });
+        const hull = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, 2, 32), mat);
+        hull.scale.set(1, 0.3, 1.2);
         
-        // Main Hull (Dish shape)
-        const hullGeo = new THREE.CylinderGeometry(10, 10, 1, 32);
-        const hullMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
-        const hull = new THREE.Mesh(hullGeo, hullMat);
-        hull.scale.set(1, 0.2, 1);
+        const cock = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 16), new THREE.MeshBasicMaterial({color: 0x001111}));
+        cock.position.set(10, 1, 6);
         
-        // Engine Glow (Rear)
-        const engineGeo = new THREE.BoxGeometry(12, 1, 1);
-        const engineMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-        const engine = new THREE.Mesh(engineGeo, engineMat);
-        engine.position.z = 8;
-        
-        // Cockpit (Offset)
-        const cockpitGeo = new THREE.CylinderGeometry(2, 2, 6, 8);
-        const cockpit = new THREE.Mesh(cockpitGeo, new THREE.MeshStandardMaterial({ color: 0x333333 }));
-        cockpit.rotation.z = Math.PI / 2;
-        cockpit.position.set(8, 0, 0);
+        const mandL = new THREE.Mesh(new THREE.BoxGeometry(4, 2, 10), mat);
+        mandL.position.set(-4, 0, 12);
+        const mandR = mandL.clone();
+        mandR.position.set(4, 0, 12);
 
-        // Mandibles (Front)
-        const manGeo = new THREE.BoxGeometry(3, 1, 8);
-        const manL = new THREE.Mesh(manGeo, hullMat);
-        manL.position.set(-3, 0, -8);
-        const manR = new THREE.Mesh(manGeo, hullMat);
-        manR.position.set(3, 0, -8);
-
-        ship.add(hull, engine, cockpit, manL, manR);
-        // Rotate so -Z is forward
-        ship.rotation.y = Math.PI; 
+        ship.add(hull, cock, mandL, mandR);
         return ship;
     }
 
-    function createTieFighter() {
+    function createTie() {
         const group = new THREE.Group();
-        const mat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.5, roughness: 0.5 });
+        const mat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+        const ball = new THREE.Mesh(new THREE.SphereGeometry(5, 8, 8), mat);
+        const wingGeo = new THREE.CylinderGeometry(12, 12, 1, 6);
         const wingMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-        
-        // Cockpit Ball
-        const ball = new THREE.Mesh(new THREE.SphereGeometry(6, 16, 16), mat);
-        
-        // Wings (Hexagonal cylinders)
-        const wingGeo = new THREE.CylinderGeometry(14, 14, 1, 6);
-        const wingL = new THREE.Mesh(wingGeo, wingMat);
-        wingL.rotation.z = Math.PI / 2;
-        wingL.position.x = -10;
-        
-        const wingR = new THREE.Mesh(wingGeo, wingMat);
-        wingR.rotation.z = Math.PI / 2;
-        wingR.position.x = 10;
-        
-        // Struts
-        const strutGeo = new THREE.CylinderGeometry(2, 2, 20, 8);
-        const strut = new THREE.Mesh(strutGeo, mat);
-        strut.rotation.z = Math.PI / 2;
-
-        group.add(ball, wingL, wingR, strut);
+        const wL = new THREE.Mesh(wingGeo, wingMat); wL.rotation.z = Math.PI/2; wL.position.x = -10;
+        const wR = wL.clone(); wR.position.x = 10;
+        group.add(ball, wL, wR);
         return group;
     }
 
     function init3D() {
         scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x000000, 0.0003);
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 30000);
+        scene.fog = new THREE.FogExp2(0x000000, 0.00008);
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 50000);
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
-        clock = new THREE.Clock();
 
-        const ambient = new THREE.AmbientLight(0x404040);
-        scene.add(ambient);
+        scene.add(new THREE.AmbientLight(0x4040ff, 0.5));
         const sun = new THREE.DirectionalLight(0xffffff, 1);
-        sun.position.set(100, 500, 200);
+        sun.position.set(500, 1000, 500);
         scene.add(sun);
 
-        // REPLACED: Use Falcon Model
         playerShip = createFalcon();
-        playerShip.position.y = -50; // Initial height adjustment
+        playerShip.position.set(0, 500, 0);
         scene.add(playerShip);
 
+        // Expansive City Initialization
+        for(let i=0; i<200; i++) spawnBuilding( (Math.random()-0.5)*15000, -(Math.random()*30000) );
+
+        // Stars
         const starGeo = new THREE.BufferGeometry();
-        const posArray = new Float32Array(9000);
-        for(let i=0; i<9000; i++) posArray[i] = (Math.random() - 0.5) * 16000;
-        starGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 2 }));
+        const starPos = [];
+        for(let i=0; i<5000; i++) starPos.push((Math.random()-0.5)*30000, (Math.random()-0.5)*20000, (Math.random()-0.5)*30000);
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+        starField = new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 2}));
         scene.add(starField);
 
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'w' || e.key === 'W') input.y = 1;
-            if (e.key === 's' || e.key === 'S') input.y = -1;
-            if (e.key === 'a' || e.key === 'A') input.x = -1;
-            if (e.key === 'd' || e.key === 'D') input.x = 1;
-            if (e.key === ' ') fireLaser();
-            if (e.key === 'Shift') input.hyper = true;
-        });
-        window.addEventListener('keyup', (e) => {
-            if (['w','s','W','S'].includes(e.key)) input.y = 0;
-            if (['a','d','A','D'].includes(e.key)) input.x = 0;
-            if (e.key === 'Shift') input.hyper = false;
-        });
-        
-        // Spawn loop
-        setInterval(() => {
-            if (!stats.inBoss && enemies.length < 8) spawnEnemy();
-        }, 1200);
+        window.addEventListener('keydown', handleInput);
+        setInterval(spawnEnemy, 2000);
+    }
+
+    function spawnBuilding(x, z) {
+        const h = 500 + Math.random() * 4000;
+        const bGeo = new THREE.BoxGeometry(400, h, 400);
+        const bMat = new THREE.MeshStandardMaterial({ color: 0x050508 });
+        const b = new THREE.Mesh(bGeo, bMat);
+        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(bGeo), new THREE.LineBasicMaterial({color: 0x00ffff, transparent:true, opacity:0.3}));
+        b.add(edges);
+        b.position.set(x, h/2, z);
+        scene.add(b);
+        buildings.push(b);
     }
 
     function spawnEnemy() {
-        const angle = (Math.random() - 0.5) * Math.PI * 1.4; 
-        const dist = 9000 + Math.random() * 6000;
-        const spawnX = playerShip.position.x + Math.sin(angle) * dist;
-        const spawnY = playerShip.position.y + (Math.random() - 0.5) * 4000;
-        const spawnZ = playerShip.position.z - dist; 
-
-        // REPLACED: Use TIE Fighter Model
-        const e = createTieFighter();
-        e.position.set(spawnX, spawnY, spawnZ);
-        
-        // Scale up slightly for visibility
-        e.scale.set(4, 4, 4);
-        
+        if (stats.inBoss) return;
+        const e = createTie();
+        e.position.set((Math.random()-0.5)*10000, 400+Math.random()*1000, playerShip.position.z - 12000);
         scene.add(e);
         enemies.push(e);
     }
 
-    function fireLaser() {
-        playLaserSound();
-        const geo = new THREE.CylinderGeometry(1, 1, 60, 8);
-        geo.rotateX(Math.PI / 2);
-        const laser = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x00ffff }));
-        
-        // Fire from center of ship
-        laser.position.copy(playerShip.position);
-        laser.quaternion.copy(playerShip.quaternion);
-        laser.translateZ(-30);
-        
-        scene.add(laser);
-        lasers.push({ mesh: laser, vel: new THREE.Vector3(0,0,-2500).applyQuaternion(playerShip.quaternion), age: 0 });
+    function handleInput(e) {
+        if(e.code === 'KeyW') input.y = 1; if(e.code === 'KeyS') input.y = -1;
+        if(e.code === 'KeyA') input.x = -1; if(e.code === 'KeyD') input.x = 1;
+        if(e.code === 'Space') fireWeapon();
+        if(e.code === 'KeyF') toggleFireMode();
+        if(e.code === 'KeyV') isFirstPerson = !isFirstPerson;
     }
 
-    function createExplosion(pos, scale=1) {
-        for(let i=0; i<15*scale; i++) {
-            const p = new THREE.Mesh(new THREE.PlaneGeometry(8*scale, 8*scale), new THREE.MeshBasicMaterial({ color: 0xffaa00 }));
-            p.position.copy(pos);
-            p.lookAt(camera.position);
-            scene.add(p);
-            particles.push({ 
-                mesh: p, 
-                vel: new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize().multiplyScalar(50*scale), 
-                age: 0 
-            });
-        }
+    function toggleFireMode() {
+        fireMode = (fireMode + 1) % 2;
+        document.getElementById('fire-mode').innerText = fireMode === 0 ? "DUAL BOLT" : "SPREAD-V";
+        playBeep(440, 50);
+    }
+
+    function fireWeapon() {
+        const offsets = fireMode === 0 ? [-5, 5] : [-15, 0, 15];
+        offsets.forEach(off => {
+            const l = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 40, 8), new THREE.MeshBasicMaterial({color: 0x00ffff}));
+            l.position.copy(playerShip.position);
+            l.position.x += off;
+            l.rotation.copy(playerShip.rotation);
+            l.rotateX(Math.PI/2);
+            if(fireMode === 1) l.rotation.y += off * 0.01;
+            scene.add(l);
+            lasers.push({ mesh: l, vel: new THREE.Vector3(0,0,2000).applyQuaternion(playerShip.quaternion), age: 0 });
+        });
+        playBeep(880, 30);
+    }
+
+    function playBeep(f, d) {
+        if(!audioContext) return;
+        let o = audioContext.createOscillator();
+        let g = audioContext.createGain();
+        o.frequency.value = f; g.gain.value = 0.1;
+        o.connect(g); g.connect(audioContext.destination);
+        o.start(); o.stop(audioContext.currentTime + d/1000);
     }
 
     function spawnBoss() {
-        if (stats.inBoss) return;
         stats.inBoss = true;
-        stats.bossHP = 2000;
-        triggerBossMusic();
         document.getElementById('boss-ui').style.display = 'flex';
-        
+        ytPlayer.playVideo();
         boss = new THREE.Group();
-        // Capital Ship Hull
-        const hull = new THREE.Mesh(new THREE.BoxGeometry(400, 200, 1200), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+        const hull = new THREE.Mesh(new THREE.BoxGeometry(1000, 300, 2500), new THREE.MeshStandardMaterial({color: 0x111111}));
         boss.add(hull);
         
-        // Massive Wings
-        const wingL = new THREE.Mesh(new THREE.BoxGeometry(800, 40, 400), new THREE.MeshStandardMaterial({ color: 0x222222 }));
-        wingL.position.set(-400, 0, 200);
-        const wingR = wingL.clone();
-        wingR.position.set(400, 0, 200);
-        boss.add(wingL, wingR);
-        
-        // Red Vulnerability Markers
-        const markerGeo = new THREE.SphereGeometry(60, 16, 16);
-        const markerMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 2 });
-        [new THREE.Vector3(0, 120, 0), new THREE.Vector3(-500, 40, 200), new THREE.Vector3(500, 40, 200), new THREE.Vector3(0, -120, -400)].forEach(offset => {
-            const m = new THREE.Mesh(markerGeo, markerMat.clone());
-            m.position.copy(offset);
-            boss.add(m);
-            bossMarkers.push(m);
-        });
-
-        boss.position.set(playerShip.position.x, playerShip.position.y + 100, playerShip.position.z - 5000);
+        for(let i=0; i<4; i++) {
+            const m = new THREE.Mesh(new THREE.SphereGeometry(60), new THREE.MeshStandardMaterial({color:0xff0000, emissive:0xff0000}));
+            m.position.set((i%2?1:-1)*400, 150, (i<2?1:-1)*800);
+            boss.add(m); bossMarkers.push(m);
+        }
+        boss.position.set(0, 1000, playerShip.position.z - 8000);
         scene.add(boss);
     }
 
-    // --- MAIN ANIMATION LOOP ---
+    let bossMarkers = [];
+
     function animate() {
         requestAnimationFrame(animate);
         const dt = clock.getDelta();
+
+        // Pilot movement
+        input.velX = THREE.MathUtils.lerp(input.velX, (window.inputX || 0) * 30, 0.1); 
+        // Note: Using standard key listeners for demo
+        let moveX = (input.x === -1 ? -40 : (input.x === 1 ? 40 : 0));
+        let moveY = (input.y === -1 ? -40 : (input.y === 1 ? 40 : 0));
         
-        // Player Physics
-        input.velX = THREE.MathUtils.lerp(input.velX, input.x * 25, 0.1);
-        input.velY = THREE.MathUtils.lerp(input.velY, input.y * 25, 0.1);
-        playerShip.position.x += input.velX;
-        playerShip.position.y += input.velY;
-        playerShip.position.z -= (input.hyper ? 400 : 100) * dt * 10;
-        
-        // Banking Logic (Roll)
-        playerShip.rotation.z = -input.velX * 0.05;
-        playerShip.rotation.x = (input.velY * 0.03); 
+        playerShip.position.x += moveX * dt * 20;
+        playerShip.position.y += moveY * dt * 20;
+        playerShip.position.z += 1200 * dt;
+        playerShip.rotation.z = THREE.MathUtils.lerp(playerShip.rotation.z, -moveX * 0.01, 0.1);
 
-        // Camera Follow - Adjusted for Falcon Model visibility
-        const camTarget = new THREE.Vector3(playerShip.position.x, playerShip.position.y + 80, playerShip.position.z + 250);
-        camera.position.lerp(camTarget, 0.1);
-        camera.lookAt(playerShip.position.x, playerShip.position.y, playerShip.position.z - 1000);
-        
-        // Starfield
-        starField.position.z = playerShip.position.z;
-        starField.scale.z = input.hyper ? 25 : 1;
-
-        // --- MERGED DOGFIGHT AI ---
-        enemies.forEach((e, i) => {
-            // 1. Get player's forward direction
-            const playerForward = new THREE.Vector3(0, 0, -1).applyQuaternion(playerShip.quaternion);
-            // 2. Vector from enemy to player
-            const toPlayer = playerShip.position.clone().sub(e.position).normalize();
-            // 3. Alignment (-1 to 1)
-            const alignment = toPlayer.dot(playerForward);
-            
-            let chaseDir = toPlayer.clone();
-
-            // 5. Dogfight behavior
-            if (alignment > 0.7) {
-                // Enemy is in front -> flank
-                const side = (e.id % 2 === 0) ? 1 : -1;
-                const right = playerForward.clone().cross(new THREE.Vector3(0,1,0)).normalize();
-                chaseDir.add(right.multiplyScalar(side * 0.8));
-                chaseDir.normalize();
-            } else if (alignment < 0.2) {
-                // Enemy is behind -> circle back
-                chaseDir.add(playerForward.clone().multiplyScalar(0.4));
-                chaseDir.normalize();
-            }
-
-            // 6. Movement
-            const speed = 55 + (Math.random() * 15);
-            e.position.add(chaseDir.multiplyScalar(speed * dt * 10)); 
-
-            // 7. Face player
-            e.lookAt(playerShip.position);
-
-            // 8. Proximity Damage
-            const dist = e.position.distanceTo(playerShip.position);
-            if (dist < 400) {
-                const damage = (alignment > 0.8 ? 1.2 : 0.6) * dt * 20;
-                stats.hull -= damage;
-                document.getElementById('hull-stat').innerText = Math.max(0, Math.floor(stats.hull));
-                document.getElementById('vignette').style.boxShadow = `inset 0 0 150px rgba(255,0,0, ${1 - (stats.hull/100)})`;
-                
-                if (stats.hull <= 0) {
-                    document.getElementById('game-over').style.display = 'flex';
-                    document.getElementById('game-over').classList.remove('hidden');
-                    document.getElementById('final-kills').innerText = stats.kills;
-                    stopBossMusic();
-                    renderer.setAnimationLoop(null);
-                }
+        // Expansive City recycling
+        buildings.forEach(b => {
+            if (b.position.z < playerShip.position.z - 5000) {
+                b.position.z += 35000; // Move it way ahead
+                b.position.x = (Math.random()-0.5) * 20000;
             }
         });
 
-        // Cleanup dead enemies
-        for (let i = enemies.length - 1; i >= 0; i--) {
-            // Check z-distance for despawn
-            if(enemies[i].position.z > playerShip.position.z + 2000) {
-                scene.remove(enemies[i]); enemies.splice(i, 1);
-            }
+        // Camera
+        if(isFirstPerson) {
+            camera.position.copy(playerShip.position).add(new THREE.Vector3(10, 5, 8));
+            camera.lookAt(playerShip.position.x, playerShip.position.y, playerShip.position.z + 1000);
+        } else {
+            camera.position.set(playerShip.position.x, playerShip.position.y + 400, playerShip.position.z - 1200);
+            camera.lookAt(playerShip.position);
         }
+
+        starField.position.z = playerShip.position.z;
+
+        // AI Dogfight
+        enemies.forEach((e, i) => {
+            const toPlayer = playerShip.position.clone().sub(e.position).normalize();
+            e.position.add(toPlayer.multiplyScalar(8));
+            e.lookAt(playerShip.position);
+            
+            if(e.position.distanceTo(playerShip.position) < 150) {
+                stats.hull -= 0.5;
+                document.getElementById('hull-stat').innerText = Math.floor(stats.hull);
+            }
+        });
 
         // Lasers
-        for (let i = lasers.length - 1; i >= 0; i--) {
-            let l = lasers[i];
+        lasers.forEach((l, i) => {
             l.mesh.position.add(l.vel.clone().multiplyScalar(dt));
             l.age += dt;
-            if (l.age > 2) { scene.remove(l.mesh); lasers.splice(i, 1); continue; }
-
-            // Laser vs Enemy
-            let hit = false;
-            for (let j = enemies.length - 1; j >= 0; j--) {
-                if (l.mesh.position.distanceTo(enemies[j].position) < 80) { // Increased hit radius for TIEs
-                    createExplosion(enemies[j].position, 3);
-                    scene.remove(enemies[j]);
-                    enemies.splice(j, 1);
+            
+            enemies.forEach((e, ei) => {
+                if(l.mesh.position.distanceTo(e.position) < 100) {
+                    scene.remove(e); enemies.splice(ei, 1);
                     stats.kills++;
                     document.getElementById('kill-stat').innerText = stats.kills;
-                    hit = true;
-                    if (stats.kills >= 15 && !stats.inBoss) spawnBoss();
-                    break;
+                    if(stats.kills === 15) spawnBoss();
                 }
-            }
-            // Laser vs Boss
-            if (!hit && stats.inBoss && boss) {
-                for (let k = bossMarkers.length - 1; k >= 0; k--) {
-                    const mPos = new THREE.Vector3();
-                    bossMarkers[k].getWorldPosition(mPos);
-                    if (l.mesh.position.distanceTo(mPos) < 100) {
-                        createExplosion(mPos, 6);
-                        stats.bossHP -= 500;
-                        document.getElementById('boss-health').style.width = (stats.bossHP / stats.bossMaxHP * 100) + "%";
-                        boss.remove(bossMarkers[k]);
-                        bossMarkers.splice(k, 1);
-                        hit = true;
-                        if (stats.bossHP <= 0) {
-                            createExplosion(boss.position, 30);
-                            scene.remove(boss);
-                            stats.inBoss = false;
-                            document.getElementById('boss-ui').style.display = 'none';
-                            stopBossMusic();
-                            document.getElementById('kill-stat').innerText = "BOSS DEFEATED";
-                        }
-                        break;
-                    }
-                }
-            }
-            if (hit) { scene.remove(l.mesh); lasers.splice(i, 1); }
-        }
-
-        // Boss AI
-        if (stats.inBoss && boss) {
-            boss.position.z += 20 * dt;
-            boss.position.x = THREE.MathUtils.lerp(boss.position.x, playerShip.position.x * 0.5, 0.01);
-            
-            // Lock-on Logic
-            let maxAlignment = 0;
-            const playerFwd = new THREE.Vector3(0,0,-1).applyQuaternion(playerShip.quaternion);
-            bossMarkers.forEach(m => {
-                const wPos = new THREE.Vector3();
-                m.getWorldPosition(wPos);
-                const align = playerFwd.dot(wPos.clone().sub(playerShip.position).normalize());
-                if (align > maxAlignment) maxAlignment = align;
             });
-            const ch = document.getElementById('crosshair');
-            if (maxAlignment > 0.98) { ch.classList.add('locked'); updateLockOnAudio(1); }
-            else if (maxAlignment > 0.90) { ch.classList.remove('locked'); updateLockOnAudio((maxAlignment-0.90)*10); }
-            else { ch.classList.remove('locked'); }
-        }
 
-        // Particles
-        for (let i = particles.length - 1; i >= 0; i--) {
-            particles[i].mesh.position.add(particles[i].vel.clone().multiplyScalar(dt));
-            particles[i].mesh.material.opacity -= dt;
-            particles[i].mesh.rotation.z += dt;
-            if ((particles[i].age += dt) > 1) { scene.remove(particles[i].mesh); particles.splice(i, 1); }
-        }
+            if(stats.inBoss && boss) {
+                bossMarkers.forEach((m, mi) => {
+                    const worldPos = new THREE.Vector3(); m.getWorldPosition(worldPos);
+                    if(l.mesh.position.distanceTo(worldPos) < 150) {
+                        stats.bossHP -= 100;
+                        document.getElementById('boss-hp').style.width = (stats.bossHP/3000*100) + "%";
+                        if(stats.bossHP <= 0) {
+                            scene.remove(boss); stats.inBoss = false;
+                            document.getElementById('boss-ui').classList.add('hidden');
+                        }
+                    }
+                });
+            }
+        });
+
+        // UI Reset for keys
+        input.x = 0; input.y = 0; 
+        window.addEventListener('keydown', (e) => {
+            if(e.code === 'KeyA') input.x = -1; if(e.code === 'KeyD') input.x = 1;
+            if(e.code === 'KeyW') input.y = 1; if(e.code === 'KeyS') input.y = -1;
+        });
 
         renderer.render(scene, camera);
     }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', onWindowResize);
 </script>
 </body>
 </html>
