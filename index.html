@@ -3,218 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Titan Siege: Tactical Flight</title>
+    <title>Megacity OS - Flight Core</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        :root { --blue: #00f2ff; --gold: #d4af37; --red: #ff2d55; --green: #39ff14; --yellow: #ffff00; }
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: #fff; }
+        :root { --blue: #0ff; --gold: #d4af37; --red: #f0f; --green: #39ff14; --yellow: #ffff00; }
+        body { margin: 0; overflow: hidden; background: #000; color: var(--blue); font-family: 'Courier New', monospace; }
         
-        #hud { position: fixed; top: 20px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
-        .stat-box { background: rgba(0,0,0,0.8); border: 1px solid var(--blue); padding: 8px; border-radius: 4px; text-align: center; min-width: 100px; }
-        
-        /* Weapon Selection Buttons */
-        #weapon-dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 500; }
-        .w-btn { width: 70px; height: 70px; border: 2px solid #555; background: rgba(0,0,0,0.7); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #888; cursor: pointer; }
-        .w-btn.active { border-color: var(--blue); color: #fff; box-shadow: 0 0 15px var(--blue); background: rgba(0,242,255,0.2); }
-        .w-btn i { font-size: 18px; margin-bottom: 5px; font-style: normal; }
+        /* Tactical Overlay */
+        #overlay { 
+            position: absolute; top: 20px; left: 20px; z-index: 100; 
+            border-left: 2px solid var(--blue); padding: 15px; background: rgba(0,0,0,0.85); 
+            text-transform: uppercase; letter-spacing: 1px; pointer-events: none;
+        }
+        .stat { color: var(--red); font-weight: bold; text-shadow: 0 0 5px var(--red); }
 
-        #joystick-zone { position: fixed; bottom: 40px; left: 40px; width: 110px; height: 110px; background: rgba(0,242,255,0.05); border: 1px solid var(--blue); border-radius: 50%; z-index: 200; }
-        #joystick-stick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.6; }
+        /* Weapon Dock */
+        #weapon-dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 500; }
+        .w-btn { width: 65px; height: 65px; border: 1px solid #444; background: rgba(0,0,0,0.9); border-radius: 5px; color: #666; font-size: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .w-btn.active { border-color: var(--blue); color: var(--blue); box-shadow: 0 0 10px var(--blue); }
 
-        #minimap { position: fixed; bottom: 20px; right: 20px; width: 120px; height: 120px; background: rgba(0,20,20,0.8); border: 1px solid var(--blue); border-radius: 50%; z-index: 100; }
-        .map-dot { position: absolute; width: 4px; height: 4px; background: var(--red); border-radius: 50%; }
+        /* Flight Controls */
+        #joystick-zone { position: fixed; bottom: 40px; left: 40px; width: 100px; height: 100px; background: rgba(0,255,255,0.05); border: 1px solid var(--blue); border-radius: 50%; z-index: 200; }
+        #joystick-stick { position: absolute; top: 50%; left: 50%; width: 35px; height: 35px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.5; }
 
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .btn { padding: 15px 30px; border: 2px solid var(--blue); background: none; color: #fff; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        #minimap { position: fixed; bottom: 20px; right: 20px; width: 120px; height: 120px; background: rgba(0,0,0,0.8); border: 1px solid var(--blue); border-radius: 50%; z-index: 100; overflow: hidden; }
+        .dot { position: absolute; width: 4px; height: 4px; border-radius: 50%; transform: translate(-50%, -50%); }
     </style>
 </head>
 <body>
 
-    <div id="hud">
-        <div class="stat-box"><small>STABILITY</small><br><b id="stability">100%</b></div>
-        <div class="stat-box"><small>WEAPON</small><br><b id="mode-text">STANDARD</b></div>
+    <div id="overlay">
+        <span style="font-size: 1.2em; border-bottom: 1px solid var(--blue);">MEGACITY FLIGHT OS</span><br>
+        HULL: <span id="hull-status" class="stat">100%</span><br>
+        ALT: <span id="alt-status" class="stat">0m</span><br>
+        MODE: <span id="mode-status" class="stat">STD</span>
     </div>
 
     <div id="weapon-dock">
-        <div class="w-btn active" id="w-std" onclick="setWeapon('std')"><i>⚡</i>STD</div>
-        <div class="w-btn" id="w-burst" onclick="setWeapon('burst')"><i>Ξ</i>BURST</div>
-        <div class="w-btn" id="w-msl" onclick="setWeapon('msl')"><i>🚀</i>MSL</div>
+        <div class="w-btn active" id="w-std" onclick="setWeapon('std')">STD</div>
+        <div class="w-btn" id="w-burst" onclick="setWeapon('burst')">BURST</div>
+        <div class="w-btn" id="w-msl" onclick="setWeapon('msl')">MSL</div>
     </div>
 
-    <div id="minimap"></div>
+    <div id="minimap"><div class="dot" style="background:var(--green); left:50%; top:50%;"></div></div>
     <div id="joystick-zone"><div id="joystick-stick"></div></div>
 
-    <div id="start-menu" class="overlay">
-        <h1 style="color:var(--blue)">TITAN SIEGE: FLIGHT</h1>
-        <button class="btn" onclick="initGame()">SYNC NEURAL LINK</button>
-    </div>
-
-    <script>
+<script>
 let scene, camera, renderer, clock = new THREE.Clock();
-let ship, buildings = [], enemies = [], projectiles = [];
+let ship, buildings = [], enemies = [], projectiles = [], weatherSystem;
 const state = { 
-    active: false, stability: 100, 
-    joy: { x: 0, y: 0 },
-    weaponMode: 'std',
-    fireTimer: 0
+    active: true, hull: 100, joy: { x: 0, y: 0 }, 
+    weapon: 'std', fireTimer: 0, speed: 25 
 };
 
-function initGame() {
-    state.active = true;
-    document.getElementById('start-menu').style.display = 'none';
+function init() {
     scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x000000, 0.0001);
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 30000);
+
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 30000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    scene.add(new THREE.AmbientLight(0x4040ff, 0.5));
+    const sun = new THREE.PointLight(0xffffff, 1, 20000);
+    sun.position.set(5000, 5000, 5000);
+    scene.add(sun);
+
     createShip();
-    createWorld();
+    createEnvironment();
     setupControls();
     animate();
 }
 
-function setWeapon(mode) {
-    state.weaponMode = mode;
-    document.querySelectorAll('.w-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('w-' + mode).classList.add('active');
-    document.getElementById('mode-text').innerText = mode.toUpperCase();
-}
-
 function createShip() {
     ship = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 60), new THREE.MeshStandardMaterial({color: 0x222222}));
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(70, 2, 25), new THREE.MeshStandardMaterial({color: 0x333333}));
-    ship.add(body, wing);
-    ship.position.set(0, 500, 0);
+    // Cockpit/Body
+    const body = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 50), new THREE.MeshStandardMaterial({color: 0x111111}));
+    const wings = new THREE.Mesh(new THREE.BoxGeometry(60, 2, 20), new THREE.MeshStandardMaterial({color: 0x222222}));
+    ship.add(body, wings);
+    ship.position.set(0, 1000, 2000);
     scene.add(ship);
+    
+    // Add collision box helper
+    ship.userData.box = new THREE.Box3().setFromObject(ship);
 }
 
-function createWorld() {
-    scene.add(new THREE.GridHelper(40000, 60, 0x444444, 0x111111));
-    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-    for (let i = 0; i < 150; i++) {
-        const h = 500 + Math.random() * 3000;
-        const b = new THREE.Mesh(new THREE.BoxGeometry(400, h, 400), new THREE.MeshStandardMaterial({color: 0x050508}));
-        b.position.set((Math.random()-0.5)*18000, h/2, (Math.random()-0.5)*18000);
+function createEnvironment() {
+    // Grid
+    scene.add(new THREE.GridHelper(20000, 40, 0xff00ff, 0x222222));
+
+    // Buildings (The "Un-pass-through-able" structures)
+    for (let i = 0; i < 200; i++) {
+        const h = 500 + Math.random() * 2500;
+        const bGeo = new THREE.BoxGeometry(200, h, 200);
+        const bMat = new THREE.MeshStandardMaterial({ color: 0x050508 });
+        const b = new THREE.Mesh(bGeo, bMat);
+        
+        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(bGeo), new THREE.LineBasicMaterial({ color: 0x00ffff, opacity: 0.3, transparent: true }));
+        b.add(edges);
+
+        let x = (Math.random() - 0.5) * 15000;
+        let z = (Math.random() - 0.5) * 15000;
+        if (Math.abs(x) < 500 && Math.abs(z) < 500) x += 1000;
+        b.position.set(x, h/2, z);
+        
+        // Store bounding box for physics
+        b.userData.box = new THREE.Box3().setFromObject(b);
         scene.add(b);
         buildings.push(b);
     }
+
+    // Weather
+    const wGeo = new THREE.BufferGeometry();
+    const wPos = new Float32Array(5000 * 3);
+    for(let i=0; i<wPos.length; i++) wPos[i] = (Math.random()-0.5) * 15000;
+    wGeo.setAttribute('position', new THREE.BufferAttribute(wPos, 3));
+    weatherSystem = new THREE.Points(wGeo, new THREE.PointsMaterial({color: 0xffffff, size: 3, transparent: true, opacity: 0.5}));
+    scene.add(weatherSystem);
+}
+
+function setWeapon(m) {
+    state.weapon = m;
+    document.querySelectorAll('.w-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('w-'+m).classList.add('active');
+    document.getElementById('mode-status').innerText = m.toUpperCase();
 }
 
 class Projectile {
-    constructor(pos, rot, color, type, offset = new THREE.Vector3()) {
+    constructor(type, offset = new THREE.Vector3()) {
         this.type = type;
-        const geo = type === 'msl' ? new THREE.CylinderGeometry(4,4,20) : new THREE.BoxGeometry(2,2,30);
-        this.mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color: color}));
-        this.mesh.position.copy(pos).add(offset.applyQuaternion(rot));
-        this.mesh.quaternion.copy(rot);
-        this.mesh.rotateX(Math.PI/2);
-        this.target = (type === 'msl' && enemies.length > 0) ? enemies[0] : null;
+        const color = type === 'burst' ? 0x39ff14 : 0xffff00;
+        this.mesh = new THREE.Mesh(new THREE.BoxGeometry(type === 'msl' ? 5 : 2, 2, 30), new THREE.MeshBasicMaterial({color: color}));
+        this.mesh.position.copy(ship.position).add(offset.applyQuaternion(ship.quaternion));
+        this.mesh.quaternion.copy(ship.quaternion);
         scene.add(this.mesh);
         projectiles.push(this);
     }
     update() {
-        if (this.type === 'msl' && this.target && enemies.includes(this.target)) {
-            const dir = new THREE.Vector3().subVectors(this.target.mesh.position, this.mesh.position).normalize();
-            this.mesh.position.add(dir.multiplyScalar(35));
-            this.mesh.lookAt(this.target.mesh.position);
-            this.mesh.rotateX(Math.PI/2);
-        } else {
-            this.mesh.translateY(this.type === 'msl' ? 30 : 50);
-        }
-        
+        this.mesh.translateZ(-60);
+        if (this.mesh.position.distanceTo(ship.position) > 6000) this.destroy();
         enemies.forEach(e => {
-            if (this.mesh.position.distanceTo(e.mesh.position) < 80) {
-                e.hp -= (this.type === 'burst' ? 40 : 100);
-                this.destroy();
-            }
+            if (this.mesh.position.distanceTo(e.mesh.position) < 100) { e.hp -= 50; this.destroy(); }
         });
-        if (this.mesh.position.distanceTo(ship.position) > 5000) this.destroy();
     }
     destroy() { scene.remove(this.mesh); projectiles = projectiles.filter(p => p !== this); }
 }
 
-function handleFiring(delta) {
-    state.fireTimer += delta;
-    let rate = state.weaponMode === 'std' ? 0.15 : (state.weaponMode === 'burst' ? 0.4 : 0.8);
-    
+function fireWeapons(dt) {
+    state.fireTimer += dt;
+    let rate = state.weapon === 'std' ? 0.15 : (state.weapon === 'burst' ? 0.4 : 0.7);
     if (state.fireTimer > rate) {
         state.fireTimer = 0;
-        if (state.weaponMode === 'std') {
-            new Projectile(ship.position, ship.quaternion, 0xffff00, 'std');
-        } else if (state.weaponMode === 'burst') {
-            new Projectile(ship.position, ship.quaternion, 0x39ff14, 'burst', new THREE.Vector3(-30, 0, 0));
-            new Projectile(ship.position, ship.quaternion, 0x39ff14, 'burst', new THREE.Vector3(0, 0, 0));
-            new Projectile(ship.position, ship.quaternion, 0x39ff14, 'burst', new THREE.Vector3(30, 0, 0));
-        } else if (state.weaponMode === 'msl') {
-            new Projectile(ship.position, ship.quaternion, 0xffff00, 'msl');
+        if (state.weapon === 'std') new Projectile('std');
+        if (state.weapon === 'msl') new Projectile('msl');
+        if (state.weapon === 'burst') {
+            new Projectile('burst', new THREE.Vector3(-30, 0, 0));
+            new Projectile('burst', new THREE.Vector3(0, 0, 0));
+            new Projectile('burst', new THREE.Vector3(30, 0, 0));
         }
     }
 }
 
-class Enemy {
-    constructor() {
-        this.mesh = new THREE.Mesh(new THREE.SphereGeometry(50, 8, 8), new THREE.MeshBasicMaterial({color: 0xff2d55, wireframe:true}));
-        const a = Math.random()*Math.PI*2;
-        this.mesh.position.set(ship.position.x + Math.cos(a)*4000, 500 + Math.random()*1000, ship.position.z + Math.sin(a)*4000);
-        this.hp = 100;
-        this.mapDot = document.createElement('div');
-        this.mapDot.className = 'map-dot';
-        document.getElementById('minimap').appendChild(this.mapDot);
-        scene.add(this.mesh);
-        enemies.push(this);
-    }
-    update() {
-        const d = new THREE.Vector3().subVectors(ship.position, this.mesh.position).normalize();
-        this.mesh.position.add(d.multiplyScalar(10));
-        const relX = (this.mesh.position.x - ship.position.x) / 100;
-        const relZ = (this.mesh.position.z - ship.position.z) / 100;
-        this.mapDot.style.left = (60 + relX) + 'px';
-        this.mapDot.style.top = (60 + relZ) + 'px';
-        if (this.hp <= 0 || this.mesh.position.distanceTo(ship.position) < 100) {
-            if(this.mesh.position.distanceTo(ship.position) < 100) state.stability -= 10;
-            this.destroy();
+function checkCollisions() {
+    ship.userData.box.setFromObject(ship);
+    buildings.forEach(b => {
+        if (ship.userData.box.intersectsBox(b.userData.box)) {
+            state.hull -= 0.5;
+            // Physical bounce back
+            const bounce = new THREE.Vector3().subVectors(ship.position, b.position).normalize();
+            ship.position.add(bounce.multiplyScalar(30));
         }
-    }
-    destroy() { this.mapDot.remove(); scene.remove(this.mesh); enemies = enemies.filter(e => e !== this); }
-}
-
-function setupControls() {
-    const jZone = document.getElementById('joystick-zone');
-    jZone.addEventListener('pointermove', e => {
-        const rect = jZone.getBoundingClientRect();
-        state.joy.x = (e.clientX - (rect.left + 55)) / 55;
-        state.joy.y = (e.clientY - (rect.top + 55)) / 55;
-        document.getElementById('joystick-stick').style.transform = `translate(calc(-50% + ${state.joy.x*25}px), calc(-50% + ${state.joy.y*25}px))`;
     });
-    jZone.addEventListener('pointerup', () => { state.joy = {x:0, y:0}; document.getElementById('joystick-stick').style.transform = 'translate(-50%,-50%)'; });
 }
 
 function animate() {
     requestAnimationFrame(animate);
-    if (!state.active) return;
-    const delta = clock.getDelta();
+    const dt = clock.getDelta();
 
+    // Flight
     ship.rotateY(-state.joy.x * 0.04);
     ship.rotateX(-state.joy.y * 0.04);
-    ship.rotation.z = -state.joy.x * 0.4;
-    const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(ship.quaternion);
-    ship.position.add(dir.multiplyScalar(20));
+    ship.rotation.z = -state.joy.x * 0.5;
+    const dir = new THREE.Vector3(0,0,-1).applyQuaternion(ship.quaternion);
+    ship.position.add(dir.multiplyScalar(state.speed));
 
-    camera.position.lerp(ship.position.clone().add(new THREE.Vector3(0, 30, 120).applyQuaternion(ship.quaternion)), 0.1);
+    // Collision & Camera
+    checkCollisions();
+    const camTarget = ship.position.clone().add(new THREE.Vector3(0, 40, 150).applyQuaternion(ship.quaternion));
+    camera.position.lerp(camTarget, 0.1);
     camera.lookAt(ship.position);
 
-    handleFiring(delta);
-    if (Math.random() < 0.03 && enemies.length < 15) new Enemy();
-    enemies.forEach(e => e.update());
+    // Systems
+    fireWeapons(dt);
     projectiles.forEach(p => p.update());
+    
+    // UI
+    document.getElementById('hull-status').innerText = Math.ceil(state.hull) + "%";
+    document.getElementById('alt-status').innerText = Math.floor(ship.position.y) + "m";
 
-    document.getElementById('stability').innerText = Math.ceil(state.stability) + "%";
-    if (state.stability <= 0) location.reload();
+    if (state.hull <= 0) { alert("CRITICAL FAILURE"); location.reload(); }
     renderer.render(scene, camera);
 }
-    </script>
+
+function setupControls() {
+    const jz = document.getElementById('joystick-zone');
+    const js = document.getElementById('joystick-stick');
+    const handleMove = (e) => {
+        const rect = jz.getBoundingClientRect();
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        state.joy.x = (cx - (rect.left + 50)) / 50;
+        state.joy.y = (cy - (rect.top + 50)) / 50;
+        js.style.transform = `translate(calc(-50% + ${state.joy.x*25}px), calc(-50% + ${state.joy.y*25}px))`;
+    };
+    jz.addEventListener('pointermove', handleMove);
+    jz.addEventListener('pointerup', () => { state.joy = {x:0, y:0}; js.style.transform = 'translate(-50%,-50%)'; });
+}
+
+init();
+</script>
 </body>
 </html>
