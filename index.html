@@ -3,39 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Megacity OS - Flight Core</title>
+    <title>Megacity OS - Falcon Command</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        :root { --blue: #0ff; --gold: #d4af37; --red: #f0f; --green: #39ff14; --yellow: #ffff00; }
+        :root { --blue: #0ff; --red: #f0f; --green: #39ff14; }
         body { margin: 0; overflow: hidden; background: #000; color: var(--blue); font-family: 'Courier New', monospace; }
         
-        /* Tactical Overlay */
         #overlay { 
             position: absolute; top: 20px; left: 20px; z-index: 100; 
             border-left: 2px solid var(--blue); padding: 15px; background: rgba(0,0,0,0.85); 
-            text-transform: uppercase; letter-spacing: 1px; pointer-events: none;
+            text-transform: uppercase; pointer-events: none;
         }
-        .stat { color: var(--red); font-weight: bold; text-shadow: 0 0 5px var(--red); }
+        .stat { color: var(--red); font-weight: bold; }
 
-        /* Weapon Dock */
         #weapon-dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 500; }
         .w-btn { width: 65px; height: 65px; border: 1px solid #444; background: rgba(0,0,0,0.9); border-radius: 5px; color: #666; font-size: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .w-btn.active { border-color: var(--blue); color: var(--blue); box-shadow: 0 0 10px var(--blue); }
 
-        /* Flight Controls */
         #joystick-zone { position: fixed; bottom: 40px; left: 40px; width: 100px; height: 100px; background: rgba(0,255,255,0.05); border: 1px solid var(--blue); border-radius: 50%; z-index: 200; }
         #joystick-stick { position: absolute; top: 50%; left: 50%; width: 35px; height: 35px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.5; }
-
-        #minimap { position: fixed; bottom: 20px; right: 20px; width: 120px; height: 120px; background: rgba(0,0,0,0.8); border: 1px solid var(--blue); border-radius: 50%; z-index: 100; overflow: hidden; }
-        .dot { position: absolute; width: 4px; height: 4px; border-radius: 50%; transform: translate(-50%, -50%); }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <span style="font-size: 1.2em; border-bottom: 1px solid var(--blue);">MEGACITY FLIGHT OS</span><br>
+        <span style="font-size: 1.2em; border-bottom: 1px solid var(--blue);">FALCON FLIGHT OS</span><br>
         HULL: <span id="hull-status" class="stat">100%</span><br>
-        ALT: <span id="alt-status" class="stat">0m</span><br>
+        SPEED: <span id="speed-status" class="stat">0 MK</span><br>
         MODE: <span id="mode-status" class="stat">STD</span>
     </div>
 
@@ -45,82 +39,93 @@
         <div class="w-btn" id="w-msl" onclick="setWeapon('msl')">MSL</div>
     </div>
 
-    <div id="minimap"><div class="dot" style="background:var(--green); left:50%; top:50%;"></div></div>
     <div id="joystick-zone"><div id="joystick-stick"></div></div>
 
 <script>
 let scene, camera, renderer, clock = new THREE.Clock();
-let ship, buildings = [], enemies = [], projectiles = [], weatherSystem;
+let playerShip, buildings = [], projectiles = [];
 const state = { 
-    active: true, hull: 100, joy: { x: 0, y: 0 }, 
-    weapon: 'std', fireTimer: 0, speed: 25 
+    hull: 100, joy: { x: 0, y: 0 }, 
+    weapon: 'std', fireTimer: 0, speed: 30 
 };
 
 function init() {
     scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x000000, 0.0001);
-
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 30000);
+    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 1, 40000);
+    
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0x4040ff, 0.5));
-    const sun = new THREE.PointLight(0xffffff, 1, 20000);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+    const sun = new THREE.PointLight(0xffffff, 1);
     sun.position.set(5000, 5000, 5000);
     scene.add(sun);
 
-    createShip();
+    createFalcon(); // Your custom ship function
     createEnvironment();
     setupControls();
     animate();
 }
 
-function createShip() {
-    ship = new THREE.Group();
-    // Cockpit/Body
-    const body = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 50), new THREE.MeshStandardMaterial({color: 0x111111}));
-    const wings = new THREE.Mesh(new THREE.BoxGeometry(60, 2, 20), new THREE.MeshStandardMaterial({color: 0x222222}));
-    ship.add(body, wings);
-    ship.position.set(0, 1000, 2000);
-    scene.add(ship);
-    
-    // Add collision box helper
-    ship.userData.box = new THREE.Box3().setFromObject(ship);
+function createFalcon() {
+    const falconGroup = new THREE.Group();
+    const silverMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
+    const blackMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5, roughness: 0.8 });
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+
+    // 1. MAIN HULL
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(40, 40, 8, 32), silverMat);
+    falconGroup.add(hull);
+
+    // 2. MANDIBLES
+    const leftProng = new THREE.Mesh(new THREE.BoxGeometry(10, 6, 35), silverMat);
+    leftProng.position.set(-12, 0, 45);
+    const rightProng = new THREE.Mesh(new THREE.BoxGeometry(10, 6, 35), silverMat);
+    rightProng.position.set(12, 0, 45);
+    falconGroup.add(leftProng, rightProng);
+
+    // 3. COCKPIT
+    const cockpitTunnel = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 15, 16), silverMat);
+    cockpitTunnel.rotation.z = Math.PI / 2;
+    cockpitTunnel.position.set(40, 0, 15);
+    falconGroup.add(cockpitTunnel);
+
+    const cockpitGlass = new THREE.Mesh(new THREE.SphereGeometry(4.5, 16, 16), blackMat);
+    cockpitGlass.position.set(48, 0, 22);
+    falconGroup.add(cockpitGlass);
+
+    // 4. TOP TURRET
+    const turret = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 2, 16), blackMat);
+    turret.position.y = 5;
+    falconGroup.add(turret);
+
+    // 5. ENGINE GLOW
+    const engine = new THREE.Mesh(new THREE.TorusGeometry(38, 1, 8, 20, Math.PI), glowMat);
+    engine.rotation.x = Math.PI / 2;
+    engine.rotation.z = Math.PI;
+    engine.position.set(0, 0, -5);
+    falconGroup.add(engine);
+
+    // Scaled to match city
+    falconGroup.scale.set(10, 10, 10);
+    falconGroup.position.set(0, 1000, 0);
+    scene.add(falconGroup);
+    playerShip = falconGroup;
+    playerShip.userData.box = new THREE.Box3();
 }
 
 function createEnvironment() {
-    // Grid
-    scene.add(new THREE.GridHelper(20000, 40, 0xff00ff, 0x222222));
-
-    // Buildings (The "Un-pass-through-able" structures)
-    for (let i = 0; i < 200; i++) {
-        const h = 500 + Math.random() * 2500;
-        const bGeo = new THREE.BoxGeometry(200, h, 200);
-        const bMat = new THREE.MeshStandardMaterial({ color: 0x050508 });
-        const b = new THREE.Mesh(bGeo, bMat);
-        
-        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(bGeo), new THREE.LineBasicMaterial({ color: 0x00ffff, opacity: 0.3, transparent: true }));
-        b.add(edges);
-
-        let x = (Math.random() - 0.5) * 15000;
-        let z = (Math.random() - 0.5) * 15000;
-        if (Math.abs(x) < 500 && Math.abs(z) < 500) x += 1000;
-        b.position.set(x, h/2, z);
-        
-        // Store bounding box for physics
+    scene.add(new THREE.GridHelper(30000, 50, 0xff00ff, 0x222222));
+    for (let i = 0; i < 180; i++) {
+        const h = 500 + Math.random() * 3000;
+        const b = new THREE.Mesh(new THREE.BoxGeometry(300, h, 300), new THREE.MeshStandardMaterial({ color: 0x050508 }));
+        b.position.set((Math.random()-0.5)*18000, h/2, (Math.random()-0.5)*18000);
         b.userData.box = new THREE.Box3().setFromObject(b);
         scene.add(b);
         buildings.push(b);
     }
-
-    // Weather
-    const wGeo = new THREE.BufferGeometry();
-    const wPos = new Float32Array(5000 * 3);
-    for(let i=0; i<wPos.length; i++) wPos[i] = (Math.random()-0.5) * 15000;
-    wGeo.setAttribute('position', new THREE.BufferAttribute(wPos, 3));
-    weatherSystem = new THREE.Points(wGeo, new THREE.PointsMaterial({color: 0xffffff, size: 3, transparent: true, opacity: 0.5}));
-    scene.add(weatherSystem);
 }
 
 function setWeapon(m) {
@@ -130,95 +135,69 @@ function setWeapon(m) {
     document.getElementById('mode-status').innerText = m.toUpperCase();
 }
 
-class Projectile {
-    constructor(type, offset = new THREE.Vector3()) {
-        this.type = type;
-        const color = type === 'burst' ? 0x39ff14 : 0xffff00;
-        this.mesh = new THREE.Mesh(new THREE.BoxGeometry(type === 'msl' ? 5 : 2, 2, 30), new THREE.MeshBasicMaterial({color: color}));
-        this.mesh.position.copy(ship.position).add(offset.applyQuaternion(ship.quaternion));
-        this.mesh.quaternion.copy(ship.quaternion);
-        scene.add(this.mesh);
-        projectiles.push(this);
-    }
-    update() {
-        this.mesh.translateZ(-60);
-        if (this.mesh.position.distanceTo(ship.position) > 6000) this.destroy();
-        enemies.forEach(e => {
-            if (this.mesh.position.distanceTo(e.mesh.position) < 100) { e.hp -= 50; this.destroy(); }
-        });
-    }
-    destroy() { scene.remove(this.mesh); projectiles = projectiles.filter(p => p !== this); }
-}
-
-function fireWeapons(dt) {
+function fire(dt) {
     state.fireTimer += dt;
-    let rate = state.weapon === 'std' ? 0.15 : (state.weapon === 'burst' ? 0.4 : 0.7);
+    let rate = state.weapon === 'std' ? 0.15 : (state.weapon === 'burst' ? 0.4 : 0.8);
     if (state.fireTimer > rate) {
         state.fireTimer = 0;
-        if (state.weapon === 'std') new Projectile('std');
-        if (state.weapon === 'msl') new Projectile('msl');
-        if (state.weapon === 'burst') {
-            new Projectile('burst', new THREE.Vector3(-30, 0, 0));
-            new Projectile('burst', new THREE.Vector3(0, 0, 0));
-            new Projectile('burst', new THREE.Vector3(30, 0, 0));
-        }
+        const p = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 50), new THREE.MeshBasicMaterial({color: state.weapon === 'burst' ? 0x39ff14 : 0xffff00}));
+        p.position.copy(playerShip.position);
+        p.quaternion.copy(playerShip.quaternion);
+        scene.add(p);
+        projectiles.push(p);
     }
-}
-
-function checkCollisions() {
-    ship.userData.box.setFromObject(ship);
-    buildings.forEach(b => {
-        if (ship.userData.box.intersectsBox(b.userData.box)) {
-            state.hull -= 0.5;
-            // Physical bounce back
-            const bounce = new THREE.Vector3().subVectors(ship.position, b.position).normalize();
-            ship.position.add(bounce.multiplyScalar(30));
-        }
-    });
 }
 
 function animate() {
     requestAnimationFrame(animate);
     const dt = clock.getDelta();
 
-    // Flight
-    ship.rotateY(-state.joy.x * 0.04);
-    ship.rotateX(-state.joy.y * 0.04);
-    ship.rotation.z = -state.joy.x * 0.5;
-    const dir = new THREE.Vector3(0,0,-1).applyQuaternion(ship.quaternion);
-    ship.position.add(dir.multiplyScalar(state.speed));
-
-    // Collision & Camera
-    checkCollisions();
-    const camTarget = ship.position.clone().add(new THREE.Vector3(0, 40, 150).applyQuaternion(ship.quaternion));
-    camera.position.lerp(camTarget, 0.1);
-    camera.lookAt(ship.position);
-
-    // Systems
-    fireWeapons(dt);
-    projectiles.forEach(p => p.update());
+    // Handling Falcon Movement
+    playerShip.rotateY(-state.joy.x * 0.04);
+    playerShip.rotateX(-state.joy.y * 0.04);
+    playerShip.rotation.z = -state.joy.x * 0.4;
     
-    // UI
-    document.getElementById('hull-status').innerText = Math.ceil(state.hull) + "%";
-    document.getElementById('alt-status').innerText = Math.floor(ship.position.y) + "m";
+    const dir = new THREE.Vector3(0,0,1).applyQuaternion(playerShip.quaternion);
+    playerShip.position.add(dir.multiplyScalar(state.speed));
 
-    if (state.hull <= 0) { alert("CRITICAL FAILURE"); location.reload(); }
+    // Collision
+    playerShip.userData.box.setFromObject(playerShip);
+    buildings.forEach(b => {
+        if (playerShip.userData.box.intersectsBox(b.userData.box)) {
+            state.hull -= 0.5;
+            playerShip.position.add(new THREE.Vector3().subVectors(playerShip.position, b.position).setLength(40));
+        }
+    });
+
+    // Camera Chase
+    const offset = new THREE.Vector3(0, 150, -500).applyQuaternion(playerShip.quaternion);
+    camera.position.lerp(playerShip.position.clone().add(offset), 0.1);
+    camera.lookAt(playerShip.position);
+
+    fire(dt);
+    projectiles.forEach((p, i) => {
+        p.translateZ(80);
+        if (p.position.distanceTo(playerShip.position) > 8000) { scene.remove(p); projectiles.splice(i,1); }
+    });
+
+    document.getElementById('hull-status').innerText = Math.ceil(state.hull) + "%";
+    document.getElementById('speed-status').innerText = state.speed * 10 + " MK";
+
+    if (state.hull <= 0) location.reload();
     renderer.render(scene, camera);
 }
 
 function setupControls() {
     const jz = document.getElementById('joystick-zone');
-    const js = document.getElementById('joystick-stick');
     const handleMove = (e) => {
         const rect = jz.getBoundingClientRect();
         const cx = e.touches ? e.touches[0].clientX : e.clientX;
         const cy = e.touches ? e.touches[0].clientY : e.clientY;
         state.joy.x = (cx - (rect.left + 50)) / 50;
         state.joy.y = (cy - (rect.top + 50)) / 50;
-        js.style.transform = `translate(calc(-50% + ${state.joy.x*25}px), calc(-50% + ${state.joy.y*25}px))`;
     };
     jz.addEventListener('pointermove', handleMove);
-    jz.addEventListener('pointerup', () => { state.joy = {x:0, y:0}; js.style.transform = 'translate(-50%,-50%)'; });
+    jz.addEventListener('pointerup', () => state.joy = {x:0, y:0});
 }
 
 init();
