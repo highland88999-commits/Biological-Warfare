@@ -3,123 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Megacity OS - Falcon Command</title>
+    <title>Falcon OS - Precision Flight</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        :root { --blue: #0ff; --red: #f0f; --green: #39ff14; }
-        body { margin: 0; overflow: hidden; background: #000; color: var(--blue); font-family: 'Courier New', monospace; }
+        :root { --blue: #0ff; --red: #f0f; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; touch-action: none; }
         
-        #overlay { 
-            position: absolute; top: 20px; left: 20px; z-index: 100; 
-            border-left: 2px solid var(--blue); padding: 15px; background: rgba(0,0,0,0.85); 
-            text-transform: uppercase; pointer-events: none;
-        }
+        /* Tactical HUD */
+        #hud { position: absolute; top: 20px; left: 20px; z-index: 100; border-left: 2px solid var(--blue); padding: 10px; background: rgba(0,0,0,0.7); pointer-events: none; font-size: 12px; }
         .stat { color: var(--red); font-weight: bold; }
 
-        #weapon-dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 500; }
-        .w-btn { width: 65px; height: 65px; border: 1px solid #444; background: rgba(0,0,0,0.9); border-radius: 5px; color: #666; font-size: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .w-btn.active { border-color: var(--blue); color: var(--blue); box-shadow: 0 0 10px var(--blue); }
+        /* Floating Flight Joystick (Left) */
+        #joy-left-zone { position: absolute; top: 0; left: 0; width: 50%; height: 100%; z-index: 200; }
+        #joy-left-container { position: absolute; width: 100px; height: 100px; border: 1px solid var(--blue); border-radius: 50%; display: none; pointer-events: none; transform: translate(-50%, -50%); }
+        #joy-left-stick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.5; }
 
-        #joystick-zone { position: fixed; bottom: 40px; left: 40px; width: 100px; height: 100px; background: rgba(0,255,255,0.05); border: 1px solid var(--blue); border-radius: 50%; z-index: 200; }
-        #joystick-stick { position: absolute; top: 50%; left: 50%; width: 35px; height: 35px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.5; }
+        /* Fixed Camera Joystick (Right) */
+        #cam-joy-container { position: fixed; bottom: 110px; right: 40px; width: 100px; height: 100px; border: 1px solid var(--red); border-radius: 50%; z-index: 200; background: rgba(255,0,255,0.05); }
+        #cam-joy-stick { position: absolute; top: 50%; left: 50%; width: 35px; height: 35px; background: var(--red); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.5; }
+
+        /* Weapon Dock */
+        #weapon-dock { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 8px; z-index: 500; }
+        .w-btn { width: 50px; height: 50px; border: 1px solid #444; background: rgba(0,0,0,0.9); border-radius: 5px; color: #666; font-size: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .w-btn.active { border-color: var(--blue); color: var(--blue); box-shadow: 0 0 10px var(--blue); }
     </style>
 </head>
 <body>
 
-    <div id="overlay">
-        <span style="font-size: 1.2em; border-bottom: 1px solid var(--blue);">FALCON FLIGHT OS</span><br>
-        HULL: <span id="hull-status" class="stat">100%</span><br>
-        SPEED: <span id="speed-status" class="stat">0 MK</span><br>
-        MODE: <span id="mode-status" class="stat">STD</span>
+    <div id="hud">
+        FALCON_OS_V3<br>
+        HULL: <span id="hull" class="stat">100%</span><br>
+        PHASE: <span id="phase" class="stat">...</span>
     </div>
+
+    <div id="joy-left-zone">
+        <div id="joy-left-container"><div id="joy-left-stick"></div></div>
+    </div>
+
+    <div id="cam-joy-container"><div id="cam-joy-stick"></div></div>
 
     <div id="weapon-dock">
-        <div class="w-btn active" id="w-std" onclick="setWeapon('std')">STD</div>
-        <div class="w-btn" id="w-burst" onclick="setWeapon('burst')">BURST</div>
-        <div class="w-btn" id="w-msl" onclick="setWeapon('msl')">MSL</div>
+        <div class="w-btn active" onclick="state.weapon='std'">STD</div>
+        <div class="w-btn" onclick="state.weapon='burst'">BRST</div>
+        <div class="w-btn" onclick="state.weapon='msl'">MSL</div>
     </div>
-
-    <div id="joystick-zone"><div id="joystick-stick"></div></div>
 
 <script>
 let scene, camera, renderer, clock = new THREE.Clock();
-let playerShip, buildings = [], projectiles = [];
+let playerShip, buildings = [], sunLight;
 const state = { 
-    hull: 100, joy: { x: 0, y: 0 }, 
-    weapon: 'std', fireTimer: 0, speed: 30 
+    hull: 100, 
+    joyL: { x: 0, y: 0, active: false }, 
+    joyR: { x: 0, y: 0 },
+    camOrbit: { x: 0, y: 0.2 },
+    speed: 25 
 };
 
 function init() {
     scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x000000, 0.0001);
     camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 1, 40000);
-    
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-    const sun = new THREE.PointLight(0xffffff, 1);
-    sun.position.set(5000, 5000, 5000);
-    scene.add(sun);
+    sunLight = new THREE.DirectionalLight(0xffffff, 1);
+    sunLight.position.set(1000, 2000, 1000);
+    scene.add(sunLight);
 
-    createFalcon(); // Your custom ship function
-    createEnvironment();
-    setupControls();
+    createFalcon();
+    createCity();
+    setupJoysticks();
     animate();
 }
 
 function createFalcon() {
-    const falconGroup = new THREE.Group();
-    const silverMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
-    const blackMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5, roughness: 0.8 });
-    const glowMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-
-    // 1. MAIN HULL
-    const hull = new THREE.Mesh(new THREE.CylinderGeometry(40, 40, 8, 32), silverMat);
-    falconGroup.add(hull);
-
-    // 2. MANDIBLES
-    const leftProng = new THREE.Mesh(new THREE.BoxGeometry(10, 6, 35), silverMat);
-    leftProng.position.set(-12, 0, 45);
-    const rightProng = new THREE.Mesh(new THREE.BoxGeometry(10, 6, 35), silverMat);
-    rightProng.position.set(12, 0, 45);
-    falconGroup.add(leftProng, rightProng);
-
-    // 3. COCKPIT
-    const cockpitTunnel = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 15, 16), silverMat);
-    cockpitTunnel.rotation.z = Math.PI / 2;
-    cockpitTunnel.position.set(40, 0, 15);
-    falconGroup.add(cockpitTunnel);
-
-    const cockpitGlass = new THREE.Mesh(new THREE.SphereGeometry(4.5, 16, 16), blackMat);
-    cockpitGlass.position.set(48, 0, 22);
-    falconGroup.add(cockpitGlass);
-
-    // 4. TOP TURRET
-    const turret = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 2, 16), blackMat);
-    turret.position.y = 5;
-    falconGroup.add(turret);
-
-    // 5. ENGINE GLOW
-    const engine = new THREE.Mesh(new THREE.TorusGeometry(38, 1, 8, 20, Math.PI), glowMat);
-    engine.rotation.x = Math.PI / 2;
-    engine.rotation.z = Math.PI;
-    engine.position.set(0, 0, -5);
-    falconGroup.add(engine);
-
-    // Scaled to match city
-    falconGroup.scale.set(10, 10, 10);
-    falconGroup.position.set(0, 1000, 0);
-    scene.add(falconGroup);
-    playerShip = falconGroup;
+    playerShip = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 });
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 5, 32), mat);
+    const cockpit = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 16), mat);
+    cockpit.position.set(22, 0, 10);
+    playerShip.add(hull, cockpit);
+    
+    // Scale reduced for "City Fit"
+    playerShip.scale.set(1.5, 1.5, 1.5); 
+    playerShip.position.set(0, 500, 0);
+    scene.add(playerShip);
     playerShip.userData.box = new THREE.Box3();
 }
 
-function createEnvironment() {
-    scene.add(new THREE.GridHelper(30000, 50, 0xff00ff, 0x222222));
-    for (let i = 0; i < 180; i++) {
-        const h = 500 + Math.random() * 3000;
+function createCity() {
+    scene.add(new THREE.GridHelper(30000, 60, 0xff00ff, 0x111111));
+    for (let i = 0; i < 200; i++) {
+        const h = 400 + Math.random() * 2000;
         const b = new THREE.Mesh(new THREE.BoxGeometry(300, h, 300), new THREE.MeshStandardMaterial({ color: 0x050508 }));
         b.position.set((Math.random()-0.5)*18000, h/2, (Math.random()-0.5)*18000);
         b.userData.box = new THREE.Box3().setFromObject(b);
@@ -128,76 +105,83 @@ function createEnvironment() {
     }
 }
 
-function setWeapon(m) {
-    state.weapon = m;
-    document.querySelectorAll('.w-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('w-'+m).classList.add('active');
-    document.getElementById('mode-status').innerText = m.toUpperCase();
-}
+function setupJoysticks() {
+    const lZone = document.getElementById('joy-left-zone');
+    const lCont = document.getElementById('joy-left-container');
+    const rZone = document.getElementById('cam-joy-container');
 
-function fire(dt) {
-    state.fireTimer += dt;
-    let rate = state.weapon === 'std' ? 0.15 : (state.weapon === 'burst' ? 0.4 : 0.8);
-    if (state.fireTimer > rate) {
-        state.fireTimer = 0;
-        const p = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 50), new THREE.MeshBasicMaterial({color: state.weapon === 'burst' ? 0x39ff14 : 0xffff00}));
-        p.position.copy(playerShip.position);
-        p.quaternion.copy(playerShip.quaternion);
-        scene.add(p);
-        projectiles.push(p);
-    }
+    // Left Joystick Logic (Free Floating)
+    lZone.addEventListener('pointerdown', e => {
+        state.joyL.active = true;
+        lCont.style.display = 'block';
+        lCont.style.left = e.clientX + 'px';
+        lCont.style.top = e.clientY + 'px';
+        state.joyL.originX = e.clientX;
+        state.joyL.originY = e.clientY;
+    });
+
+    window.addEventListener('pointermove', e => {
+        if (state.joyL.active) {
+            const dx = e.clientX - state.joyL.originX;
+            const dy = e.clientY - state.joyL.originY;
+            const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 50);
+            const angle = Math.atan2(dy, dx);
+            state.joyL.x = (Math.cos(angle) * dist) / 50;
+            state.joyL.y = (Math.sin(angle) * dist) / 50;
+            document.getElementById('joy-left-stick').style.transform = `translate(calc(-50% + ${state.joyL.x * 25}px), calc(-50% + ${state.joyL.y * 25}px))`;
+        }
+        // Right Joystick Logic (Fixed Position)
+        if (e.buttons === 1 && e.clientX > window.innerWidth/2) {
+            const rect = rZone.getBoundingClientRect();
+            state.joyR.x = (e.clientX - (rect.left + 50)) / 50;
+            state.joyR.y = (e.clientY - (rect.top + 50)) / 50;
+            document.getElementById('cam-joy-stick').style.transform = `translate(calc(-50% + ${state.joyR.x * 20}px), calc(-50% + ${state.joyR.y * 20}px))`;
+        }
+    });
+
+    window.addEventListener('pointerup', () => {
+        state.joyL.active = false;
+        state.joyL.x = state.joyL.y = 0;
+        lCont.style.display = 'none';
+        state.joyR.x = state.joyR.y = 0;
+        document.getElementById('cam-joy-stick').style.transform = 'translate(-50%, -50%)';
+    });
 }
 
 function animate() {
     requestAnimationFrame(animate);
-    const dt = clock.getDelta();
-
-    // Handling Falcon Movement
-    playerShip.rotateY(-state.joy.x * 0.04);
-    playerShip.rotateX(-state.joy.y * 0.04);
-    playerShip.rotation.z = -state.joy.x * 0.4;
     
+    // 1. Flight Stability Logic
+    playerShip.rotateY(-state.joyL.x * 0.04);
+    playerShip.rotation.x = THREE.MathUtils.lerp(playerShip.rotation.x, -state.joyL.y * 0.8, 0.05);
+    playerShip.rotation.z = THREE.MathUtils.lerp(playerShip.rotation.z, -state.joyL.x * 0.8, 0.05);
+
     const dir = new THREE.Vector3(0,0,1).applyQuaternion(playerShip.quaternion);
     playerShip.position.add(dir.multiplyScalar(state.speed));
 
-    // Collision
+    // 2. Camera Orbit Logic (Joystick R)
+    state.camOrbit.x += state.joyR.x * 0.05;
+    state.camOrbit.y = Math.max(0.1, Math.min(1.0, state.camOrbit.y + state.joyR.y * 0.02));
+
+    const camDist = 300;
+    camera.position.set(
+        playerShip.position.x - Math.sin(playerShip.rotation.y + state.camOrbit.x) * camDist,
+        playerShip.position.y + (state.camOrbit.y * 200),
+        playerShip.position.z - Math.cos(playerShip.rotation.y + state.camOrbit.x) * camDist
+    );
+    camera.lookAt(playerShip.position);
+
+    // Collision Check
     playerShip.userData.box.setFromObject(playerShip);
     buildings.forEach(b => {
         if (playerShip.userData.box.intersectsBox(b.userData.box)) {
-            state.hull -= 0.5;
-            playerShip.position.add(new THREE.Vector3().subVectors(playerShip.position, b.position).setLength(40));
+            state.hull -= 0.1;
+            playerShip.position.add(new THREE.Vector3().subVectors(playerShip.position, b.position).setLength(20));
         }
     });
 
-    // Camera Chase
-    const offset = new THREE.Vector3(0, 150, -500).applyQuaternion(playerShip.quaternion);
-    camera.position.lerp(playerShip.position.clone().add(offset), 0.1);
-    camera.lookAt(playerShip.position);
-
-    fire(dt);
-    projectiles.forEach((p, i) => {
-        p.translateZ(80);
-        if (p.position.distanceTo(playerShip.position) > 8000) { scene.remove(p); projectiles.splice(i,1); }
-    });
-
-    document.getElementById('hull-status').innerText = Math.ceil(state.hull) + "%";
-    document.getElementById('speed-status').innerText = state.speed * 10 + " MK";
-
-    if (state.hull <= 0) location.reload();
+    document.getElementById('hull').innerText = Math.ceil(state.hull) + "%";
     renderer.render(scene, camera);
-}
-
-function setupControls() {
-    const jz = document.getElementById('joystick-zone');
-    const handleMove = (e) => {
-        const rect = jz.getBoundingClientRect();
-        const cx = e.touches ? e.touches[0].clientX : e.clientX;
-        const cy = e.touches ? e.touches[0].clientY : e.clientY;
-        state.joy.x = (cx - (rect.left + 50)) / 50;
-        state.joy.y = (cy - (rect.top + 50)) / 50;
-    };
-    jz.addEventListener('pointermove', handleMove);
-    jz.addEventListener('pointerup', () => state.joy = {x:0, y:0});
 }
 
 init();
