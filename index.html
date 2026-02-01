@@ -22,8 +22,10 @@
             transition: all 0.1s;
         }
         #crosshair.locked {
-            border-color: #ff0000; width: 30px; height: 30px; box-shadow: 0 0 15px #ff0000;
+            border-color: #ff0000; width: 60px; height: 60px; box-shadow: 0 0 15px #ff0000;
+            border-style: dashed; animation: spin 4s linear infinite;
         }
+        @keyframes spin { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
         
         #boss-ui {
             display: none; position: absolute; top: 10%; left: 50%; 
@@ -103,10 +105,10 @@
 
 <script>
     /* =========================================
-       AUDIO SYSTEM (Hidden)
+       AUDIO SYSTEM
        ========================================= */
     const BOSS_PLAYLIST = [
-        "lEDxJfr4YJQ", "8CdcCD5V-d8", "er416Ad3R1g", "6yq3b0v6y0M", "7w0z8g2Z0kY", "f5QobncKsOw"
+        "lEDxJfr4YJQ", "8CdcCD5V-d8", "er416Ad3R1g" // Cyberpunk/Synthwave tracks
     ];
     let ytPlayer, lastPlayedId = null;
     let audioContext;
@@ -190,7 +192,7 @@
     }
 
     /* =========================================
-       GAME ENGINE
+       GAME ENGINE & ASSETS
        ========================================= */
     let scene, camera, renderer, clock, playerShip, starField;
     const enemies = [];
@@ -210,6 +212,67 @@
         animate();
     }
 
+    function createFalcon() {
+        const ship = new THREE.Group();
+        
+        // Main Hull (Dish shape)
+        const hullGeo = new THREE.CylinderGeometry(10, 10, 1, 32);
+        const hullMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
+        const hull = new THREE.Mesh(hullGeo, hullMat);
+        hull.scale.set(1, 0.2, 1);
+        
+        // Engine Glow (Rear)
+        const engineGeo = new THREE.BoxGeometry(12, 1, 1);
+        const engineMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+        const engine = new THREE.Mesh(engineGeo, engineMat);
+        engine.position.z = 8;
+        
+        // Cockpit (Offset)
+        const cockpitGeo = new THREE.CylinderGeometry(2, 2, 6, 8);
+        const cockpit = new THREE.Mesh(cockpitGeo, new THREE.MeshStandardMaterial({ color: 0x333333 }));
+        cockpit.rotation.z = Math.PI / 2;
+        cockpit.position.set(8, 0, 0);
+
+        // Mandibles (Front)
+        const manGeo = new THREE.BoxGeometry(3, 1, 8);
+        const manL = new THREE.Mesh(manGeo, hullMat);
+        manL.position.set(-3, 0, -8);
+        const manR = new THREE.Mesh(manGeo, hullMat);
+        manR.position.set(3, 0, -8);
+
+        ship.add(hull, engine, cockpit, manL, manR);
+        // Rotate so -Z is forward
+        ship.rotation.y = Math.PI; 
+        return ship;
+    }
+
+    function createTieFighter() {
+        const group = new THREE.Group();
+        const mat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.5, roughness: 0.5 });
+        const wingMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+        
+        // Cockpit Ball
+        const ball = new THREE.Mesh(new THREE.SphereGeometry(6, 16, 16), mat);
+        
+        // Wings (Hexagonal cylinders)
+        const wingGeo = new THREE.CylinderGeometry(14, 14, 1, 6);
+        const wingL = new THREE.Mesh(wingGeo, wingMat);
+        wingL.rotation.z = Math.PI / 2;
+        wingL.position.x = -10;
+        
+        const wingR = new THREE.Mesh(wingGeo, wingMat);
+        wingR.rotation.z = Math.PI / 2;
+        wingR.position.x = 10;
+        
+        // Struts
+        const strutGeo = new THREE.CylinderGeometry(2, 2, 20, 8);
+        const strut = new THREE.Mesh(strutGeo, mat);
+        strut.rotation.z = Math.PI / 2;
+
+        group.add(ball, wingL, wingR, strut);
+        return group;
+    }
+
     function init3D() {
         scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x000000, 0.0003);
@@ -225,10 +288,9 @@
         sun.position.set(100, 500, 200);
         scene.add(sun);
 
-        const shipGeo = new THREE.ConeGeometry(5, 20, 4);
-        const shipMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x0044aa, wireframe: true });
-        playerShip = new THREE.Mesh(shipGeo, shipMat);
-        playerShip.rotation.x = -Math.PI / 2;
+        // REPLACED: Use Falcon Model
+        playerShip = createFalcon();
+        playerShip.position.y = -50; // Initial height adjustment
         scene.add(playerShip);
 
         const starGeo = new THREE.BufferGeometry();
@@ -258,39 +320,42 @@
         }, 1200);
     }
 
-    // --- REPLACED WITH YOUR ADVANCED SPAWN LOGIC ---
     function spawnEnemy() {
-        const angle = (Math.random() - 0.5) * Math.PI * 1.4; // ±126° spread ahead
+        const angle = (Math.random() - 0.5) * Math.PI * 1.4; 
         const dist = 9000 + Math.random() * 6000;
         const spawnX = playerShip.position.x + Math.sin(angle) * dist;
         const spawnY = playerShip.position.y + (Math.random() - 0.5) * 4000;
-        const spawnZ = playerShip.position.z - dist; // always ahead in Z
+        const spawnZ = playerShip.position.z - dist; 
 
-        // Create Mesh to visualize enemy
-        const geo = new THREE.OctahedronGeometry(15, 0);
-        const mat = new THREE.MeshStandardMaterial({ color: 0xff0000, wireframe: true });
-        const e = new THREE.Mesh(geo, mat);
-
+        // REPLACED: Use TIE Fighter Model
+        const e = createTieFighter();
         e.position.set(spawnX, spawnY, spawnZ);
+        
+        // Scale up slightly for visibility
+        e.scale.set(4, 4, 4);
+        
         scene.add(e);
         enemies.push(e);
     }
 
     function fireLaser() {
         playLaserSound();
-        const geo = new THREE.CylinderGeometry(1, 1, 40, 8);
+        const geo = new THREE.CylinderGeometry(1, 1, 60, 8);
         geo.rotateX(Math.PI / 2);
         const laser = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x00ffff }));
+        
+        // Fire from center of ship
         laser.position.copy(playerShip.position);
         laser.quaternion.copy(playerShip.quaternion);
         laser.translateZ(-30);
+        
         scene.add(laser);
-        lasers.push({ mesh: laser, vel: new THREE.Vector3(0,0,-2000).applyQuaternion(playerShip.quaternion), age: 0 });
+        lasers.push({ mesh: laser, vel: new THREE.Vector3(0,0,-2500).applyQuaternion(playerShip.quaternion), age: 0 });
     }
 
     function createExplosion(pos, scale=1) {
         for(let i=0; i<15*scale; i++) {
-            const p = new THREE.Mesh(new THREE.PlaneGeometry(5*scale, 5*scale), new THREE.MeshBasicMaterial({ color: 0xffaa00 }));
+            const p = new THREE.Mesh(new THREE.PlaneGeometry(8*scale, 8*scale), new THREE.MeshBasicMaterial({ color: 0xffaa00 }));
             p.position.copy(pos);
             p.lookAt(camera.position);
             scene.add(p);
@@ -310,24 +375,28 @@
         document.getElementById('boss-ui').style.display = 'flex';
         
         boss = new THREE.Group();
-        const hull = new THREE.Mesh(new THREE.BoxGeometry(200, 100, 600), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+        // Capital Ship Hull
+        const hull = new THREE.Mesh(new THREE.BoxGeometry(400, 200, 1200), new THREE.MeshStandardMaterial({ color: 0x111111 }));
         boss.add(hull);
-        const wingL = new THREE.Mesh(new THREE.BoxGeometry(400, 20, 200), new THREE.MeshStandardMaterial({ color: 0x333333 }));
-        wingL.position.set(-200, 0, 100);
+        
+        // Massive Wings
+        const wingL = new THREE.Mesh(new THREE.BoxGeometry(800, 40, 400), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+        wingL.position.set(-400, 0, 200);
         const wingR = wingL.clone();
-        wingR.position.set(200, 0, 100);
+        wingR.position.set(400, 0, 200);
         boss.add(wingL, wingR);
         
-        const markerGeo = new THREE.SphereGeometry(30, 16, 16);
+        // Red Vulnerability Markers
+        const markerGeo = new THREE.SphereGeometry(60, 16, 16);
         const markerMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 2 });
-        [new THREE.Vector3(0, 60, 0), new THREE.Vector3(-250, 20, 100), new THREE.Vector3(250, 20, 100), new THREE.Vector3(0, -60, -200)].forEach(offset => {
+        [new THREE.Vector3(0, 120, 0), new THREE.Vector3(-500, 40, 200), new THREE.Vector3(500, 40, 200), new THREE.Vector3(0, -120, -400)].forEach(offset => {
             const m = new THREE.Mesh(markerGeo, markerMat.clone());
             m.position.copy(offset);
             boss.add(m);
             bossMarkers.push(m);
         });
 
-        boss.position.set(playerShip.position.x, playerShip.position.y + 100, playerShip.position.z - 4000);
+        boss.position.set(playerShip.position.x, playerShip.position.y + 100, playerShip.position.z - 5000);
         scene.add(boss);
     }
 
@@ -337,23 +406,26 @@
         const dt = clock.getDelta();
         
         // Player Physics
-        input.velX = THREE.MathUtils.lerp(input.velX, input.x * 20, 0.1);
-        input.velY = THREE.MathUtils.lerp(input.velY, input.y * 20, 0.1);
+        input.velX = THREE.MathUtils.lerp(input.velX, input.x * 25, 0.1);
+        input.velY = THREE.MathUtils.lerp(input.velY, input.y * 25, 0.1);
         playerShip.position.x += input.velX;
         playerShip.position.y += input.velY;
-        playerShip.position.z -= (input.hyper ? 300 : 80) * dt * 10;
+        playerShip.position.z -= (input.hyper ? 400 : 100) * dt * 10;
+        
+        // Banking Logic (Roll)
         playerShip.rotation.z = -input.velX * 0.05;
-        playerShip.rotation.x = -Math.PI/2 - (input.velY * 0.05);
+        playerShip.rotation.x = (input.velY * 0.03); 
 
-        // Camera Follow
-        camera.position.lerp(new THREE.Vector3(playerShip.position.x, playerShip.position.y + 50, playerShip.position.z + 200), 0.1);
-        camera.lookAt(playerShip.position.x, playerShip.position.y, playerShip.position.z - 500);
+        // Camera Follow - Adjusted for Falcon Model visibility
+        const camTarget = new THREE.Vector3(playerShip.position.x, playerShip.position.y + 80, playerShip.position.z + 250);
+        camera.position.lerp(camTarget, 0.1);
+        camera.lookAt(playerShip.position.x, playerShip.position.y, playerShip.position.z - 1000);
         
         // Starfield
         starField.position.z = playerShip.position.z;
-        starField.scale.z = input.hyper ? 20 : 1;
+        starField.scale.z = input.hyper ? 25 : 1;
 
-        // --- ENEMY DOGFIGHT AI (YOUR NEW CODE) ---
+        // --- MERGED DOGFIGHT AI ---
         enemies.forEach((e, i) => {
             // 1. Get player's forward direction
             const playerForward = new THREE.Vector3(0, 0, -1).applyQuaternion(playerShip.quaternion);
@@ -367,9 +439,9 @@
             // 5. Dogfight behavior
             if (alignment > 0.7) {
                 // Enemy is in front -> flank
-                const side = (e.id % 2 === 0) ? 1 : -1; // deterministic randomness based on ID
+                const side = (e.id % 2 === 0) ? 1 : -1;
                 const right = playerForward.clone().cross(new THREE.Vector3(0,1,0)).normalize();
-                chaseDir.add(right.multiplyScalar(side * 0.6));
+                chaseDir.add(right.multiplyScalar(side * 0.8));
                 chaseDir.normalize();
             } else if (alignment < 0.2) {
                 // Enemy is behind -> circle back
@@ -378,8 +450,8 @@
             }
 
             // 6. Movement
-            const speed = 45 + (Math.random() * 15);
-            e.position.add(chaseDir.multiplyScalar(speed * dt * 10)); // Adjusted scalar for ThreeJS scale
+            const speed = 55 + (Math.random() * 15);
+            e.position.add(chaseDir.multiplyScalar(speed * dt * 10)); 
 
             // 7. Face player
             e.lookAt(playerShip.position);
@@ -404,7 +476,10 @@
 
         // Cleanup dead enemies
         for (let i = enemies.length - 1; i >= 0; i--) {
-            if (enemies[i].dead) enemies.splice(i, 1);
+            // Check z-distance for despawn
+            if(enemies[i].position.z > playerShip.position.z + 2000) {
+                scene.remove(enemies[i]); enemies.splice(i, 1);
+            }
         }
 
         // Lasers
@@ -417,8 +492,8 @@
             // Laser vs Enemy
             let hit = false;
             for (let j = enemies.length - 1; j >= 0; j--) {
-                if (l.mesh.position.distanceTo(enemies[j].position) < 30) {
-                    createExplosion(enemies[j].position, 2);
+                if (l.mesh.position.distanceTo(enemies[j].position) < 80) { // Increased hit radius for TIEs
+                    createExplosion(enemies[j].position, 3);
                     scene.remove(enemies[j]);
                     enemies.splice(j, 1);
                     stats.kills++;
@@ -433,15 +508,15 @@
                 for (let k = bossMarkers.length - 1; k >= 0; k--) {
                     const mPos = new THREE.Vector3();
                     bossMarkers[k].getWorldPosition(mPos);
-                    if (l.mesh.position.distanceTo(mPos) < 50) {
-                        createExplosion(mPos, 4);
+                    if (l.mesh.position.distanceTo(mPos) < 100) {
+                        createExplosion(mPos, 6);
                         stats.bossHP -= 500;
                         document.getElementById('boss-health').style.width = (stats.bossHP / stats.bossMaxHP * 100) + "%";
                         boss.remove(bossMarkers[k]);
                         bossMarkers.splice(k, 1);
                         hit = true;
                         if (stats.bossHP <= 0) {
-                            createExplosion(boss.position, 20);
+                            createExplosion(boss.position, 30);
                             scene.remove(boss);
                             stats.inBoss = false;
                             document.getElementById('boss-ui').style.display = 'none';
@@ -479,6 +554,7 @@
         for (let i = particles.length - 1; i >= 0; i--) {
             particles[i].mesh.position.add(particles[i].vel.clone().multiplyScalar(dt));
             particles[i].mesh.material.opacity -= dt;
+            particles[i].mesh.rotation.z += dt;
             if ((particles[i].age += dt) > 1) { scene.remove(particles[i].mesh); particles.splice(i, 1); }
         }
 
