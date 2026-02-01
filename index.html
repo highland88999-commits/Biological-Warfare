@@ -3,204 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Megacity - Tie Intercept</title>
+    <title>Falcon OS: Open World</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        :root { --blue: #0ff; --red: #f00; --neon: #39ff14; }
+        :root { --blue: #0ff; --red: #f00; --gold: #ffd700; }
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; touch-action: none; }
-        #hud { position: absolute; top: 20px; left: 20px; z-index: 100; border-left: 2px solid var(--blue); padding: 10px; background: rgba(0,0,0,0.7); pointer-events: none; }
-        .danger { color: var(--red); font-weight: bold; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        #hud { position: absolute; top: 20px; left: 20px; z-index: 100; border-left: 2px solid var(--blue); padding: 10px; background: rgba(0,0,0,0.8); pointer-events: none; }
+        .radar { color: var(--gold); font-weight: bold; }
         
         #joy-left-zone { position: absolute; top: 0; left: 0; width: 50%; height: 100%; z-index: 200; }
         #joy-left-container { position: absolute; width: 80px; height: 80px; border: 1px solid var(--blue); border-radius: 50%; display: none; pointer-events: none; transform: translate(-50%, -50%); }
         #joy-left-stick { position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); }
         
-        #weapon-dock { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 8px; z-index: 500; }
-        .w-btn { width: 50px; height: 50px; border: 1px solid #444; background: rgba(0,0,0,0.9); border-radius: 5px; color: #666; font-size: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .w-btn.active { border-color: var(--blue); color: var(--blue); }
+        #fire-btn { position: fixed; bottom: 40px; right: 40px; width: 80px; height: 80px; background: rgba(255,0,0,0.2); border: 2px solid var(--red); border-radius: 50%; z-index: 500; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="hud">
-        SYS_STATUS: <span class="danger">ENEMIES DETECTED</span><br>
-        HULL: <span id="hull" style="color:var(--neon)">100%</span><br>
-        TIE_COUNT: <span id="enemy-count" style="color:var(--red)">0</span>
+        SECTOR: <span class="radar" id="sector-coord">0, 0</span><br>
+        HULL: <span id="hull" style="color:var(--blue)">100%</span><br>
+        THREATS: <span id="threat-count" style="color:var(--red)">0</span>
     </div>
 
-    <div id="joy-left-zone">
-        <div id="joy-left-container"><div id="joy-left-stick"></div></div>
-    </div>
-
-    <div id="weapon-dock">
-        <div class="w-btn active" onclick="state.weapon='std'">STD</div>
-        <div class="w-btn" onclick="state.weapon='burst'">BRST</div>
-    </div>
+    <div id="joy-left-zone"><div id="joy-left-container"><div id="joy-left-stick"></div></div></div>
+    <div id="fire-btn">FIRE</div>
 
 <script>
 let scene, camera, renderer, clock = new THREE.Clock();
 let playerShip, buildings = [], enemies = [], projectiles = [];
-const state = { hull: 100, joyL: { x: 0, y: 0, active: false }, weapon: 'std', speed: 40 };
+const state = { hull: 100, joyL: { x: 0, y: 0, active: false }, speed: 50, sectorSize: 5000 };
 
 function init() {
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 1, 40000);
+    scene.fog = new THREE.FogExp2(0x000000, 0.0001);
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 50000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-    const sun = new THREE.DirectionalLight(0xffffff, 1);
-    sun.position.set(1000, 2000, 1000);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+    const sun = new THREE.DirectionalLight(0x00ffff, 0.8);
+    sun.position.set(1, 1, 1);
     scene.add(sun);
 
     createFalcon();
-    createCity();
     setupControls();
     
-    // Spawn TIEs periodically
-    setInterval(() => { if(enemies.length < 5) createTieFighter(); }, 3000);
-
+    // Initial city chunk
+    spawnSector(0, 0);
+    
     animate();
 }
 
 function createFalcon() {
     playerShip = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 });
-    const hull = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 5, 32), mat);
-    const cockpit = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 16), mat);
-    cockpit.position.set(22, 0, 10);
+    const silver = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 });
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 4, 32), silver);
+    const cockpit = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 16), silver);
+    cockpit.position.set(18, 0, 8);
     playerShip.add(hull, cockpit);
-    playerShip.scale.set(0.5, 0.5, 0.5); // Scaled to fit streets
-    playerShip.position.set(0, 500, 0);
+    playerShip.position.set(0, 400, 0);
     scene.add(playerShip);
     playerShip.userData.box = new THREE.Box3();
 }
 
-function createTieFighter() {
-    const tieGroup = new THREE.Group();
-    const blackMat = new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 0.9, roughness: 0.2 });
-    const wingPanelMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.2, roughness: 0.8 });
-    const engineGlow = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-
-    const ball = new THREE.Mesh(new THREE.SphereGeometry(6, 16, 16), blackMat);
-    tieGroup.add(ball);
-
-    const arms = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 20, 8), blackMat);
-    arms.rotation.z = Math.PI / 2;
-    tieGroup.add(arms);
-
-    const wingGeo = new THREE.CylinderGeometry(15, 15, 1, 6);
-    const lWing = new THREE.Mesh(wingGeo, wingPanelMat);
-    lWing.position.x = -10; lWing.rotation.z = Math.PI / 2;
-    const rWing = new THREE.Mesh(wingGeo, wingPanelMat);
-    rWing.position.x = 10; rWing.rotation.z = Math.PI / 2;
-    tieGroup.add(lWing, rWing);
-
-    // AI Stats
-    const side = Math.random() > 0.5 ? 1 : -1;
-    tieGroup.position.set(playerShip.position.x + (2000 * side), 500 + Math.random()*500, playerShip.position.z - 3000);
-    scene.add(tieGroup);
-    
-    const enemyObj = { 
-        mesh: tieGroup, 
-        hp: 100, 
-        lastFire: 0,
-        box: new THREE.Box3()
-    };
-    enemies.push(enemyObj);
-}
-
-function handleAI(dt) {
-    enemies.forEach((enemy, index) => {
-        // Simple Chase Physics
-        const targetPos = playerShip.position.clone();
-        enemy.mesh.lookAt(targetPos);
+function spawnSector(gridX, gridZ) {
+    const group = new THREE.Group();
+    for (let i = 0; i < 40; i++) {
+        const h = 500 + Math.random() * 3000;
+        const b = new THREE.Mesh(new THREE.BoxGeometry(200, h, 200), new THREE.MeshStandardMaterial({ color: 0x05050a }));
+        b.position.set((Math.random()-0.5)*state.sectorSize, h/2, (Math.random()-0.5)*state.sectorSize);
         
-        // Move forward
-        const dir = new THREE.Vector3(0,0,1).applyQuaternion(enemy.mesh.quaternion);
-        enemy.mesh.position.add(dir.multiplyScalar(state.speed * 0.8));
-
-        // Combat Engagement
-        enemy.lastFire += dt;
-        if (enemy.lastFire > 2.0 && enemy.mesh.position.distanceTo(playerShip.position) < 3000) {
-            spawnLaser(enemy.mesh, 0xff0000, true);
-            enemy.lastFire = 0;
-        }
-
-        if (enemy.hp <= 0) {
-            scene.remove(enemy.mesh);
-            enemies.splice(index, 1);
-        }
-    });
+        const frame = new THREE.LineSegments(new THREE.EdgesGeometry(b.geometry), new THREE.LineBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.3 }));
+        b.add(frame);
+        
+        b.userData.box = new THREE.Box3();
+        group.add(b);
+        buildings.push(b);
+    }
+    group.position.set(gridX * state.sectorSize, 0, gridZ * state.sectorSize);
+    scene.add(group);
 }
 
-function spawnLaser(source, color, isEnemy) {
-    const p = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 40), new THREE.MeshBasicMaterial({color: color}));
-    p.position.copy(source.position);
-    p.quaternion.copy(source.quaternion);
-    p.userData = { isEnemy: isEnemy, age: 0 };
-    scene.add(p);
-    projectiles.push(p);
+function createTieFighter() {
+    const tie = new THREE.Group();
+    const black = new THREE.MeshStandardMaterial({ color: 0x0a0a0a });
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(5, 8, 8), black);
+    const wings = new THREE.Mesh(new THREE.BoxGeometry(20, 15, 1), black);
+    wings.rotation.y = Math.PI/2;
+    tie.add(ball, wings);
+    
+    // Spawn in a ring around the player
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 4000;
+    tie.position.set(
+        playerShip.position.x + Math.cos(angle) * dist,
+        playerShip.position.y + (Math.random()-0.5)*500,
+        playerShip.position.z + Math.sin(angle) * dist
+    );
+    
+    scene.add(tie);
+    enemies.push({ mesh: tie, hp: 100, lastFire: 0 });
 }
 
 function animate() {
     requestAnimationFrame(animate);
     const dt = clock.getDelta();
 
-    // Player Flight & Stability
+    // 1. Open World Infinite Logic
+    const currentSectorX = Math.round(playerShip.position.x / state.sectorSize);
+    const currentSectorZ = Math.round(playerShip.position.z / state.sectorSize);
+    document.getElementById('sector-coord').innerText = `${currentSectorX}, ${currentSectorZ}`;
+
+    // 2. Flight & Stability
     playerShip.rotateY(-state.joyL.x * 0.04);
-    playerShip.rotation.x = THREE.MathUtils.lerp(playerShip.rotation.x, -state.joyL.y * 0.8, 0.05);
-    playerShip.rotation.z = THREE.MathUtils.lerp(playerShip.rotation.z, -state.joyL.x * 0.8, 0.05);
+    playerShip.rotation.x = THREE.MathUtils.lerp(playerShip.rotation.x, -state.joyL.y * 0.7, 0.05);
+    playerShip.rotation.z = THREE.MathUtils.lerp(playerShip.rotation.z, -state.joyL.x * 0.7, 0.05);
     const pDir = new THREE.Vector3(0,0,1).applyQuaternion(playerShip.quaternion);
     playerShip.position.add(pDir.multiplyScalar(state.speed));
 
-    camera.position.lerp(playerShip.position.clone().add(new THREE.Vector3(0, 40, -150).applyQuaternion(playerShip.quaternion)), 0.1);
+    // 3. Camera Chase
+    const camOffset = new THREE.Vector3(0, 30, -120).applyQuaternion(playerShip.quaternion);
+    camera.position.lerp(playerShip.position.clone().add(camOffset), 0.1);
     camera.lookAt(playerShip.position);
 
-    handleAI(dt);
+    // 4. Enemy Seek & Combat
+    if (Math.random() < 0.01 && enemies.length < 8) createTieFighter();
+    
+    enemies.forEach((enemy, i) => {
+        // Pursuit Logic
+        const vectorToPlayer = new THREE.Vector3().subVectors(playerShip.position, enemy.mesh.position);
+        enemy.mesh.lookAt(playerShip.position);
+        
+        // Only move if far away
+        if (vectorToPlayer.length() > 400) {
+            const eDir = new THREE.Vector3(0,0,1).applyQuaternion(enemy.mesh.quaternion);
+            enemy.mesh.position.add(eDir.multiplyScalar(state.speed * 0.7));
+        }
 
-    // Projectile Logic
+        // AI Firing
+        enemy.lastFire += dt;
+        if (enemy.lastFire > 2.5 && vectorToPlayer.length() < 2500) {
+            fireLaser(enemy.mesh, 0xff0000, true);
+            enemy.lastFire = 0;
+        }
+    });
+
+    // 5. Projectile Physics
     projectiles.forEach((p, i) => {
-        p.translateZ(80);
-        p.userData.age += dt;
-        if (p.userData.age > 2) { scene.remove(p); projectiles.splice(i, 1); return; }
-
+        p.translateZ(100);
+        if (p.position.distanceTo(playerShip.position) > 6000) { scene.remove(p); projectiles.splice(i, 1); }
+        
         if (p.userData.isEnemy) {
-            if (p.position.distanceTo(playerShip.position) < 30) { state.hull -= 5; scene.remove(p); projectiles.splice(i, 1); }
+            if (p.position.distanceTo(playerShip.position) < 25) { state.hull -= 10; scene.remove(p); projectiles.splice(i, 1); }
         } else {
-            enemies.forEach(e => {
-                if (p.position.distanceTo(e.mesh.position) < 40) { e.hp -= 40; scene.remove(p); projectiles.splice(i, 1); }
+            enemies.forEach((e, ei) => {
+                if (p.position.distanceTo(e.mesh.position) < 30) {
+                    scene.remove(e.mesh); enemies.splice(ei, 1);
+                    scene.remove(p); projectiles.splice(i, 1);
+                }
             });
         }
     });
 
-    document.getElementById('hull').innerText = Math.max(0, Math.ceil(state.hull)) + "%";
-    document.getElementById('enemy-count').innerText = enemies.length;
+    // Sector Management (Cleanup far buildings)
+    if (buildings.length > 400) {
+        const farB = buildings.shift();
+        scene.remove(farB);
+    }
+
+    document.getElementById('hull').innerText = Math.ceil(state.hull) + "%";
+    document.getElementById('threat-count').innerText = enemies.length;
+    if (state.hull <= 0) location.reload();
+    
     renderer.render(scene, camera);
 }
 
-// Reuse previous setupControls/createCity logic here...
-function createCity() {
-    scene.add(new THREE.GridHelper(30000, 60, 0x444444, 0x111111));
-    for (let i = 0; i < 150; i++) {
-        const h = 400 + Math.random() * 2000;
-        const b = new THREE.Mesh(new THREE.BoxGeometry(300, h, 300), new THREE.MeshStandardMaterial({ color: 0x050508 }));
-        b.position.set((Math.random()-0.5)*15000, h/2, (Math.random()-0.5)*15000);
-        scene.add(b);
-    }
+function fireLaser(source, color, isEnemy) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 40), new THREE.MeshBasicMaterial({ color }));
+    p.position.copy(source.position);
+    p.quaternion.copy(source.quaternion);
+    p.userData = { isEnemy };
+    scene.add(p);
+    projectiles.push(p);
 }
 
 function setupControls() {
     const lZone = document.getElementById('joy-left-zone');
     const lCont = document.getElementById('joy-left-container');
+    const fBtn = document.getElementById('fire-btn');
+
     lZone.addEventListener('pointerdown', e => {
         state.joyL.active = true;
         lCont.style.display = 'block';
         lCont.style.left = e.clientX + 'px'; lCont.style.top = e.clientY + 'px';
         state.joyL.originX = e.clientX; state.joyL.originY = e.clientY;
     });
+
     window.addEventListener('pointermove', e => {
         if (!state.joyL.active) return;
         const dx = e.clientX - state.joyL.originX; const dy = e.clientY - state.joyL.originY;
@@ -210,7 +210,9 @@ function setupControls() {
         state.joyL.y = (Math.sin(angle) * dist) / 40;
         document.getElementById('joy-left-stick').style.transform = `translate(calc(-50% + ${state.joyL.x * 20}px), calc(-50% + ${state.joyL.y * 20}px))`;
     });
+
     window.addEventListener('pointerup', () => { state.joyL.active = false; lCont.style.display = 'none'; });
+    fBtn.addEventListener('pointerdown', () => fireLaser(playerShip, 0x00ffff, false));
 }
 
 init();
