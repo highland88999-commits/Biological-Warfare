@@ -3,262 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Titan Siege: Ultimate</title>
+    <title>Titan Siege: Interceptor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        :root { --blue: #00f2ff; --gold: #d4af37; --red: #ff2d55; --green: #39ff14; --bg: #050505; }
-        * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; touch-action:none; }
-        body { background: var(--bg); color: #fff; font-family: 'Courier New', monospace; overflow:hidden; height: 100vh; transition: background 0.3s; }
+        :root { --blue: #00f2ff; --gold: #d4af37; --red: #ff2d55; --green: #39ff14; --bg: #000; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: #fff; }
         
+        /* HUD UI */
         #hud { position: fixed; top: 20px; width: 100%; display: flex; justify-content: space-around; z-index: 100; pointer-events: none; }
-        .stat-box { background: rgba(0,0,0,0.9); border: 1px solid var(--blue); padding: 8px 15px; border-radius: 4px; text-align: center; min-width: 120px; }
+        .stat-box { background: rgba(0,0,0,0.8); border: 1px solid var(--blue); padding: 10px; border-radius: 5px; text-align: center; min-width: 120px; }
         
-        #boss-ui { position: fixed; top: 90px; width: 100%; display: none; flex-direction: column; align-items: center; z-index: 100; }
-        #boss-hp-bar { width: 75%; height: 14px; background: #111; border: 1px solid var(--red); margin-top: 8px; border-radius: 7px; overflow: hidden; }
-        #boss-hp-fill { height: 100%; background: var(--red); width: 100%; transition: width 0.2s; }
-        
-        #boss-speech { position: absolute; background: white; color: black; padding: 6px 14px; border-radius: 10px; font-size: 14px; font-weight: 900; display: none; z-index: 200; border: 3px solid var(--red); white-space: nowrap; }
-        
-        .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%); }
-        .hero { border: 4px solid var(--green); box-shadow: 0 0 20px var(--green); z-index: 1000; }
-        .hero.shielded { border-color: var(--gold); box-shadow: 0 0 45px var(--gold); }
-        .boss { border: 8px double var(--red); box-shadow: 0 0 50px var(--red); z-index: 500; }
-        .minion { border: 2px solid #ff5555; box-shadow: 0 0 12px #ff5555; }
-        .bullet { background: var(--green); box-shadow: 0 0 10px var(--green); border-radius: 2px; }
+        /* Proximity Alarm */
+        #proximity-alert { position: fixed; inset: 0; pointer-events: none; border: 0px solid var(--red); transition: border-width 0.2s; z-index: 40; }
+        .danger-pulse { border-width: 20px !important; animation: pulse 0.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.2; } 50% { opacity: 1; } 100% { opacity: 0.2; } }
 
-        #joystick-zone { position: fixed; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.05); border-radius: 50%; z-index: 2000; border: 2px solid rgba(0,242,255,0.1); }
-        #joystick-stick { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.4; }
-        
-        #shield-btn { position: fixed; bottom: 40px; right: 40px; width: 90px; height: 90px; background: rgba(0,0,0,0.8); border: 3px solid var(--gold); border-radius: 50%; z-index: 2000; color: var(--gold); font-weight: 900; display: flex; align-items: center; justify-content: center; font-size: 11px; overflow: hidden; text-align: center; line-height: 1.2; }
-        #shield-fill { position: absolute; bottom: 0; width: 100%; background: rgba(212,175,55,0.3); height: 0%; pointer-events: none; }
+        /* Mini Map */
+        #minimap { position: fixed; bottom: 20px; right: 20px; width: 150px; height: 150px; background: rgba(0,20,20,0.8); border: 2px solid var(--blue); border-radius: 50%; z-index: 100; overflow: hidden; }
+        #map-center { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; background: var(--green); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px var(--green); }
+        .map-dot { position: absolute; width: 4px; height: 4px; background: var(--red); border-radius: 50%; transform: translate(-50%, -50%); }
 
-        #clash-bar { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; height: 35px; border: 4px solid #fff; z-index: 5000; display: none; background: #000; }
-        #clash-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--green)); width: 50%; }
+        /* Cannon & Cockpit */
+        #cockpit { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; height: 250px; pointer-events: none; z-index: 50; display: flex; justify-content: center; align-items: flex-end; }
+        #cannon { width: 100px; height: 180px; background: linear-gradient(to top, #111, #333); border: 4px solid var(--green); border-bottom: none; border-radius: 15px 15px 0 0; box-shadow: 0 0 30px var(--green); transition: transform 0.05s; }
+        #cannon.recoil { transform: translateY(30px); }
 
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 6000; text-align: center; }
-        .btn { padding: 18px 35px; margin: 12px; border: 2px solid var(--blue); background: none; color: #fff; cursor: pointer; font-weight: bold; min-width: 220px; text-transform: uppercase; }
+        /* Controls */
+        #joystick-zone { position: fixed; bottom: 40px; left: 40px; width: 100px; height: 100px; background: rgba(0,242,255,0.1); border-radius: 50%; z-index: 200; border: 2px solid var(--blue); }
+        #joystick-stick { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: var(--blue); border-radius: 50%; transform: translate(-50%, -50%); }
+
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .btn { padding: 20px 40px; margin-top: 20px; border: 2px solid var(--blue); background: none; color: #fff; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
+
+    <div id="proximity-alert"></div>
     <div id="hud">
-        <div class="stat-box"><small>STABILITY</small><br><span id="stability">100%</span></div>
-        <div class="stat-box"><small>SYSTEM</small><br><span id="lvl-text">LVL 1</span></div>
+        <div class="stat-box"><small>STABILITY</small><br><b id="stability">100%</b></div>
+        <div class="stat-box"><small>MISSILES</small><br><b id="missile-status">READY</b></div>
     </div>
-    
-    <div id="boss-ui">
-        <div id="boss-timer" style="color:var(--red); font-weight:900;">60s</div>
-        <div id="boss-hp-bar"><div id="boss-hp-fill"></div></div>
-    </div>
-    
-    <div id="boss-speech"></div>
-    <div id="clash-bar"><div id="clash-fill"></div></div>
+
+    <div id="minimap"><div id="map-center"></div></div>
+    <div id="cockpit"><div id="cannon"></div></div>
 
     <div id="joystick-zone"><div id="joystick-stick"></div></div>
-    <button id="shield-btn">SHIELD<br>READY<div id="shield-fill"></div></button>
 
-    <div id="upgrade-menu" class="overlay">
-        <h2 style="color:var(--gold); margin-bottom:20px;">EVOLUTION PROTOCOL</h2>
-        <button class="btn" onclick="applyUpgrade('dmg')">ATK POWER++</button>
-        <button class="btn" onclick="applyUpgrade('heal')">REPAIR SYSTEM</button>
+    <div id="start-menu" class="overlay">
+        <h1 style="color:var(--blue)">ARTEMIS-OS V2</h1>
+        <p>SYSTEM: BURST CANNON & SEEKER READY</p>
+        <button class="btn" onclick="initGame()">ENGAGE</button>
     </div>
 
-    <div id="arena"></div>
-
     <script>
-        const state = { 
-            active: true, stability: 100, level: 1, entities: [], isPiloting: false, keys: {}, isBoss: false,
-            dmgMod: 1, isClashing: false, clashPower: 50, bossMaxHP: 0, bossTime: 0,
-            joy: { active: false, x: 0, y: 0 },
-            shield: { active: false, cd: 0, duration: 5000, maxCD: 15000 }
-        };
+let scene, camera, renderer, clock = new THREE.Clock();
+let enemies = [], missiles = [], weatherSystem;
+const state = {
+    active: false, stability: 100, level: 1,
+    joy: { x: 0, y: 0 },
+    rotation: { y: 0, x: 0 },
+    missileCD: 0
+};
 
-        const BOSS_QUOTES = { start: "PURGE INITIATED", half: "ADAPTING...", death: "OFFLINE...", clash: "MASH!!" };
+function initGame() {
+    state.active = true;
+    document.getElementById('start-menu').style.display = 'none';
+    
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x000000, 0.0002);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 20000);
+    
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-        const stick = document.getElementById('joystick-stick');
-        const shieldBtn = document.getElementById('shield-btn');
-        const shieldFill = document.getElementById('shield-fill');
+    createWorld();
+    setupControls();
+    
+    // Weapon Systems
+    setInterval(burstFire, 1500); // Burst every 1.5s
+    setInterval(launchSeeker, 3000); // Missile every 3s
 
-        function updateJoystick(e) {
-            const rect = document.getElementById('joystick-zone').getBoundingClientRect();
-            const cx = rect.left + rect.width/2;
-            const cy = rect.top + rect.height/2;
-            const dx = (e.clientX || e.touches[0].clientX) - cx;
-            const dy = (e.clientY || e.touches[0].clientY) - cy;
-            const dist = Math.min(Math.hypot(dx, dy), 50);
-            const angle = Math.atan2(dy, dx);
-            state.joy.x = Math.cos(angle) * (dist / 50);
-            state.joy.y = Math.sin(angle) * (dist / 50);
-            stick.style.transform = `translate(calc(-50% + ${state.joy.x * 35}px), calc(-50% + ${state.joy.y * 35}px))`;
-        }
+    animate();
+}
 
-        document.getElementById('joystick-zone').addEventListener('pointerdown', e => { state.joy.active = true; updateJoystick(e); });
-        window.addEventListener('pointermove', e => { if (state.joy.active) updateJoystick(e); });
-        window.addEventListener('pointerup', () => { state.joy.active = false; state.joy.x = state.joy.y = 0; stick.style.transform = 'translate(-50%,-50%)'; });
+function createWorld() {
+    scene.add(new THREE.GridHelper(20000, 40, 0xff00ff, 0x111111));
+    scene.add(new THREE.AmbientLight(0x4040ff, 0.6));
+    
+    // Buildings
+    for (let i = 0; i < 100; i++) {
+        const h = 500 + Math.random() * 3000;
+        const b = new THREE.Mesh(new THREE.BoxGeometry(400, h, 400), new THREE.MeshStandardMaterial({color: 0x050508}));
+        b.position.set((Math.random()-0.5)*15000, h/2, (Math.random()-0.5)*15000);
+        scene.add(b);
+    }
+}
 
-        shieldBtn.addEventListener('pointerdown', e => {
-            e.preventDefault();
-            if (state.shield.cd <= 0 && state.isPiloting) activateShield();
-        });
-
-        function activateShield() {
-            state.shield.active = true;
-            state.shield.cd = state.shield.maxCD;
-            const h = state.entities.find(e => e.type === 'hero');
-            if (h) h.el.classList.add('shielded');
-            setTimeout(() => {
-                state.shield.active = false;
-                const hero = state.entities.find(e => e.type === 'hero');
-                if (hero) hero.el.classList.remove('shielded');
-            }, state.shield.duration);
-        }
-
-        class Entity {
-            constructor(side, type) {
-                this.side = side; this.type = type; this.hp = 100; this.size = 35;
-                this.x = side === 'p' ? window.innerWidth/2 : Math.random()*window.innerWidth;
-                this.y = side === 'p' ? window.innerHeight-200 : -50;
-                this.vx = 0; this.vy = side === 'p' ? 0 : 2.5;
-                this.dmg = (type === 'bullet' ? 85 : 20) * state.dmgMod;
-                
-                if (type === 'hero') { this.hp = 9e9; this.size = 60; }
-                if (type === 'boss') { 
-                    this.hp = 6000 + state.level * 1500; state.bossMaxHP = this.hp; 
-                    this.size = 150; this.vy = 0.3; this.lastM = 0; this.saidHalf = false;
-                }
-                if (type === 'unit') { this.size = 30; this.hp = 150 + (state.level * 30); }
-
-                this.el = document.createElement('div');
-                this.el.className = `cell ${type} ${side==='p'?'hero':'minion'} ${type==='boss'?'boss':''} ${type==='bullet'?'bullet':''}`;
-                this.el.style.width = this.el.style.height = `${this.size}px`;
-                document.getElementById('arena').appendChild(this.el);
-            }
-
-            say(txt) {
-                const b = document.getElementById('boss-speech');
-                b.innerText = txt; b.style.display = 'block';
-                setTimeout(() => b.style.display = 'none', 2000);
-            }
-
-            update() {
-                if (this.type === 'hero') {
-                    let mx = state.joy.x * 10, my = state.joy.y * 10;
-                    if (state.keys['ArrowLeft']) mx = -9; if (state.keys['ArrowRight']) mx = 9;
-                    if (state.keys['ArrowUp']) my = -9; if (state.keys['ArrowDown']) my = 9;
-                    this.x += mx; this.y += my;
-                    this.x = Math.max(30, Math.min(window.innerWidth-30, this.x));
-                    this.y = Math.max(30, Math.min(window.innerHeight-150, this.y));
-
-                    state.entities.forEach(e => {
-                        if (e.side === 'e' && Math.hypot(this.x-e.x, this.y-e.y) < (this.size+e.size)/2) {
-                            if (!state.shield.active) state.stability -= (e.type === 'boss' ? 0.8 : 0.35);
-                            if (e.type === 'boss' && !state.isClashing) { startClash(); this.say(BOSS_QUOTES.clash); }
-                        }
-                    });
-                }
-                if (this.type === 'boss') {
-                    this.x += Math.sin(Date.now()*0.001)*3.5;
-                    this.x = Math.max(80, Math.min(window.innerWidth-80, this.x));
-                    if (this.hp < state.bossMaxHP * 0.5 && !this.saidHalf) { this.say(BOSS_QUOTES.half); this.saidHalf = true; }
-                    if (Date.now() - this.lastM > 4500) { this.lastM = Date.now(); state.entities.push(new Entity('e', 'unit')); }
-                    const b = document.getElementById('boss-speech');
-                    if (b.style.display !== 'none') { 
-                        b.style.left = `${this.x}px`; b.style.top = `${this.y - this.size/2 - 40}px`; b.style.transform = 'translateX(-50%)';
-                    }
-                }
-
-                this.x += this.vx; this.y += this.vy;
-                this.el.style.left = this.x+'px'; this.el.style.top = this.y+'px';
-                
-                if (this.side === 'p') {
-                    state.entities.forEach(e => {
-                        if (e.side === 'e' && Math.hypot(this.x-e.x, this.y-e.y) < (this.size+e.size)/2) {
-                            e.hp -= this.dmg; if(this.type === 'bullet') this.hp = 0;
-                            e.el.style.filter = 'brightness(2.5)'; setTimeout(()=>e.el.style.filter='', 50);
-                        }
-                    });
-                }
-                if (this.y > window.innerHeight && this.side === 'e') { this.hp = 0; state.stability -= 5; }
+class Missile {
+    constructor(target) {
+        this.target = target;
+        this.mesh = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 40), new THREE.MeshBasicMaterial({color: 0xffff00}));
+        this.mesh.position.copy(camera.position);
+        this.mesh.rotation.copy(camera.rotation);
+        scene.add(this.mesh);
+        missiles.push(this);
+    }
+    update() {
+        if (!this.target || !enemies.includes(this.target)) {
+            this.mesh.translateZ(-30);
+        } else {
+            const dir = new THREE.Vector3().subVectors(this.target.mesh.position, this.mesh.position).normalize();
+            this.mesh.position.add(dir.multiplyScalar(40));
+            this.mesh.lookAt(this.target.mesh.position);
+            if (this.mesh.position.distanceTo(this.target.mesh.position) < 100) {
+                this.target.hp -= 200;
+                this.destroy();
             }
         }
+        if (this.mesh.position.length() > 10000) this.destroy();
+    }
+    destroy() { scene.remove(this.mesh); missiles = missiles.filter(m => m !== this); }
+}
 
-        function startClash() { state.isClashing = true; state.clashPower = 50; document.getElementById('clash-bar').style.display = 'block'; }
-
-        function gameLoop() {
-            if (!state.active) return;
-            
-            if (state.shield.cd > 0) {
-                state.shield.cd -= 16.67;
-                shieldFill.style.height = (state.shield.cd / state.shield.maxCD * 100) + "%";
-                shieldBtn.innerHTML = `SHIELD<br>${Math.ceil(state.shield.cd/1000)}s`;
-                shieldBtn.style.opacity = '0.6';
-            } else { shieldBtn.innerHTML = "SHIELD<br>READY"; shieldFill.style.height = "0%"; shieldBtn.style.opacity = '1'; }
-
-            if (state.isClashing) {
-                state.clashPower -= 0.25;
-                document.getElementById('clash-fill').style.width = state.clashPower + "%";
-                if (state.clashPower >= 100) {
-                    let b = state.entities.find(e => e.type === 'boss'); if(b) b.hp -= 4000;
-                    state.isClashing = false; document.getElementById('clash-bar').style.display = 'none';
-                    document.body.style.background = 'rgba(0,255,80,0.3)'; setTimeout(() => document.body.style.background = 'var(--bg)', 200);
-                }
-                if (state.clashPower <= 0) { state.isClashing = false; state.stability -= 15; document.getElementById('clash-bar').style.display = 'none'; }
-            } else if (state.isBoss) {
-                state.bossTime -= 1/60; document.getElementById('boss-timer').innerText = Math.ceil(state.bossTime) + "s";
-                if (state.bossTime <= 0) state.stability = 0;
-                let b = state.entities.find(e => e.type === 'boss');
-                if (b) document.getElementById('boss-hp-fill').style.width = (b.hp / state.bossMaxHP * 100) + "%";
-            }
-
-            for (let i = state.entities.length-1; i >= 0; i--) {
-                let ent = state.entities[i]; ent.update();
-                if (ent.hp <= 0) {
-                    if (ent.type === 'boss') {
-                        ent.say(BOSS_QUOTES.death);
-                        document.body.style.background = 'rgba(255,50,50,0.4)';
-                        setTimeout(() => {
-                            document.body.style.background = 'var(--bg)';
-                            state.isBoss = false; document.getElementById('boss-ui').style.display = 'none';
-                            state.entities = state.entities.filter(e => e.side !== 'e');
-                            document.querySelectorAll('.minion').forEach(m => m.remove());
-                            nextLevel();
-                        }, 1800);
-                    }
-                    ent.el.remove(); state.entities.splice(i, 1);
-                }
-            }
-
-            if (!state.isBoss && Math.random() < 0.02) state.entities.push(new Entity('e', 'unit'));
-            document.getElementById('stability').innerText = Math.ceil(state.stability) + "%";
-            document.getElementById('lvl-text').innerText = "LVL " + state.level;
-            if (state.stability <= 0) { alert("SYSTEM CRITICAL: REACHED LVL " + state.level); location.reload(); }
-            requestAnimationFrame(gameLoop);
-        }
-
-        function nextLevel() { state.active = false; document.getElementById('upgrade-menu').style.display = 'flex'; }
+class Drone {
+    constructor() {
+        this.mesh = new THREE.Mesh(new THREE.SphereGeometry(60, 8, 8), new THREE.MeshBasicMaterial({color: 0xff2d55, wireframe: true}));
+        const ang = Math.random() * Math.PI * 2;
+        this.mesh.position.set(Math.cos(ang)*8000, 500 + Math.random()*1000, Math.sin(ang)*8000);
+        this.hp = 100;
+        this.mapDot = document.createElement('div');
+        this.mapDot.className = 'map-dot';
+        document.getElementById('minimap').appendChild(this.mapDot);
+        scene.add(this.mesh);
+        enemies.push(this);
+    }
+    update() {
+        const dir = new THREE.Vector3().subVectors(camera.position, this.mesh.position).normalize();
+        this.mesh.position.add(dir.multiplyScalar(20));
         
-        function applyUpgrade(type) {
-            state.level++; if (type === 'dmg') state.dmgMod += 0.45; else state.stability = Math.min(100, state.stability + 35);
-            document.getElementById('upgrade-menu').style.display = 'none'; state.active = true;
-            if (state.level % 2 === 0) { 
-                state.isBoss = true; state.bossTime = 60; document.getElementById('boss-ui').style.display = 'flex';
-                let b = new Entity('e', 'boss'); state.entities.push(b); b.say(BOSS_QUOTES.start);
-            }
-            requestAnimationFrame(gameLoop);
+        // Map Logic
+        const dx = (this.mesh.position.x - camera.position.x) / 100;
+        const dz = (this.mesh.position.z - camera.position.z) / 100;
+        this.mapDot.style.left = (75 + dx) + 'px';
+        this.mapDot.style.top = (75 + dz) + 'px';
+
+        const dist = this.mesh.position.distanceTo(camera.position);
+        if (dist < 1500) document.getElementById('proximity-alert').classList.add('danger-pulse');
+        if (dist < 200) { state.stability -= 5; this.destroy(); }
+    }
+    destroy() { 
+        this.mapDot.remove(); scene.remove(this.mesh); 
+        enemies = enemies.filter(e => e !== this); 
+        document.getElementById('proximity-alert').classList.remove('danger-pulse');
+    }
+}
+
+function burstFire() {
+    if (!state.active) return;
+    let shots = 0;
+    const interval = setInterval(() => {
+        document.getElementById('cannon').classList.add('recoil');
+        setTimeout(() => document.getElementById('cannon').classList.remove('recoil'), 50);
+        
+        const ray = new THREE.Raycaster();
+        ray.setFromCamera(new THREE.Vector2(0, -0.2), camera);
+        const hits = ray.intersectObjects(enemies.map(e => e.mesh));
+        if (hits.length > 0) {
+            const e = enemies.find(en => en.mesh === hits[0].object);
+            if (e) { e.hp -= 40; if(e.hp <= 0) e.destroy(); }
         }
 
-        window.addEventListener('pointerdown', e => {
-            if (state.isClashing) state.clashPower += 6.5;
-            if (!state.isPiloting && !['shield-btn', 'joystick-zone', 'joystick-stick'].includes(e.target.id)) {
-                state.isPiloting = true; state.entities.push(new Entity('p', 'hero'));
-                setInterval(() => { if(state.isPiloting && !state.isClashing) {
-                    let h = state.entities.find(e => e.type === 'hero');
-                    if(h) { let b = new Entity('p', 'bullet'); b.x = h.x; b.y = h.y-45; state.entities.push(b); }
-                }}, 650);
-            }
-        });
-        window.addEventListener('keydown', e => { state.keys[e.code] = true; if(e.code === 'KeyE') activateShield(); });
-        window.addEventListener('keyup', e => state.keys[e.code] = false);
+        if (++shots >= 3) clearInterval(interval);
+    }, 100);
+}
 
-        requestAnimationFrame(gameLoop);
+function launchSeeker() {
+    if (!state.active || enemies.length === 0) return;
+    new Missile(enemies[0]);
+}
+
+function setupControls() {
+    const jZone = document.getElementById('joystick-zone');
+    const jStick = document.getElementById('joystick-stick');
+    jZone.addEventListener('pointermove', e => {
+        const rect = jZone.getBoundingClientRect();
+        state.joy.x = (e.clientX - (rect.left + 50)) / 50;
+        state.joy.y = (e.clientY - (rect.top + 50)) / 50;
+        jStick.style.transform = `translate(calc(-50% + ${state.joy.x*25}px), calc(-50% + ${state.joy.y*25}px))`;
+    });
+    jZone.addEventListener('pointerup', () => { state.joy = {x:0, y:0}; jStick.style.transform = 'translate(-50%, -50%)'; });
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    state.rotation.y -= state.joy.x * 0.04;
+    state.rotation.x = Math.max(-0.6, Math.min(0.6, state.rotation.x - state.joy.y * 0.03));
+    camera.rotation.set(state.rotation.x, state.rotation.y, 0, 'YXZ');
+
+    if (Math.random() < 0.04) new Drone();
+    enemies.forEach(e => e.update());
+    missiles.forEach(m => m.update());
+
+    document.getElementById('stability').innerText = Math.max(0, state.stability) + "%";
+    if (state.stability <= 0) location.reload();
+
+    renderer.render(scene, camera);
+}
     </script>
 </body>
 </html>
