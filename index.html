@@ -3,37 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ARTEMIS v14.0 | THE HYPER-SAGA</title>
+    <title>ARTEMIS v16.1 | ZERO DEFECT</title>
     <style>
         body { margin:0; overflow:hidden; background:#000; font-family:'Courier New',monospace; touch-action:none; color:#0ff; }
-        #hud { position:absolute; inset:0; pointer-events:none; z-index:20; }
+        #hud { position:absolute; inset:0; pointer-events:none; z-index:20; display:none; }
         .top-bar { display:flex; justify-content:space-between; padding:15px; background:rgba(0,0,0,0.8); border-bottom:2px solid #0ff; font-size:1.1em; }
-        .ctrl-btn { position:absolute; border-radius:50%; pointer-events:auto; display:flex; align-items:center; justify-content:center; font-weight:bold; z-index:30; cursor:pointer;}
+        .ctrl-btn { position:absolute; border-radius:50%; pointer-events:auto; display:flex; align-items:center; justify-content:center; font-weight:bold; cursor:pointer; z-index:100; user-select:none; }
         #fire-btn { bottom:40px; right:40px; width:110px; height:110px; background:rgba(0,255,255,0.1); border:5px solid #0ff; color:#0ff; box-shadow: 0 0 20px #0ff; }
-        #video-container { position:absolute; inset:0; background:#000; display:none; z-index:2000; pointer-events:auto; }
+        #rapid-btn { bottom:40px; left:40px; width:90px; height:90px; background:rgba(255,165,0,0.1); border:5px solid #ffa500; color:#ffa500; display:none; }
+        #video-container { position:absolute; inset:0; background:#000; display:none; z-index:2000; }
         #skip-btn { position:absolute; bottom:40px; right:40px; padding:15px 40px; background:#0ff; border:none; font-weight:bold; cursor:pointer; z-index:2100; }
         .screen { position:absolute; inset:0; background:#000; z-index:5000; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
         #palpatine-img { width: 250px; border-radius: 50%; border: 4px solid #f00; box-shadow: 0 0 30px #f00; margin-bottom: 20px; }
-        button.start { padding:25px 60px; background:#0ff; color:#000; border:none; font-weight:bold; font-size:24px; cursor:pointer; }
+        button.start { padding:25px 60px; background:#0ff; color:#000; border:none; font-weight:bold; font-size:24px; cursor:pointer; transition:0.3s; }
+        button.start:hover { box-shadow: 0 0 30px #0ff; transform:scale(1.05); }
     </style>
 </head>
 <body>
 
-    <div id="yt-player-container" style="position:absolute; top:-1000px;"><div id="player"></div></div>
-
     <div id="menu-screen" class="screen">
         <img id="palpatine-img" src="https://i.imgur.com/kP5h1oE.jpg">
         <h1 style="letter-spacing:10px; color:#f00;">UNLIMITED POWER</h1>
-        <p>ARTEMIS HYPER-SAGA PROTOCOL</p>
+        <p>ARTEMIS COMMAND: SECTOR 1</p>
         <button class="start" onclick="bootSystem()">ENGAGE COCKPIT</button>
     </div>
 
-    <div id="hud" style="display:none;">
+    <div id="hud">
         <div class="top-bar">
             <div>SECTOR: <span id="lvl">1</span> | SHIELD: <span id="shd">100</span>%</div>
-            <div>TIES: <span id="cnt">0</span>/100 | LVL KILLS: <span id="lvl-kills">0</span></div>
+            <div>GOAL: <span id="cnt">0</span>/100 | LVL KILLS: <span id="lvl-kills">0</span></div>
         </div>
-        <div id="fire-btn" class="ctrl-btn">FIRE</div>
+        <div id="fire-btn">FIRE</div>
+        <div id="rapid-btn" onclick="activateRapidFire()">RAPID</div>
     </div>
 
     <div id="video-container">
@@ -50,10 +51,11 @@
 
 <script>
 let scene, camera, renderer, clock, falcon, deathStar, starField, music, ytPlayer;
-let lasers = [], drones = [], enemyLasers = [], cores = [];
+let lasers = [], drones = [], cores = [];
 let state = { 
     level: 1, kills: 0, lvlKills: 0, health: 100, 
-    speed: 6000, shake: 0, phase: 'SWARM', active: false 
+    speed: 8500, shake: 0, phase: 'SWARM', active: false,
+    isRapid: false, canRapid: true
 };
 let mouse = { x: 0, y: 0 };
 const vids = { 10:'D5iEO8n6I3w', 20:'lsAEdblcqU4', 30:'Xkm9h0S4wr8', 40:'d3nuk8UI76M', 50:'n3DHDXAzoBA' };
@@ -69,48 +71,49 @@ function bootSystem() {
     document.getElementById('menu-screen').style.display = 'none';
     document.getElementById('hud').style.display = 'block';
     music = document.getElementById('bg-music');
-    music.volume = 0.5;
-    music.play();
+    music.volume = 0.6;
+    music.play().catch(e => console.log("Audio requires interaction first."));
     init();
 }
 
 function init() {
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.00002);
     camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 1000000);
     renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
     document.body.appendChild(renderer.domElement);
 
-    // Starfield Warp
+    // Deep Space Starfield
     const starGeo = new THREE.BufferGeometry();
     const pos = [];
-    for(let i=0; i<15000; i++) pos.push((Math.random()-0.5)*200000, (Math.random()-0.5)*200000, (Math.random()-0.5)*400000);
+    for(let i=0; i<18000; i++) pos.push((Math.random()-0.5)*400000, (Math.random()-0.5)*400000, (Math.random()-0.5)*800000);
     starGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    starField = new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xffffff, size:200}));
+    starField = new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xffffff, size:350}));
     scene.add(starField);
 
-    // Millennium Falcon
+    // The Millennium Falcon
     falcon = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(400, 400, 100, 32), new THREE.MeshStandardMaterial({color:0xaaaaaa, metalness:0.8}));
-    body.rotation.x = Math.PI/2;
-    falcon.add(body);
+    const disk = new THREE.Mesh(new THREE.CylinderGeometry(500, 500, 100, 32), new THREE.MeshStandardMaterial({color:0x999999, metalness:0.8}));
+    disk.rotation.x = Math.PI/2;
+    falcon.add(disk);
     scene.add(falcon);
 
-    // Death Star (Ready for Boss phase)
-    deathStar = new THREE.Mesh(new THREE.SphereGeometry(40000, 32, 32), new THREE.MeshStandardMaterial({color:0x222222}));
-    deathStar.position.z = -150000;
+    // Death Star Boss Proxy
+    deathStar = new THREE.Mesh(new THREE.SphereGeometry(35000, 32, 32), new THREE.MeshStandardMaterial({color:0x1a1a1a, metalness:0.5}));
     deathStar.visible = false;
     scene.add(deathStar);
 
-    scene.add(new THREE.HemisphereLight(0x00ffff, 0x000000, 1));
+    scene.add(new THREE.HemisphereLight(0x00ffff, 0x000000, 1.5));
     
+    // Controls
     window.addEventListener('mousemove', e => {
         mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
     });
-
-    document.getElementById('fire-btn').addEventListener('mousedown', shoot);
+    
+    document.getElementById('fire-btn').addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); });
+    document.getElementById('fire-btn').addEventListener('mousedown', (e) => { e.preventDefault(); shoot(); });
     
     state.active = true;
     clock = new THREE.Clock();
@@ -119,15 +122,37 @@ function init() {
 }
 
 function shoot() {
-    const l = new THREE.Mesh(new THREE.BoxGeometry(40, 40, 2000), new THREE.MeshBasicMaterial({color:0x00ffff}));
-    l.position.copy(falcon.position).z -= 500;
+    if(!state.active) return;
+    const l = new THREE.Mesh(new THREE.BoxGeometry(50, 50, 2500), new THREE.MeshBasicMaterial({color:0x00ffff}));
+    l.position.copy(falcon.position).z -= 800;
     scene.add(l);
     lasers.push(l);
+
+    if(state.isRapid) {
+        setTimeout(() => {
+            const l2 = l.clone(); 
+            l2.position.copy(falcon.position).x += 300;
+            scene.add(l2); lasers.push(l2);
+        }, 70);
+    }
+}
+
+function activateRapidFire() {
+    if(!state.canRapid) return;
+    state.isRapid = true; state.canRapid = false;
+    const btn = document.getElementById('rapid-btn');
+    btn.style.background = "rgba(255,165,0,0.8)";
+    setTimeout(() => { 
+        state.isRapid = false; 
+        btn.style.background = "rgba(255,165,0,0.1)";
+        setTimeout(() => { state.canRapid = true; }, 8000);
+    }, 12000);
 }
 
 function spawnTies() {
-    for(let i=0; i<12; i++) {
-        const tie = new THREE.Mesh(new THREE.BoxGeometry(800, 800, 800), new THREE.MeshPhongMaterial({color:0x444444}));
+    drones.forEach(d => scene.remove(d)); drones = [];
+    for(let i=0; i<15; i++) {
+        const tie = new THREE.Mesh(new THREE.BoxGeometry(1500, 1500, 1500), new THREE.MeshPhongMaterial({color:0x333333}));
         resetTie(tie);
         scene.add(tie);
         drones.push(tie);
@@ -135,7 +160,7 @@ function spawnTies() {
 }
 
 function resetTie(tie) {
-    tie.position.set((Math.random()-0.5)*60000, (Math.random()-0.5)*40000, falcon.position.z - (40000 + Math.random()*60000));
+    tie.position.set((Math.random()-0.5)*90000, (Math.random()-0.5)*60000, falcon.position.z - (70000 + Math.random()*80000));
 }
 
 function animate() {
@@ -143,50 +168,59 @@ function animate() {
     if(!state.active) return;
     const dt = clock.getDelta();
 
-    // Movement & Hyperdrive FOV
-    falcon.position.x = THREE.MathUtils.lerp(falcon.position.x, mouse.x * 30000, 0.1);
-    falcon.position.y = THREE.MathUtils.lerp(falcon.position.y, mouse.y * 20000, 0.1);
+    // Flight Physics
+    falcon.position.x = THREE.MathUtils.lerp(falcon.position.x, mouse.x * 45000, 0.08);
+    falcon.position.y = THREE.MathUtils.lerp(falcon.position.y, mouse.y * 35000, 0.08);
     falcon.position.z -= state.speed * dt;
     
-    camera.fov = THREE.MathUtils.lerp(camera.fov, 85 + (state.speed/2000), 0.05);
+    // Dynamic Warp FOV
+    camera.fov = THREE.MathUtils.lerp(camera.fov, 75 + (state.speed/1200), 0.05);
     camera.updateProjectionMatrix();
-    camera.position.lerp(falcon.position.clone().add(new THREE.Vector3(0, 800, 3000)), 0.1);
-    camera.lookAt(falcon.position.x, falcon.position.y, falcon.position.z - 5000);
+    camera.position.lerp(falcon.position.clone().add(new THREE.Vector3(0, 1500, 4500)), 0.1);
+    camera.lookAt(falcon.position.x, falcon.position.y, falcon.position.z - 10000);
 
-    // Starfield Warp
-    starField.position.z = falcon.position.z % 100000;
+    starField.position.z = falcon.position.z % 200000;
 
-    // Combat Logic
+    // Laser & Collision Logic
     lasers.forEach((l, i) => {
-        l.position.z -= 40000 * dt;
-        if(l.position.distanceTo(falcon.position) > 100000) { scene.remove(l); lasers.splice(i,1); }
+        l.position.z -= 60000 * dt;
+        if(l.position.distanceTo(falcon.position) > 150000) { scene.remove(l); lasers.splice(i,1); }
         
         drones.forEach(d => {
-            if(l.position.distanceTo(d.position) < 2000) {
+            if(l.position.distanceTo(d.position) < 5000) {
                 state.kills++; state.lvlKills++;
                 document.getElementById('cnt').innerText = state.kills;
                 document.getElementById('lvl-kills').innerText = state.lvlKills;
                 resetTie(d);
-                state.shake = 5;
                 if(state.kills >= 100 && state.phase === 'SWARM') startBoss();
             }
         });
 
         cores.forEach((c, ci) => {
-            if(l.position.distanceTo(c.position) < 4000) {
+            if(l.position.distanceTo(c.position) < 6000) {
                 scene.remove(c); cores.splice(ci,1);
+                state.shake = 20;
                 if(cores.length === 0) levelUp();
             }
         });
     });
 
     drones.forEach(d => {
-        if(d.position.z > falcon.position.z) resetTie(d);
+        if(d.position.z > falcon.position.z + 5000) resetTie(d);
+        if(d.position.distanceTo(falcon.position) < 3500) {
+            state.health -= 15;
+            state.shake = 25;
+            document.getElementById('shd').innerText = Math.max(0, state.health);
+            resetTie(d);
+            if(state.health <= 0) { alert("SYSTEM FAILURE: REBOOTING..."); location.reload(); }
+        }
     });
 
+    // Camera Shake Processor
     if(state.shake > 0) {
         camera.position.x += (Math.random()-0.5)*state.shake;
-        state.shake *= 0.9;
+        camera.position.y += (Math.random()-0.5)*state.shake;
+        state.shake *= 0.85;
     }
 
     renderer.render(scene, camera);
@@ -195,11 +229,11 @@ function animate() {
 function startBoss() {
     state.phase = 'BOSS';
     deathStar.visible = true;
-    deathStar.position.z = falcon.position.z - 80000;
+    deathStar.position.z = falcon.position.z - 120000;
     drones.forEach(d => scene.remove(d)); drones = [];
-    for(let i=0; i<state.level; i++) {
-        const c = new THREE.Mesh(new THREE.SphereGeometry(1500), new THREE.MeshBasicMaterial({color:0xff0000}));
-        c.position.set((Math.random()-0.5)*20000, (Math.random()-0.5)*20000, deathStar.position.z + 2000);
+    for(let i=0; i < (state.level * 2); i++) {
+        const c = new THREE.Mesh(new THREE.SphereGeometry(2500), new THREE.MeshBasicMaterial({color:0xff0000, wireframe:true}));
+        c.position.set((Math.random()-0.5)*40000, (Math.random()-0.5)*40000, deathStar.position.z + 6000);
         scene.add(c);
         cores.push(c);
     }
@@ -208,12 +242,10 @@ function startBoss() {
 function levelUp() {
     state.active = false;
     music.pause();
-    if(vids[state.level]) {
+    if(vids[state.level * 10]) {
         document.getElementById('video-container').style.display = 'block';
-        ytPlayer.loadVideoById(vids[state.level]);
-    } else {
-        nextSector();
-    }
+        ytPlayer.loadVideoById(vids[state.level * 10]);
+    } else { nextSector(); }
 }
 
 function skipClip() {
@@ -229,6 +261,8 @@ function nextSector() {
     document.getElementById('lvl').innerText = state.level;
     document.getElementById('cnt').innerText = "0";
     document.getElementById('lvl-kills').innerText = "0";
+    // Persistent Unlock: Rapid fire stays visible after Sector 2
+    if(state.level >= 2) document.getElementById('rapid-btn').style.display = 'flex';
     spawnTies();
     music.play();
     state.active = true;
