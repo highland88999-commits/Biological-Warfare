@@ -2,218 +2,211 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ARTEMIS: GALACTIC COMMAND</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ARTEMIS v14.0 | THE HYPER-SAGA</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: #0ff; }
-        /* LANDING PAGE */
-        #landing-page { position: absolute; width: 100vw; height: 100vh; background: black; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        #palpatine-img { width: 300px; border-radius: 50%; border: 4px solid #444; box-shadow: 0 0 30px #f00; margin-bottom: 20px; }
-        #start-btn { padding: 20px 50px; font-size: 1.5rem; background: #222; color: #0ff; border: 2px solid #0ff; cursor: pointer; border-radius: 10px; }
-        #start-btn:hover { background: #0ff; color: #000; }
-
-        /* HUD */
-        #hud { position: absolute; top: 0; width: 100%; padding: 20px; box-sizing: border-box; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-        .hud-box { background: rgba(0, 40, 40, 0.8); padding: 10px 20px; border: 2px solid #0ff; border-radius: 5px; box-shadow: 0 0 10px #0ff; }
-        
-        /* VIDEO & OVERLAYS */
-        #video-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; display: none; z-index: 1000; }
-        #skip-btn { position: absolute; bottom: 40px; right: 40px; padding: 15px 30px; background: #0ff; color: #000; border: none; font-weight: bold; cursor: pointer; }
-        #rapid-fire-btn { position: absolute; bottom: 20px; right: 20px; width: 100px; height: 100px; border-radius: 50%; background: rgba(0,255,255,0.2); border: 3px solid #0ff; color: #0ff; display: none; cursor: pointer; z-index: 500; }
-        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; display: none; z-index: 2000; background: rgba(0,0,0,0.9); padding: 50px; border: 5px solid #f00; }
+        body { margin:0; overflow:hidden; background:#000; font-family:'Courier New',monospace; touch-action:none; color:#0ff; }
+        #hud { position:absolute; inset:0; pointer-events:none; z-index:20; }
+        .top-bar { display:flex; justify-content:space-between; padding:15px; background:rgba(0,0,0,0.8); border-bottom:2px solid #0ff; font-size:1.1em; }
+        .ctrl-btn { position:absolute; border-radius:50%; pointer-events:auto; display:flex; align-items:center; justify-content:center; font-weight:bold; z-index:30; cursor:pointer;}
+        #fire-btn { bottom:40px; right:40px; width:110px; height:110px; background:rgba(0,255,255,0.1); border:5px solid #0ff; color:#0ff; box-shadow: 0 0 20px #0ff; }
+        #video-container { position:absolute; inset:0; background:#000; display:none; z-index:2000; pointer-events:auto; }
+        #skip-btn { position:absolute; bottom:40px; right:40px; padding:15px 40px; background:#0ff; border:none; font-weight:bold; cursor:pointer; z-index:2100; }
+        .screen { position:absolute; inset:0; background:#000; z-index:5000; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+        #palpatine-img { width: 250px; border-radius: 50%; border: 4px solid #f00; box-shadow: 0 0 30px #f00; margin-bottom: 20px; }
+        button.start { padding:25px 60px; background:#0ff; color:#000; border:none; font-weight:bold; font-size:24px; cursor:pointer; }
     </style>
 </head>
 <body>
 
-<div id="landing-page">
-    <img id="palpatine-img" src="https://i.imgur.com/kP5h1oE.jpg" alt="Emperor Palpatine">
-    <h1 style="color: #f00;">UNLIMITED POWER</h1>
-    <p>Sector Command Awaiting Orders...</p>
-    <button id="start-btn" onclick="startGame()">ENTER COCKPIT</button>
-</div>
+    <div id="yt-player-container" style="position:absolute; top:-1000px;"><div id="player"></div></div>
 
-<div id="hud" style="display:none;">
-    <div class="hud-box">SECTOR: <span id="lvl">1</span></div>
-    <div class="hud-box">SHIELD: <span id="shd">100</span>%</div>
-    <div class="hud-box">
-        <span id="target-label">TIES</span>: <span id="cnt">0</span>/100<br>
-        <small>LVL KILLS: <span id="lvl-kills">0</span></small>
+    <div id="menu-screen" class="screen">
+        <img id="palpatine-img" src="https://i.imgur.com/kP5h1oE.jpg">
+        <h1 style="letter-spacing:10px; color:#f00;">UNLIMITED POWER</h1>
+        <p>ARTEMIS HYPER-SAGA PROTOCOL</p>
+        <button class="start" onclick="bootSystem()">ENGAGE COCKPIT</button>
     </div>
-</div>
 
-<button id="rapid-fire-btn" onclick="activateRapidFire()">RAPID FIRE</button>
+    <div id="hud" style="display:none;">
+        <div class="top-bar">
+            <div>SECTOR: <span id="lvl">1</span> | SHIELD: <span id="shd">100</span>%</div>
+            <div>TIES: <span id="cnt">0</span>/100 | LVL KILLS: <span id="lvl-kills">0</span></div>
+        </div>
+        <div id="fire-btn" class="ctrl-btn">FIRE</div>
+    </div>
 
-<div id="game-over">
-    <h1 style="color:red; font-size:3rem;">TRANSMISSION LOST</h1>
-    <button onclick="respawn()" style="padding:15px 30px; cursor:pointer;">RESPAWN</button>
-</div>
+    <div id="video-container">
+        <div id="vid-frame" style="width:100%; height:100%;"></div>
+        <button id="skip-btn" onclick="skipClip()">SKIP TRANSMISSION</button>
+    </div>
 
-<div id="video-container">
-    <div id="player"></div>
-    <button id="skip-btn" onclick="skipClip()">SKIP TRANSMISSION</button>
-</div>
-
-<audio id="bg-music" loop>
-    <source src="https://www.soundboard.com/handler/DownLoadTrack.ashx?cliptitle=Star+Wars+Main+Theme&filename=mt/MTI0Nzk2NDgxMjQ3OTY4_y3X_2fK_2bR38o.mp3" type="audio/mpeg">
-</audio>
+    <audio id="bg-music" loop>
+        <source src="https://www.soundboard.com/handler/DownLoadTrack.ashx?cliptitle=Star+Wars+Main+Theme&filename=mt/MTI0Nzk2NDgxMjQ3OTY4_y3X_2fK_2bR38o.mp3" type="audio/mpeg">
+    </audio>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-const state = {
-    level: 1, health: 100, phase: 'SWARM', kills: 0, totalLvlKills: 0,
-    isRapidFire: false, canRapidFire: true, lastDamage: Date.now()
+let scene, camera, renderer, clock, falcon, deathStar, starField, music, ytPlayer;
+let lasers = [], drones = [], enemyLasers = [], cores = [];
+let state = { 
+    level: 1, kills: 0, lvlKills: 0, health: 100, 
+    speed: 6000, shake: 0, phase: 'SWARM', active: false 
 };
-
-const vids = { 10:'D5iEO8n6I3w', 20:'lsAEdblcqU4', 30:'Xkm9h0S4wr8', 40:'d3nuk8UI76M', 50:'n3DHDXAzoBA', 60:'ijTAJ-JRiac', 70:'9MDNJSv6Bpw', 80:'wXrwWnu7agk', 90:'8kpHK4YIwY4', 100:'ErjtFtRi9Xo' };
-
-let scene, camera, renderer, falcon, deathStar, ytPlayer, starField, music;
-let lasers = [], enemyLasers = [], drones = [], cores = [];
-let gameActive = false;
+let mouse = { x: 0, y: 0 };
+const vids = { 10:'D5iEO8n6I3w', 20:'lsAEdblcqU4', 30:'Xkm9h0S4wr8', 40:'d3nuk8UI76M', 50:'n3DHDXAzoBA' };
 
 function onYouTubeIframeAPIReady() {
-    ytPlayer = new YT.Player('player', {
+    ytPlayer = new YT.Player('vid-frame', {
         height: '100%', width: '100%',
         events: { 'onStateChange': (e) => { if(e.data === YT.PlayerState.ENDED) skipClip(); } }
     });
 }
 
-function startGame() {
-    document.getElementById('landing-page').style.display = 'none';
-    document.getElementById('hud').style.display = 'flex';
+function bootSystem() {
+    document.getElementById('menu-screen').style.display = 'none';
+    document.getElementById('hud').style.display = 'block';
     music = document.getElementById('bg-music');
+    music.volume = 0.5;
     music.play();
-    initGame();
+    init();
 }
 
-function initGame() {
+function init() {
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 2000000);
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    scene.fog = new THREE.FogExp2(0x000000, 0.00002);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 1000000);
+    renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Starfield
+    // Starfield Warp
     const starGeo = new THREE.BufferGeometry();
-    const starCoords = [];
-    for(let i=0; i<15000; i++) starCoords.push((Math.random()-0.5)*1000000, (Math.random()-0.5)*1000000, (Math.random()-0.5)*1000000);
-    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-    starField = new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 500}));
+    const pos = [];
+    for(let i=0; i<15000; i++) pos.push((Math.random()-0.5)*200000, (Math.random()-0.5)*200000, (Math.random()-0.5)*400000);
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    starField = new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xffffff, size:200}));
     scene.add(starField);
 
-    createFalcon();
-    createDeathStar();
-    
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const sun = new THREE.DirectionalLight(0xffffff, 1);
-    sun.position.set(5, 5, 5);
-    scene.add(sun);
-
-    window.addEventListener('mousemove', (e) => {
-        if(!gameActive) return;
-        falcon.position.x = (e.clientX - window.innerWidth/2) * 60;
-        falcon.position.y = -(e.clientY - window.innerHeight/2) * 60;
-        camera.lookAt(falcon.position.x, falcon.position.y, falcon.position.z - 100000);
-    });
-
-    window.addEventListener('mousedown', () => { if(gameActive) fireBlue(); });
-    
-    gameActive = true;
-    spawnSwarm();
-    animate();
-}
-
-function createFalcon() {
+    // Millennium Falcon
     falcon = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(1500, 1500, 400, 32), new THREE.MeshPhongMaterial({color: 0xcccccc}));
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(400, 400, 100, 32), new THREE.MeshStandardMaterial({color:0xaaaaaa, metalness:0.8}));
     body.rotation.x = Math.PI/2;
     falcon.add(body);
     scene.add(falcon);
-}
 
-function createDeathStar() {
-    deathStar = new THREE.Mesh(new THREE.SphereGeometry(150000, 32, 32), new THREE.MeshPhongMaterial({color: 0x333333}));
-    deathStar.position.z = -600000;
-    scene.add(deathStar);
+    // Death Star (Ready for Boss phase)
+    deathStar = new THREE.Mesh(new THREE.SphereGeometry(40000, 32, 32), new THREE.MeshStandardMaterial({color:0x222222}));
+    deathStar.position.z = -150000;
     deathStar.visible = false;
+    scene.add(deathStar);
+
+    scene.add(new THREE.HemisphereLight(0x00ffff, 0x000000, 1));
+    
+    window.addEventListener('mousemove', e => {
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    });
+
+    document.getElementById('fire-btn').addEventListener('mousedown', shoot);
+    
+    state.active = true;
+    clock = new THREE.Clock();
+    spawnTies();
+    animate();
 }
 
-function fireBlue() {
-    const l = new THREE.Mesh(new THREE.CylinderGeometry(80, 80, 4000), new THREE.MeshBasicMaterial({color: 0x00ffff}));
-    l.position.copy(falcon.position);
-    l.rotation.x = Math.PI/2;
+function shoot() {
+    const l = new THREE.Mesh(new THREE.BoxGeometry(40, 40, 2000), new THREE.MeshBasicMaterial({color:0x00ffff}));
+    l.position.copy(falcon.position).z -= 500;
     scene.add(l);
     lasers.push(l);
-    if(state.isRapidFire) {
-        setTimeout(() => {
-            const l2 = l.clone(); scene.add(l2); lasers.push(l2);
-        }, 100);
-    }
 }
 
-function animate() {
-    requestAnimationFrame(animate);
-    if(!gameActive) return;
-
-    starField.position.z += 3000;
-    if(starField.position.z > 500000) starField.position.z = 0;
-
-    // Laser Movement & Hit Detection
-    lasers.forEach((l, i) => {
-        l.position.z -= 18000;
-        if(l.position.z < -800000) { scene.remove(l); lasers.splice(i, 1); }
-        
-        drones.forEach(t => {
-            if(l.position.distanceTo(t.position) < 6000) {
-                state.kills++;
-                state.totalLvlKills++;
-                document.getElementById('cnt').innerText = state.kills;
-                document.getElementById('lvl-kills').innerText = state.totalLvlKills;
-                t.position.z = -400000; // Reset TIE
-                if(state.kills >= 100 && state.phase === 'SWARM') startBoss();
-            }
-        });
-
-        cores.forEach((c, ci) => {
-            if(l.position.distanceTo(c.position) < 8000) {
-                scene.remove(c); cores.splice(ci, 1);
-                if(cores.length === 0) levelUp();
-            }
-        });
-    });
-
-    // Enemy AI
-    drones.forEach(t => {
-        t.position.z += 2000;
-        if(t.position.z > 20000) t.position.z = -400000;
-    });
-
-    renderer.render(scene, camera);
-}
-
-function spawnSwarm() {
+function spawnTies() {
     for(let i=0; i<12; i++) {
-        const tie = new THREE.Mesh(new THREE.BoxGeometry(3000, 3000, 3000), new THREE.MeshPhongMaterial({color: 0x666666}));
-        tie.position.set((Math.random()-0.5)*150000, (Math.random()-0.5)*150000, -300000 - Math.random()*200000);
+        const tie = new THREE.Mesh(new THREE.BoxGeometry(800, 800, 800), new THREE.MeshPhongMaterial({color:0x444444}));
+        resetTie(tie);
         scene.add(tie);
         drones.push(tie);
     }
 }
 
+function resetTie(tie) {
+    tie.position.set((Math.random()-0.5)*60000, (Math.random()-0.5)*40000, falcon.position.z - (40000 + Math.random()*60000));
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    if(!state.active) return;
+    const dt = clock.getDelta();
+
+    // Movement & Hyperdrive FOV
+    falcon.position.x = THREE.MathUtils.lerp(falcon.position.x, mouse.x * 30000, 0.1);
+    falcon.position.y = THREE.MathUtils.lerp(falcon.position.y, mouse.y * 20000, 0.1);
+    falcon.position.z -= state.speed * dt;
+    
+    camera.fov = THREE.MathUtils.lerp(camera.fov, 85 + (state.speed/2000), 0.05);
+    camera.updateProjectionMatrix();
+    camera.position.lerp(falcon.position.clone().add(new THREE.Vector3(0, 800, 3000)), 0.1);
+    camera.lookAt(falcon.position.x, falcon.position.y, falcon.position.z - 5000);
+
+    // Starfield Warp
+    starField.position.z = falcon.position.z % 100000;
+
+    // Combat Logic
+    lasers.forEach((l, i) => {
+        l.position.z -= 40000 * dt;
+        if(l.position.distanceTo(falcon.position) > 100000) { scene.remove(l); lasers.splice(i,1); }
+        
+        drones.forEach(d => {
+            if(l.position.distanceTo(d.position) < 2000) {
+                state.kills++; state.lvlKills++;
+                document.getElementById('cnt').innerText = state.kills;
+                document.getElementById('lvl-kills').innerText = state.lvlKills;
+                resetTie(d);
+                state.shake = 5;
+                if(state.kills >= 100 && state.phase === 'SWARM') startBoss();
+            }
+        });
+
+        cores.forEach((c, ci) => {
+            if(l.position.distanceTo(c.position) < 4000) {
+                scene.remove(c); cores.splice(ci,1);
+                if(cores.length === 0) levelUp();
+            }
+        });
+    });
+
+    drones.forEach(d => {
+        if(d.position.z > falcon.position.z) resetTie(d);
+    });
+
+    if(state.shake > 0) {
+        camera.position.x += (Math.random()-0.5)*state.shake;
+        state.shake *= 0.9;
+    }
+
+    renderer.render(scene, camera);
+}
+
 function startBoss() {
     state.phase = 'BOSS';
     deathStar.visible = true;
+    deathStar.position.z = falcon.position.z - 80000;
     drones.forEach(d => scene.remove(d)); drones = [];
     for(let i=0; i<state.level; i++) {
-        const c = new THREE.Mesh(new THREE.SphereGeometry(4000), new THREE.MeshBasicMaterial({color: 0xff0000}));
-        c.position.set((Math.random()-0.5)*120000, (Math.random()-0.5)*120000, deathStar.position.z + 10000);
+        const c = new THREE.Mesh(new THREE.SphereGeometry(1500), new THREE.MeshBasicMaterial({color:0xff0000}));
+        c.position.set((Math.random()-0.5)*20000, (Math.random()-0.5)*20000, deathStar.position.z + 2000);
         scene.add(c);
         cores.push(c);
     }
 }
 
 function levelUp() {
-    gameActive = false;
+    state.active = false;
     music.pause();
     if(vids[state.level]) {
         document.getElementById('video-container').style.display = 'block';
@@ -230,32 +223,15 @@ function skipClip() {
 }
 
 function nextSector() {
-    state.level++;
-    state.kills = 0;
-    state.totalLvlKills = 0;
+    state.level++; state.kills = 0; state.lvlKills = 0;
     state.phase = 'SWARM';
     deathStar.visible = false;
     document.getElementById('lvl').innerText = state.level;
     document.getElementById('cnt').innerText = "0";
     document.getElementById('lvl-kills').innerText = "0";
-    if(state.level >= 50) document.getElementById('rapid-fire-btn').style.display = 'block';
-    spawnSwarm();
+    spawnTies();
     music.play();
-    gameActive = true;
-}
-
-function activateRapidFire() {
-    if(!state.canRapidFire) return;
-    state.isRapidFire = true;
-    state.canRapidFire = false;
-    setTimeout(() => { state.isRapidFire = false; setTimeout(() => state.canRapidFire = true, 5000); }, 10000);
-}
-
-function respawn() {
-    state.health = 100;
-    document.getElementById('shd').innerText = "100";
-    document.getElementById('game-over').style.display = 'none';
-    gameActive = true;
+    state.active = true;
 }
 </script>
 </body>
