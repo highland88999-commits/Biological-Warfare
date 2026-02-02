@@ -3,254 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ARTEMIS | DEFINITIVE BUILD</title>
+    <title>TITAN FALL: ARTEMIS v9.8</title>
     <style>
-        body { margin:0; overflow:hidden; background:#000; font-family:'Courier New',monospace; touch-action:none; color:#0ff; }
-        #hud { position:absolute; inset:0; pointer-events:none; z-index:20; display:none; }
-        .top-bar { display:flex; justify-content:space-between; padding:15px; background:rgba(0,0,0,0.8); border-bottom:2px solid #0ff; font-size:1.1em; }
-        .btn-container { position:absolute; bottom:50px; width:100%; display:flex; justify-content:space-around; pointer-events:none; }
-        .ctrl-btn { width:120px; height:120px; border-radius:50%; pointer-events:auto; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:bold; cursor:pointer; font-size:14px; border:6px solid; text-align:center; box-shadow: 0 0 20px currentColor; -webkit-user-select:none; }
-        #seeker-btn { color:#f00; border-color:#f00; background:rgba(255,0,0,0.1); }
-        #fire-btn { color:#0ff; border-color:#0ff; background:rgba(0,255,255,0.1); }
-        #joystick-base { position:absolute; bottom:180px; left:50%; transform:translateX(-50%); width:100px; height:100px; background:rgba(255,255,255,0.1); border-radius:50%; display:none; pointer-events:auto; z-index:30; border: 1px solid rgba(255,255,255,0.3); }
-        #joystick-knob { position:absolute; top:30px; left:30px; width:40px; height:40px; background:#fff; border-radius:50%; opacity:0.6; }
-        .screen { position:absolute; inset:0; background:#000; z-index:5000; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
-        #pal-img { width: 250px; border-radius: 50%; border: 4px solid #f00; box-shadow: 0 0 30px #f00; margin-bottom: 25px; }
-        .start-btn { padding:20px 60px; background:transparent; color:#0ff; border:3px solid #0ff; font-weight:bold; font-size:22px; cursor:pointer; letter-spacing:3px; box-shadow: 0 0 15px #0ff; }
-        #video-container { position:absolute; inset:0; background:#000; display:none; z-index:6000; }
-        #skip-btn { position:absolute; bottom:40px; right:40px; padding:15px 40px; background:#0ff; border:none; font-weight:bold; cursor:pointer; z-index:6100; color:#000; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action:none; }
+        
+        /* TWO-STEP LANDING */
+        #video-container { position: absolute; inset:0; pointer-events: none; z-index: 100; opacity: 0; transition: opacity 2s; }
+        iframe { width: 100vw; height: 100vh; pointer-events: none; transform: scale(1.4); }
+        
+        .ui-screen {
+            position: absolute; inset: 0; z-index: 110; color: #0ff; text-align: center;
+            background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        
+        .glitch-text { font-size: 3em; letter-spacing: 15px; animation: pulse 2s infinite; text-shadow: 0 0 20px #0ff; }
+        button { 
+            padding: 20px 40px; background: none; border: 2px solid #0ff; color: #0ff; 
+            font-family: inherit; font-size: 1.2em; cursor: pointer; margin-top: 30px;
+            box-shadow: 0 0 10px #0ff;
+        }
+
+        /* GAME HUD */
+        #hud { position:absolute; inset:0; pointer-events:none; z-index:20; display:none; color:#0ff; }
+        .top-bar { display:flex; justify-content:space-between; padding:15px; background:rgba(0,0,0,0.8); border-bottom:2px solid #0ff; }
+        .ctrl-btn { position:absolute; border-radius:50%; pointer-events:auto; display:flex; align-items:center; justify-content:center; font-weight:bold; z-index:30; cursor:pointer; font-size:12px; }
+        #fire-btn { bottom:40px; right:40px; width:110px; height:110px; background:rgba(0,255,255,0.1); border:4px solid #0ff; color:#0ff; }
+        #seeker-btn { bottom:40px; left:40px; width:90px; height:90px; background:rgba(255,0,0,0.1); border:4px solid #f00; color:#f00; }
+        #surge-btn { bottom:150px; left:40px; width:70px; height:70px; border:3px solid #0af; color:#0af; overflow:hidden; }
+        #surge-cooldown { position:absolute; bottom:0; left:0; width:100%; height:0%; background:rgba(0,150,255,0.4); }
+
+        #fade-layer { position: absolute; inset: 0; background: #000; z-index: 200; pointer-events: none; opacity: 0; transition: opacity 1.5s; }
+        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
 </head>
 <body>
 
-    <div id="landing-1" class="screen">
-        <img id="pal-img" src="https://static.wikia.nocookie.net/starwars/images/d/d8/Emperor_Sidious.png">
-        <h1 style="color:#f00; letter-spacing:8px; font-size:2.5em; text-shadow: 0 0 20px #f00;">UNLIMITED POWER</h1>
-        <button class="start-btn" onclick="engageProtocol()">ENGAGE PROTOCOL</button>
+<div id="fade-layer"></div>
+
+<div id="screen-1" class="ui-screen">
+    <h1 class="glitch-text">TITAN FALL</h1>
+    <button onclick="engagePreload()">ENGAGE PRELOAD</button>
+</div>
+
+<div id="screen-2" class="ui-screen" style="display:none; background:transparent;">
+    <div id="video-container"><div id="player"></div></div>
+    <div style="z-index:120;">
+        <h1 class="glitch-text" style="font-size: 2em;">ARTEMIS</h1>
+        <button onclick="launchGame()">CONTINUE TO GAME</button>
     </div>
+</div>
 
-    <div id="landing-2" class="screen" style="display:none;">
-        <h2 style="color:#0ff; letter-spacing:5px;">SYSTEMS ONLINE</h2>
-        <p style="color:#fff;">COCKPIT NEURAL LINK ESTABLISHED</p>
-        <button class="start-btn" onclick="bootSystem()">ENTER COCKPIT</button>
-    </div>
-
-    <div id="hud">
-        <div class="top-bar">
-            <div>SHIELD: <span id="shd">100</span>% | SECTOR: <span id="lvl">1</span></div>
-            <div>COMBO: <span id="combo">0</span> | SCORE: <span id="score">0</span></div>
-        </div>
-        <div id="joystick-base"><div id="joystick-knob"></div></div>
-        <div class="btn-container">
-            <div id="seeker-btn" class="ctrl-btn" onclick="fireSeeker()">SEEKER<br><small id="seeker-status" style="font-size:10px;">Ready...</small></div>
-            <div id="fire-btn" class="ctrl-btn">FIRE</div>
-        </div>
-    </div>
-
-    <div id="video-container">
-        <div id="vid-frame" style="width:100%; height:100%;"></div>
-        <button id="skip-btn" onclick="skipClip()">SKIP TRANSMISSION</button>
-    </div>
-
-    <audio id="bg-music" loop><source src="https://www.soundboard.com/handler/DownLoadTrack.ashx?cliptitle=Star+Wars+Main+Theme&filename=mt/MTI0Nzk2NDgxMjQ3OTY4_y3X_2fK_2bR38o.mp3" type="audio/mpeg"></audio>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://www.youtube.com/iframe_api"></script>
+<div id="hud">
+    <div class="top-bar"><div>SHIELD: <span id="shield-val">100</span>% | SCORE: <span id="score-val">0</span></div></div>
+    <div id="fire-btn" class="ctrl-btn">CANNON</div>
+    <div id="seeker-btn" class="ctrl-btn">SEEKER</div>
+    <div id="surge-btn" class="ctrl-btn"><div id="surge-cooldown"></div><span style="z-index:2">SURGE</span></div>
+</div>
 
 <script>
-let scene, camera, renderer, clock, falcon, deathStar, music, ytPlayer, gridFloor;
-let lasers = [], drones = [], missiles = [], cores = [];
-let state = { level: 1, score: 0, combo: 0, health: 100, speed: 9800, active: false, seekerReady: true, phase: 'SWARM', shake: 0 };
-let joyPos = { x: 0, y: 0 };
+let ytPlayer, gameActive = false;
+const introId = 's0HU_j4fRkg'; 
+const mainLoopId = 'hS57I6swXcc';
+const gameplayMusic = 'PLeMER9rHllyCIchd-ZGKTzAnAXYx4FSOz'; // New playlist
 
-// Scene progression mapping
-const vids = { 1:'D5iEO8n6I3w', 2:'lsAEdblcqU4', 3:'Xkm9h0S4wr8', 4:'d3nuk8UI76M', 5:'n3DHDXAzoBA', 6:'D5iEO8n6I3w', 7:'lsAEdblcqU4', 8:'Xkm9h0S4wr8', 9:'d3nuk8UI76M', 10:'n3DHDXAzoBA' };
+function engagePreload() {
+    document.getElementById('screen-1').style.display = 'none';
+    document.getElementById('screen-2').style.display = 'flex';
+    document.getElementById('video-container').style.opacity = '1';
+    onYouTubeIframeAPIReady(); // Unlock sound on first click
+}
 
 function onYouTubeIframeAPIReady() {
-    ytPlayer = new YT.Player('vid-frame', { height: '100%', width: '100%', events: { 'onStateChange': (e) => { if(e.data === YT.PlayerState.ENDED) skipClip(); } } });
+    ytPlayer = new YT.Player('player', {
+        height: '100%', width: '100%', videoId: introId,
+        playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1, 'rel': 0 },
+        events: { 'onReady': (e) => { e.target.unMute(); e.target.playVideo(); }, 'onStateChange': onPlayerStateChange }
+    });
 }
 
-function engageProtocol() {
-    document.getElementById('landing-1').style.display = 'none';
-    document.getElementById('landing-2').style.display = 'flex';
-    music = document.getElementById('bg-music');
-    music.play().catch(() => {});
+function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.ENDED && !gameActive) {
+        ytPlayer.loadVideoById({ videoId: mainLoopId, startSeconds: 65 });
+    }
 }
+
+function launchGame() {
+    document.getElementById('fade-layer').style.opacity = 1;
+    setTimeout(() => {
+        document.getElementById('screen-2').style.display = 'none';
+        document.getElementById('hud').style.display = 'block';
+        document.getElementById('fade-layer').style.opacity = 0;
+        ytPlayer.loadPlaylist({ list: gameplayMusic });
+        bootSystem();
+        gameActive = true;
+    }, 1000);
+}
+
+// GAME LOGIC
+let scene, camera, renderer, clock, playerShip, surgeMesh;
+let chunks = [], lasers = [], drones = [], missiles = [], items = [], particles = [], eLasers = [];
+let state = { score: 0, speed: 7000, shield: 100, surgeActive: false, surgeCooldown: 0 };
+let joy = { active: false, x: 0, y: 0, sx: 0, sy: 0 };
 
 function bootSystem() {
-    document.getElementById('landing-2').style.display = 'none';
-    document.getElementById('hud').style.display = 'block';
-    document.getElementById('joystick-base').style.display = 'block';
-    init();
-}
-
-function init() {
     scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x000510, 0.00001);
     camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 1000000);
     renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-
-    gridFloor = new THREE.GridHelper(1000000, 250, 0x00ffff, 0x002222);
-    gridFloor.position.y = -5000;
-    scene.add(gridFloor);
-
-    for(let i=0; i<80; i++) {
-        const h = 20000 + Math.random()*50000;
-        const p = new THREE.Mesh(new THREE.BoxGeometry(4000, h, 4000), new THREE.MeshStandardMaterial({color:0x050505}));
-        p.position.set((Math.random()-0.5)*180000, h/2 - 5000, -Math.random()*800000);
-        scene.add(p);
-    }
-
-    falcon = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(600, 600, 150, 32), new THREE.MeshStandardMaterial({color:0xcccccc, metalness:0.8}));
-    body.rotation.x = Math.PI/2;
-    falcon.add(body);
-    scene.add(falcon);
-
-    deathStar = new THREE.Mesh(new THREE.SphereGeometry(45000, 32, 32), new THREE.MeshStandardMaterial({color:0x1a1a1a}));
-    deathStar.visible = false;
-    scene.add(deathStar);
-
-    scene.add(new THREE.HemisphereLight(0x00ffff, 0x000000, 1.8));
-    setupJoystick();
-
-    document.getElementById('fire-btn').addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); });
     
-    state.active = true;
+    // STARFIELD
+    const starGeo = new THREE.BufferGeometry();
+    const starPos = [];
+    for (let i = 0; i < 12000; i++) starPos.push((Math.random()-0.5)*300000, (Math.random()-0.5)*200000, (Math.random()-0.5)*400000);
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 150})));
+
+    scene.add(new THREE.HemisphereLight(0x00ffff, 0xff00ff, 2));
+
+    playerShip = createFalcon();
+    scene.add(playerShip);
+    surgeMesh = new THREE.Mesh(new THREE.TorusGeometry(3500, 80, 16, 100), new THREE.MeshBasicMaterial({color: 0x00aaff, transparent:true, opacity:0}));
+    surgeMesh.rotation.x = Math.PI/2;
+    playerShip.add(surgeMesh);
+
+    for(let i = 0; i < 15; i++) spawnChunk(i * -20000);
+    setupControls();
     clock = new THREE.Clock();
-    spawnEnemies();
     animate();
+    setInterval(spawnDrone, 1500);
 }
 
-function setupJoystick() {
-    const base = document.getElementById('joystick-base');
-    const knob = document.getElementById('joystick-knob');
-    const move = (e) => {
-        const t = e.touches ? e.touches[0] : e;
-        const r = base.getBoundingClientRect();
-        let dx = t.clientX - (r.left + r.width/2);
-        let dy = t.clientY - (r.top + r.height/2);
-        const d = Math.min(40, Math.sqrt(dx*dx + dy*dy));
-        const a = Math.atan2(dy, dx);
-        joyPos.x = (Math.cos(a) * d) / 40;
-        joyPos.y = -(Math.sin(a) * d) / 40;
-        knob.style.transform = `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px)`;
-    };
-    base.addEventListener('touchmove', (e) => { e.preventDefault(); move(e); });
-    base.addEventListener('touchend', () => { joyPos = {x:0, y:0}; knob.style.transform = 'translate(0,0)'; });
+function createFalcon() {
+    const g = new THREE.Group();
+
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(300, 300, 80, 32), new THREE.MeshStandardMaterial({color:0xcccccc, metalness:0.85, roughness:0.25}));
+    g.add(body);
+
+    const prongGeo = new THREE.BoxGeometry(120, 70, 380);
+    g.add(new THREE.Mesh(prongGeo, body.material).position.set(-140, 0, 460));
+    g.add(new THREE.Mesh(prongGeo, body.material).position.set(140, 0, 460));
+
+    g.add(new THREE.Mesh(new THREE.SphereGeometry(60, 16, 16), new THREE.MeshStandardMaterial({color:0x111111})).position.set(480, 0, 240));
+
+    const glow = new THREE.Mesh(
+        new THREE.TorusGeometry(380, 18, 6, 32, Math.PI*1.8),
+        new THREE.MeshBasicMaterial({color:0x00ccff})
+    );
+    glow.rotation.x = Math.PI/2; glow.position.z = -60;
+    g.add(glow);
+
+    g.scale.setScalar(0.5);
+    g.position.y = 1400;
+    return g;
 }
 
-function shoot() {
-    const l = new THREE.Mesh(new THREE.BoxGeometry(60, 60, 4000), new THREE.MeshBasicMaterial({color:0x00ffff}));
-    l.position.copy(falcon.position).z -= 1200;
-    scene.add(l);
-    lasers.push(l);
-}
+function spawnChunk(z) {
+    const chunk = new THREE.Group();
+    const floor = new THREE.GridHelper(60000, 15, 0x00ffff, 0x002222);
+    floor.position.y = -2000;
+    chunk.add(floor);
 
-function fireSeeker() {
-    if(!state.seekerReady || drones.length === 0) return;
-    state.seekerReady = false;
-    document.getElementById('seeker-status').innerText = "LOCKING...";
-    const m = new THREE.Mesh(new THREE.SphereGeometry(500), new THREE.MeshBasicMaterial({color:0xff0000}));
-    m.position.copy(falcon.position);
-    scene.add(m);
-    missiles.push({mesh: m, target: drones[0]});
-    setTimeout(() => { state.seekerReady = true; document.getElementById('seeker-status').innerText = "Ready..."; }, 5000);
-}
-
-function spawnEnemies() {
-    drones.forEach(d => scene.remove(d)); drones = [];
-    for(let i=0; i<25; i++) {
-        const tie = new THREE.Mesh(new THREE.BoxGeometry(2200, 2200, 2200), new THREE.MeshPhongMaterial({color:0x222222}));
-        resetTie(tie);
-        scene.add(tie);
-        drones.push(tie);
+    // Buildings on sides only (no in player path)
+    for(let i=0; i<10; i++) {
+        const side = Math.random() > 0.5 ? 1 : -1;
+        const h = 8000 + Math.random()*30000;
+        const b = new THREE.Mesh(new THREE.BoxGeometry(5000, h, 6000), new THREE.MeshStandardMaterial({color:0x050505}));
+        b.position.set(side * (25000 + Math.random()*15000), h/2 - 2000, (Math.random()-0.5)*20000);
+        chunk.add(b);
     }
-}
-
-function resetTie(tie) {
-    tie.position.set((Math.random()-0.5)*160000, (Math.random()-0.5)*70000, falcon.position.z - (150000 + Math.random()*200000));
+    chunk.position.z = z;
+    scene.add(chunk);
+    chunks.push(chunk);
 }
 
 function animate() {
     requestAnimationFrame(animate);
-    if(!state.active) return;
     const dt = clock.getDelta();
 
-    falcon.position.x += joyPos.x * 70000 * dt;
-    falcon.position.y += joyPos.y * 60000 * dt;
-    falcon.position.z -= state.speed * dt;
-    gridFloor.position.z = falcon.position.z;
+    playerShip.position.x += joy.x * 25000 * dt;
+    playerShip.position.y += joy.y * 20000 * dt;
+    playerShip.position.z -= state.speed * dt;
 
-    camera.position.lerp(falcon.position.clone().add(new THREE.Vector3(0, 3000, 8000)), 0.1);
-    camera.lookAt(falcon.position.x, falcon.position.y, falcon.position.z - 20000);
+    // Floor collision (bounce + damage)
+    if (playerShip.position.y < -1800) {
+        playerShip.position.y = -1700;
+        joy.y = 0.5; // upward shove
+        state.shield -= 10;
+        state.speed *= 0.8; // slowdown punishment
+        document.getElementById('shield-val').innerText = Math.max(0, state.shield);
+    }
 
-    lasers.forEach((l, i) => {
-        l.position.z -= 100000 * dt;
-        drones.forEach(d => {
-            if(l.position.distanceTo(d.position) < 8000) {
-                state.score += 300; state.combo++; updateHUD(); resetTie(d);
-                if(state.score >= 10000 && state.phase === 'SWARM') startBoss();
+    // Building side collision (bounce + damage)
+    if (Math.abs(playerShip.position.x) > 13000) {
+        playerShip.position.x = playerShip.position.x > 0 ? 12900 : -12900;
+        joy.x = playerShip.position.x > 0 ? -0.5 : 0.5;
+        state.shield -= 10;
+        document.getElementById('shield-val').innerText = Math.max(0, state.shield);
+    }
+
+    if(state.surgeCooldown > 0) {
+        state.surgeCooldown -= dt;
+        document.getElementById('surge-cooldown').style.height = (state.surgeCooldown / 60 * 100) + "%";
+    }
+
+    if(state.surgeActive) {
+        surgeMesh.rotateZ(dt * 8);
+        drones.forEach((d, i) => {
+            if(d.position.distanceTo(playerShip.position) < 4000) {
+                createExplosion(d.position);
+                scene.remove(d); drones.splice(i, 1);
+                state.score += 1000;
             }
         });
-        cores.forEach((c, ci) => {
-            if(l.position.distanceTo(c.position) < 10000) {
-                scene.remove(c); cores.splice(ci, 1); state.shake = 50;
-                if(cores.length === 0) levelUp();
-            }
-        });
-    });
+    }
 
-    missiles.forEach((m, i) => {
-        m.mesh.position.lerp(m.target.position, 0.2);
-        if(m.mesh.position.distanceTo(m.target.position) < 4000) {
-            resetTie(m.target); scene.remove(m.mesh); missiles.splice(i, 1);
-            state.score += 1000; updateHUD();
-        }
-    });
-
-    drones.forEach(d => {
-        if(d.position.z > falcon.position.z + 10000) resetTie(d);
-        if(d.position.distanceTo(falcon.position) < 5000) {
-            state.health -= 25; state.shake = 60; updateHUD(); resetTie(d);
-            if(state.health <= 0) location.reload();
-        }
-    });
-
-    if(state.shake > 0) { camera.position.x += (Math.random()-0.5)*state.shake; state.shake *= 0.85; }
+    chunks.forEach(c => { if(c.position.z > playerShip.position.z + 20000) c.position.z -= 20000 * chunks.length; });
+    
+    document.getElementById('score-val').innerText = Math.floor(state.score += state.speed*dt*0.1);
+    document.getElementById('shield-val').innerText = Math.max(0, state.shield);
+    
+    camera.position.lerp(playerShip.position.clone().add(new THREE.Vector3(0, 2500, 9000)), 0.1);
+    camera.lookAt(playerShip.position.x, playerShip.position.y, playerShip.position.z - 5000);
     renderer.render(scene, camera);
 }
 
-function startBoss() {
-    state.phase = 'BOSS'; deathStar.visible = true;
-    deathStar.position.z = falcon.position.z - 200000;
-    for(let i=0; i<5; i++) {
-        const c = new THREE.Mesh(new THREE.SphereGeometry(4000), new THREE.MeshBasicMaterial({color:0xff0000}));
-        c.position.set((Math.random()-0.5)*60000, (Math.random()-0.5)*50000, deathStar.position.z + 10000);
-        scene.add(c); cores.push(c);
-    }
+function spawnDrone() {
+    const d = new THREE.Group(); // TIE Fighter
+    d.add(new THREE.Mesh(new THREE.SphereGeometry(200, 16, 16), new THREE.MeshStandardMaterial({color:0x111111})));
+    const wingGeo = new THREE.CylinderGeometry(400, 400, 10, 6);
+    d.add(new THREE.Mesh(wingGeo, new THREE.MeshStandardMaterial({color:0x222222})).position.set(-300, 0, 0).rotation.z = Math.PI/2);
+    d.add(new THREE.Mesh(wingGeo, new THREE.MeshStandardMaterial({color:0x222222})).position.set(300, 0, 0).rotation.z = Math.PI/2);
+    d.position.set((Math.random()-0.5)*40000, (Math.random()-0.5)*15000, playerShip.position.z - 60000);
+    scene.add(d); drones.push(d);
 }
 
-function levelUp() {
-    state.active = false; music.pause();
-    document.getElementById('video-container').style.display = 'block';
-    ytPlayer.loadVideoById(vids[state.level] || 'n3DHDXAzoBA');
+function setupControls() {
+    const fire = () => shoot(false);
+    const seeker = () => shoot(true);
+    const surge = () => {
+        if(state.surgeCooldown <= 0) {
+            state.surgeActive = true; state.surgeCooldown = 60;
+            surgeMesh.material.opacity = 0.8;
+            setTimeout(() => { state.surgeActive = false; surgeMesh.material.opacity = 0; }, 3000);
+        }
+    };
+    document.getElementById('fire-btn').ontouchstart = (e) => { e.preventDefault(); fire(); };
+    document.getElementById('seeker-btn').ontouchstart = (e) => { e.preventDefault(); seeker(); };
+    document.getElementById('surge-btn').ontouchstart = (e) => { e.preventDefault(); surge(); };
+    document.addEventListener('touchstart', e => { if(e.touches[0].clientX < window.innerWidth/2) { joy.active=true; joy.sx=e.touches[0].clientX; joy.sy=e.touches[0].clientY; } });
+    document.addEventListener('touchmove', e => { if(joy.active) { joy.x = (e.touches[0].clientX-joy.sx)/80; joy.y = (joy.sy-e.touches[0].clientY)/80; } });
+    document.addEventListener('touchend', () => { joy.active=false; joy.x=joy.y=0; });
 }
 
-function skipClip() {
-    document.getElementById('video-container').style.display = 'none';
-    ytPlayer.stopVideo();
-    state.level++; state.score = 0; state.health = 100; state.phase = 'SWARM';
-    deathStar.visible = false; updateHUD();
-    document.getElementById('lvl').innerText = state.level;
-    music.play(); state.active = true;
-}
-
-function updateHUD() {
-    document.getElementById('score').innerText = state.score;
-    document.getElementById('combo').innerText = state.combo;
-    document.getElementById('shd').innerText = Math.max(0, state.health);
+function shoot(homing) {
+    const p = new THREE.Mesh(homing ? new THREE.SphereGeometry(400) : new THREE.BoxGeometry(100,100,4000), new THREE.MeshBasicMaterial({color: homing ? 0xff0000 : 0x00ffff}));
+    p.position.copy(playerShip.position).add(new THREE.Vector3(0, 0, -600)); // Ahead
+    p.userData = { vel: new THREE.Vector3(0,0, homing ? -25000 : -50000) };
+    scene.add(p);
+    if(homing) missiles.push(p); else lasers.push(p);
 }
 </script>
 </body>
