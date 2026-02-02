@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ARTEMIS v9.16 | OLYMPUS</title>
+    <title>ARTEMIS v9.17 | GALAXY AT WAR</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action:none; }
         #video-container { position: absolute; inset:0; pointer-events: none; z-index: 100; opacity: 0; transition: opacity 2s; }
@@ -15,12 +15,10 @@
         #hud { position:absolute; inset:0; pointer-events:none; z-index:20; display:none; color:#0ff; }
         .top-bar { display:flex; justify-content:space-between; padding:15px; background:rgba(0,0,0,0.8); border-bottom:2px solid #0ff; }
         
-        /* CIRCULAR RADAR */
         #radar { position: absolute; top: 60px; right: 20px; width: 100px; height: 100px; border: 2px solid #0ff; border-radius: 50%; background: rgba(0,20,20,0.6); pointer-events: auto; }
         #radar-sweep { position: absolute; inset:0; border-radius:50%; background: conic-gradient(from 0deg, rgba(0,255,255,0.2) 0%, transparent 40%); animation: sweep 2s linear infinite; }
         .blip { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #f00; box-shadow: 0 0 5px #f00; }
 
-        /* TACTICAL CONSOLE - BOTTOM RIGHT */
         #console { position: absolute; bottom: 30px; right: 30px; pointer-events: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
         .ctrl-btn { width: 90px; height: 90px; border: 2px solid #0ff; background: rgba(0,0,0,0.7); color: #0ff; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
         #hyper-btn { grid-column: span 2; height: 50px; border-color: #fff; color: #fff; }
@@ -40,7 +38,10 @@
     </div>
 
     <div id="hud">
-        <div class="top-bar"><div>LVL: <span id="lvl-val">1</span> | SHIELD: <span id="shield-val">10</span> | CORES: <span id="core-val">3</span></div></div>
+        <div class="top-bar">
+            <div>LVL: <span id="lvl-val">1</span> | KILLS: <span id="kill-val">0</span>/<span id="target-val">100</span></div>
+            <div>SHIELD: <span id="shield-val">10</span></div>
+        </div>
         <div id="radar"><div id="radar-sweep"></div><div id="blip-container"></div></div>
         <div id="console">
             <div id="hyper-btn" class="ctrl-btn">HYPER DRIVE</div>
@@ -79,9 +80,14 @@ function launchGame() {
 }
 
 // GAME CORE
-let scene, camera, renderer, clock, playerShip, moon, cores = [];
+let scene, camera, renderer, clock, playerShip, bossEntity, cores = [];
 let chunks = [], lasers = [], drones = [], missiles = [];
-let state = { speed: 7500, health: 10, level: 1, coresLeft: 3, isHyper: false };
+let state = { 
+    speed: 7500, health: 10, level: 1, 
+    kills: 0, killTarget: 100, 
+    phase: 'SWARM', // SWARM or BOSS
+    isHyper: false 
+};
 let joy = { active: false, x: 0, y: 0, sx: 0, sy: 0 };
 
 function bootSystem() {
@@ -90,121 +96,98 @@ function bootSystem() {
     renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    
     scene.add(new THREE.HemisphereLight(0x00ffff, 0x000000, 2));
     
-    // PLAYER SHIP (3X SIZE + BLOOM MASK)
     playerShip = createDreadnought();
     scene.add(playerShip);
 
-    createMoonSiege();
     for(let i = 0; i < 15; i++) spawnChunk(i * -20000);
     setupControls();
     clock = new THREE.Clock();
     animate();
-    setInterval(() => { if(!state.isHyper) spawnDrone(); }, 1200);
+    setInterval(() => { if(state.phase === 'SWARM' && !state.isHyper) spawnDrone(); }, 1000);
 }
 
 function createDreadnought() {
     const g = new THREE.Group();
     const mat = new THREE.MeshStandardMaterial({color:0x444444, metalness:1, roughness:0.1});
     const glowMat = new THREE.MeshBasicMaterial({color:0x00ffff, transparent:true, opacity:0.8});
-    
     const body = new THREE.Mesh(new THREE.CylinderGeometry(800, 900, 200, 32), mat);
     body.rotation.x = Math.PI/2;
     g.add(body);
-
-    // Bloom/Glow Parts
     const engine = new THREE.Mesh(new THREE.SphereGeometry(400, 16, 16), glowMat);
     engine.position.z = 100;
     g.add(engine);
-
-    g.scale.setScalar(3); // 3x SIZE
+    g.scale.setScalar(3);
     return g;
-}
-
-function createMoonSiege() {
-    if(moon) scene.remove(moon);
-    cores = [];
-    moon = new THREE.Group();
-    const sphere = new THREE.Mesh(new THREE.SphereGeometry(150000, 32, 32), new THREE.MeshStandardMaterial({color: 0x333333}));
-    moon.add(sphere);
-
-    state.coresLeft = 2 + state.level; // Sequential core count
-    document.getElementById('core-val').innerText = state.coresLeft;
-
-    for(let i=0; i < state.coresLeft; i++) {
-        const c = new THREE.Mesh(new THREE.SphereGeometry(12000, 16, 16), new THREE.MeshBasicMaterial({color: 0xff0000}));
-        const phi = Math.random() * Math.PI * 2;
-        const theta = Math.random() * Math.PI;
-        c.position.setFromSphericalCoords(155000, phi, theta);
-        moon.add(c);
-        cores.push(c);
-    }
-
-    moon.position.set(-200000, 100000, -2000000); // Exiting Corridor Left to find moon
-    scene.add(moon);
 }
 
 function spawnDrone() {
     const d = new THREE.Mesh(new THREE.SphereGeometry(500, 8, 8), new THREE.MeshBasicMaterial({color:0xff0000}));
-    d.position.set((Math.random()-0.5)*150000, (Math.random()-0.5)*60000, playerShip.position.z - 200000);
+    d.position.set((Math.random()-0.5)*150000, (Math.random()-0.5)*60000, playerShip.position.z - 150000);
     scene.add(d); drones.push(d);
 }
 
-function shootMissile() {
-    const m = new THREE.Mesh(new THREE.CapsuleGeometry(300, 1000, 4, 8), new THREE.MeshBasicMaterial({color:0xf0f}));
-    m.position.copy(playerShip.position);
-    m.userData = { target: drones[0] || cores[0] };
-    scene.add(m); missiles.push(m);
-}
+function spawnBoss() {
+    state.phase = 'BOSS';
+    if(bossEntity) scene.remove(bossEntity);
+    bossEntity = new THREE.Group();
+    
+    // Logic for Star Destroyer (lvl 50) or Death Star/Destroyer combo (lvl 100)
+    let bossGeo;
+    if(state.level >= 100) { bossGeo = new THREE.SphereGeometry(150000, 32, 32); } // Death Star
+    else { bossGeo = new THREE.ConeGeometry(80000, 200000, 4); } // Star Destroyer
 
-function updateRadar() {
-    const container = document.getElementById('blip-container');
-    container.innerHTML = '';
-    drones.forEach(d => {
-        const dx = (d.position.x - playerShip.position.x) / 2000;
-        const dz = (d.position.z - playerShip.position.z) / 2000;
-        const b = document.createElement('div');
-        b.className = 'blip';
-        b.style.left = (50 + dx) + 'px';
-        b.style.top = (50 + dz) + 'px';
-        container.appendChild(b);
-    });
+    const body = new THREE.Mesh(bossGeo, new THREE.MeshStandardMaterial({color: 0x666666}));
+    bossEntity.add(body);
+    
+    // Core Logic
+    cores = [];
+    let coreCount = (state.level >= 100) ? 5 : 3; 
+    for(let i=0; i<coreCount; i++) {
+        const c = new THREE.Mesh(new THREE.SphereGeometry(12000, 16, 16), new THREE.MeshBasicMaterial({color: 0xff0000}));
+        c.position.set((Math.random()-0.5)*100000, (Math.random()-0.5)*100000, 20000);
+        bossEntity.add(c);
+        cores.push(c);
+    }
+
+    bossEntity.position.set(0, 0, playerShip.position.z - 500000);
+    scene.add(bossEntity);
 }
 
 function animate() {
     requestAnimationFrame(animate);
     const dt = clock.getDelta();
 
-    // Free steering on left half of screen
     playerShip.position.x += joy.x * 50000 * dt;
     playerShip.position.y += joy.y * 40000 * dt;
     playerShip.position.z -= state.speed * dt;
 
-    // Missile Logic (Seeking)
-    missiles.forEach((m, i) => {
-        if(m.userData.target) {
-            m.lookAt(m.userData.target.getWorldPosition(new THREE.Vector3()));
-            m.translateZ(120000 * dt);
-            if(m.position.distanceTo(m.userData.target.getWorldPosition(new THREE.Vector3())) < 15000) {
-                if(cores.includes(m.userData.target)) {
-                    scene.remove(m.userData.target);
-                    cores.splice(cores.indexOf(m.userData.target), 1);
-                    state.coresLeft--;
-                    document.getElementById('core-val').innerText = state.coresLeft;
-                }
-                scene.remove(m); missiles.splice(i, 1);
+    // Fixed Bullet Speed Logic
+    const bulletSpeed = 150000; 
+    lasers.forEach((p, i) => {
+        p.position.z -= bulletSpeed * dt; 
+        
+        // Swarm Collision
+        drones.forEach((d, di) => {
+            if(p.position.distanceTo(d.position) < 3000) {
+                scene.remove(d); drones.splice(di, 1);
+                scene.remove(p); lasers.splice(i, 1);
+                state.kills++;
+                document.getElementById('kill-val').innerText = state.kills;
+                if(state.kills >= state.killTarget) spawnBoss();
             }
-        } else { m.position.z -= 100000 * dt; }
-    });
+        });
 
-    // Level Advance
-    if(state.coresLeft <= 0) {
-        state.level++;
-        document.getElementById('lvl-val').innerText = state.level;
-        createMoonSiege();
-    }
+        // Boss Core Collision
+        cores.forEach((c, ci) => {
+            if(p.position.distanceTo(c.getWorldPosition(new THREE.Vector3())) < 15000) {
+                scene.remove(c); cores.splice(ci, 1);
+                scene.remove(p); lasers.splice(i, 1);
+                if(cores.length === 0) nextLevel();
+            }
+        });
+    });
 
     updateRadar();
     chunks.forEach(c => { if(c.position.z > playerShip.position.z + 20000) c.position.z -= 20000 * chunks.length; });
@@ -212,6 +195,31 @@ function animate() {
     camera.position.lerp(playerShip.position.clone().add(new THREE.Vector3(0, 8000, 30000)), 0.1);
     camera.lookAt(playerShip.position.x, playerShip.position.y, playerShip.position.z - 15000);
     renderer.render(scene, camera);
+}
+
+function nextLevel() {
+    state.level++;
+    state.kills = 0;
+    state.killTarget = 100 + ((state.level - 1) * 50);
+    state.phase = 'SWARM';
+    scene.remove(bossEntity);
+    document.getElementById('lvl-val').innerText = state.level;
+    document.getElementById('target-val').innerText = state.killTarget;
+    document.getElementById('kill-val').innerText = "0";
+}
+
+function updateRadar() {
+    const container = document.getElementById('blip-container');
+    container.innerHTML = '';
+    drones.forEach(d => {
+        const dx = (d.position.x - playerShip.position.x) / 3000;
+        const dz = (d.position.z - playerShip.position.z) / 3000;
+        const b = document.createElement('div');
+        b.className = 'blip';
+        b.style.left = (50 + dx) + 'px';
+        b.style.top = (50 + dz) + 'px';
+        container.appendChild(b);
+    });
 }
 
 function spawnChunk(z) {
@@ -241,6 +249,13 @@ function shoot() {
     const p = new THREE.Mesh(new THREE.BoxGeometry(300,300,10000), new THREE.MeshBasicMaterial({color: 0x00ffff}));
     p.position.copy(playerShip.position);
     scene.add(p); lasers.push(p);
+}
+
+function shootMissile() {
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(300, 1000, 4, 8), new THREE.MeshBasicMaterial({color:0xf0f}));
+    m.position.copy(playerShip.position);
+    m.userData = { target: drones[0] || cores[0] };
+    scene.add(m); missiles.push(m);
 }
 </script>
 <script src="https://www.youtube.com/iframe_api"></script>
