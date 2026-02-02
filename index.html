@@ -3,50 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ARTEMIS v9.10 | SONIC OVERRIDE</title>
+    <title>ARTEMIS v9.11 | INTERCEPTOR</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action:none; }
-        
-        /* TWO-STEP LANDING UI */
         #video-container { position: absolute; inset:0; pointer-events: none; z-index: 100; opacity: 0; transition: opacity 2s; }
         iframe { width: 100vw; height: 100vh; pointer-events: none; transform: scale(1.4); }
-        
-        .ui-screen {
-            position: absolute; inset: 0; z-index: 110; color: #0ff; text-align: center;
-            background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        
+        .ui-screen { position: absolute; inset: 0; z-index: 110; color: #0ff; text-align: center; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .glitch-text { font-size: 3em; letter-spacing: 15px; animation: pulse 2s infinite; text-shadow: 0 0 20px #0ff; }
-        button { 
-            padding: 20px 40px; background: rgba(0,255,255,0.1); border: 2px solid #0ff; color: #0ff; 
-            font-family: inherit; font-size: 1.2em; cursor: pointer; margin-top: 30px;
-            box-shadow: 0 0 10px #0ff; transition: 0.3s;
-        }
-        button:active { background: #0ff; color: #000; }
-
-        /* GAME HUD */
+        button { padding: 20px 40px; background: rgba(0,255,255,0.1); border: 2px solid #0ff; color: #0ff; font-family: inherit; font-size: 1.2em; cursor: pointer; margin-top: 30px; box-shadow: 0 0 10px #0ff; }
         #hud { position:absolute; inset:0; pointer-events:none; z-index:20; display:none; color:#0ff; }
         .top-bar { display:flex; justify-content:space-between; padding:15px; background:rgba(0,0,0,0.8); border-bottom:2px solid #0ff; }
         .ctrl-btn { position:absolute; border-radius:50%; pointer-events:auto; display:flex; align-items:center; justify-content:center; font-weight:bold; z-index:30; cursor:pointer; font-size:12px; }
-        #fire-btn { bottom:40px; right:40px; width:110px; height:110px; border:4px solid #0ff; color:#0ff; box-shadow: 0 0 15px #0ff; }
-        #seeker-btn { bottom:40px; left:40px; width:90px; height:90px; border:4px solid #f00; color:#f00; box-shadow: 0 0 15px #f00; }
-        #surge-btn { bottom:150px; left:40px; width:70px; height:70px; border:3px solid #0af; color:#0af; overflow:hidden; }
+        #fire-btn { bottom:40px; right:40px; width:110px; height:110px; border:4px solid #0ff; }
+        #seeker-btn { bottom:40px; left:40px; width:90px; height:90px; border:4px solid #f00; color:#f00; }
+        #surge-btn { bottom:150px; left:40px; width:70px; height:70px; border:3px solid #0af; overflow:hidden; }
         #surge-cooldown { position:absolute; bottom:0; left:0; width:100%; height:0%; background:rgba(0,150,255,0.4); }
-
-        #fade-layer { position: absolute; inset: 0; background: #000; z-index: 200; pointer-events: none; opacity: 0; transition: opacity 1.5s; }
+        #fade-layer { position: absolute; inset: 0; background: #000; z-index: 200; pointer-events: none; opacity: 0; transition: opacity 0.5s; }
         @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-
     <div id="fade-layer"></div>
-
     <div id="screen-1" class="ui-screen">
         <h1 class="glitch-text">TITAN FALL</h1>
         <button onclick="engageAudio()">ENABLE AUDIO & VIDEO</button>
     </div>
-
     <div id="screen-2" class="ui-screen" style="display:none; background:transparent;">
         <div id="video-container"><div id="player"></div></div>
         <div style="z-index:120;">
@@ -54,9 +36,8 @@
             <button onclick="launchGame()">INITIALIZE COCKPIT</button>
         </div>
     </div>
-
     <div id="hud">
-        <div class="top-bar"><div>SHIELD: <span id="shield-val">100</span>% | SCORE: <span id="score-val">0</span></div></div>
+        <div class="top-bar"><div>HITS REMAINING: <span id="shield-val">10</span> | SCORE: <span id="score-val">0</span></div></div>
         <div id="fire-btn" class="ctrl-btn">CANNON</div>
         <div id="seeker-btn" class="ctrl-btn">SEEKER</div>
         <div id="surge-btn" class="ctrl-btn"><div id="surge-cooldown"></div><span style="z-index:2">SURGE</span></div>
@@ -64,30 +45,18 @@
 
 <script>
 let ytPlayer, gameActive = false;
-const introId = 's0HU_j4fRkg'; 
-const mainLoopId = 'hS57I6swXcc';
-const newPlaylistId = 'PLeMER9rHllyCIchd-ZGKTzAnAXYx4FSOz';
+const introId = 's0HU_j4fRkg', mainLoopId = 'hS57I6swXcc', playlistId = 'PLeMER9rHllyCIchd-ZGKTzAnAXYx4FSOz';
 
 function engageAudio() {
     document.getElementById('screen-1').style.display = 'none';
     document.getElementById('screen-2').style.display = 'flex';
     document.getElementById('video-container').style.opacity = '1';
-    
     if (!ytPlayer) {
         ytPlayer = new YT.Player('player', {
             height: '100%', width: '100%', videoId: introId,
-            playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1, 'rel': 0 },
-            events: { 
-                'onReady': (e) => { e.target.unMute(); e.target.playVideo(); },
-                'onStateChange': onPlayerStateChange 
-            }
+            playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1 },
+            events: { 'onReady': (e) => { e.target.unMute(); e.target.playVideo(); } }
         });
-    }
-}
-
-function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.ENDED && !gameActive) {
-        ytPlayer.loadVideoById({ videoId: mainLoopId, startSeconds: 65 });
     }
 }
 
@@ -97,25 +66,16 @@ function launchGame() {
         document.getElementById('screen-2').style.display = 'none';
         document.getElementById('hud').style.display = 'block';
         document.getElementById('fade-layer').style.opacity = 0;
-        
-        // SONIC OVERRIDE: Clear previous and load the new playlist
-        ytPlayer.loadPlaylist({ 
-            list: newPlaylistId, 
-            listType: 'playlist',
-            index: 0,
-            startSeconds: 0
-        });
-        ytPlayer.setShuffle(true);
-        
+        ytPlayer.loadPlaylist({ list: playlistId, listType: 'playlist' });
         bootSystem();
         gameActive = true;
     }, 1000);
 }
 
-// GAME CORE (FALCON PROTOCOL)
+// GAME LOGIC
 let scene, camera, renderer, clock, playerShip, surgeMesh;
-let chunks = [], lasers = [], drones = [], missiles = [], items = [], particles = [];
-let state = { score: 0, speed: 7500, shield: 100, surgeActive: false, surgeCooldown: 0 };
+let chunks = [], lasers = [], drones = [], missiles = [], particles = [], enemyLasers = [];
+let state = { score: 0, speed: 7500, health: 10, surgeActive: false, surgeCooldown: 0 };
 let joy = { active: false, x: 0, y: 0, sx: 0, sy: 0 };
 
 function bootSystem() {
@@ -126,64 +86,37 @@ function bootSystem() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     
-    // GENERATIVE STARFIELD
+    // STARFIELD
     const starGeo = new THREE.BufferGeometry();
     const starPos = [];
     for (let i = 0; i < 15000; i++) starPos.push((Math.random()-0.5)*400000, (Math.random()-0.5)*250000, (Math.random()-0.5)*500000);
     starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
     scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 200})));
-
     scene.add(new THREE.HemisphereLight(0x00ffff, 0xff00ff, 2));
 
     playerShip = createFalcon();
     scene.add(playerShip);
-
     surgeMesh = new THREE.Mesh(new THREE.TorusGeometry(3500, 100, 16, 100), new THREE.MeshBasicMaterial({color: 0x00aaff, transparent:true, opacity:0}));
-    surgeMesh.rotation.x = Math.PI/2;
-    playerShip.add(surgeMesh);
+    surgeMesh.rotation.x = Math.PI/2; playerShip.add(surgeMesh);
 
     for(let i = 0; i < 15; i++) spawnChunk(i * -20000);
     setupControls();
     clock = new THREE.Clock();
     animate();
-    setInterval(spawnDrone, 1200);
+    setInterval(spawnDrone, 1500);
 }
 
 function createFalcon() {
     const g = new THREE.Group();
     const mat = new THREE.MeshStandardMaterial({color:0xcccccc, metalness:0.8, roughness:0.2});
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(300, 300, 80, 32), mat);
-    g.add(body);
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(300, 300, 80, 32), mat));
     const prong = new THREE.BoxGeometry(120, 70, 400);
     g.add(new THREE.Mesh(prong, mat).position.set(-150, 0, 480));
     g.add(new THREE.Mesh(prong, mat).position.set(150, 0, 480));
     const cockpit = new THREE.Mesh(new THREE.SphereGeometry(70, 16, 16), new THREE.MeshBasicMaterial({color:0x111111}));
-    cockpit.position.set(450, 0, 200);
-    g.add(cockpit);
-    const glow = new THREE.Mesh(new THREE.TorusGeometry(350, 20, 8, 32, Math.PI*1.8), new THREE.MeshBasicMaterial({color:0x00ccff}));
-    glow.rotation.x = Math.PI/2; glow.position.z = -50;
-    g.add(glow);
+    cockpit.position.set(450, 0, 200); g.add(cockpit);
     g.scale.setScalar(0.6);
     return g;
-}
-
-function spawnChunk(z) {
-    const chunk = new THREE.Group();
-    const floor = new THREE.GridHelper(80000, 20, 0x00ffff, 0x002222);
-    floor.position.y = -2500;
-    chunk.add(floor);
-
-    // CANYON WALLS (Sides only)
-    for(let i=0; i<12; i++) {
-        const side = Math.random() > 0.5 ? 1 : -1;
-        const h = 10000 + Math.random()*40000;
-        const b = new THREE.Mesh(new THREE.BoxGeometry(6000, h, 8000), new THREE.MeshStandardMaterial({color:0x050505}));
-        b.position.set(side * (28000 + Math.random()*15000), h/2 - 2500, (Math.random()-0.5)*20000);
-        chunk.add(b);
-    }
-    chunk.position.z = z;
-    scene.add(chunk);
-    chunks.push(chunk);
 }
 
 function spawnDrone() {
@@ -191,91 +124,89 @@ function spawnDrone() {
     d.add(new THREE.Mesh(new THREE.SphereGeometry(250, 16, 16), new THREE.MeshStandardMaterial({color:0x111111})));
     const wing = new THREE.CylinderGeometry(500, 500, 20, 6);
     const wL = new THREE.Mesh(wing, new THREE.MeshStandardMaterial({color:0x333333}));
-    wL.position.set(-400,0,0); wL.rotation.z = Math.PI/2;
-    d.add(wL);
-    const wR = wL.clone(); wR.position.set(400,0,0);
-    d.add(wR);
-    d.position.set((Math.random()-0.5)*50000, (Math.random()-0.5)*20000, playerShip.position.z - 70000);
+    wL.position.set(-400,0,0); wL.rotation.z = Math.PI/2; d.add(wL);
+    const wR = wL.clone(); wR.position.set(400,0,0); d.add(wR);
+    d.position.set((Math.random()-0.5)*40000, (Math.random()-0.5)*15000, playerShip.position.z - 80000);
+    d.userData = { lastShot: 0 };
     scene.add(d); drones.push(d);
 }
 
-function createExplosion(pos) {
-    for(let i=0; i<12; i++) {
-        const p = new THREE.Mesh(new THREE.BoxGeometry(300,300,300), new THREE.MeshBasicMaterial({color:0xff6600}));
-        p.position.copy(pos);
-        p.userData = { vel: new THREE.Vector3((Math.random()-0.5)*25000, (Math.random()-0.5)*25000, (Math.random()-0.5)*25000), life: 1.0 };
-        scene.add(p); particles.push(p);
-    }
+function spawnEnemyLaser(pos) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(100, 100, 3000), new THREE.MeshBasicMaterial({color: 0x00ff00}));
+    p.position.copy(pos);
+    p.userData = { vel: new THREE.Vector3(0, 0, 15000) }; // Moving toward player
+    scene.add(p); enemyLasers.push(p);
+}
+
+function respawn() {
+    document.getElementById('fade-layer').style.opacity = 1;
+    state.health = 10;
+    setTimeout(() => {
+        playerShip.position.set(0, 0, playerShip.position.z);
+        document.getElementById('fade-layer').style.opacity = 0;
+    }, 600);
 }
 
 function animate() {
     requestAnimationFrame(animate);
     const dt = clock.getDelta();
+    const now = Date.now();
 
     playerShip.position.x += joy.x * 28000 * dt;
     playerShip.position.y += joy.y * 22000 * dt;
     playerShip.position.z -= state.speed * dt;
 
-    // BOUNDARY RESTRAINTS
-    if (playerShip.position.y < -2300) { playerShip.position.y = -2200; state.shield -= 5; }
-    if (Math.abs(playerShip.position.x) > 22000) { playerShip.position.x = playerShip.position.x > 0 ? 21500 : -21500; state.shield -= 5; }
+    // BOUNDARIES
+    if (playerShip.position.y < -2300) playerShip.position.y = -2250;
+    if (Math.abs(playerShip.position.x) > 22000) playerShip.position.x = playerShip.position.x > 0 ? 21500 : -21500;
 
-    if(state.surgeCooldown > 0) {
-        state.surgeCooldown -= dt;
-        document.getElementById('surge-cooldown').style.height = (state.surgeCooldown / 60 * 100) + "%";
-    }
-
-    if(state.surgeActive) {
-        surgeMesh.rotateZ(dt * 10);
-        drones.forEach((d, i) => {
-            if(d.position.distanceTo(playerShip.position) < 4500) {
-                createExplosion(d.position); scene.remove(d); drones.splice(i, 1);
-            }
-        });
-    }
-
-    // PROJECTILE LOGIC
-    [...lasers, ...missiles].forEach((p, i) => {
-        p.position.add(p.userData.vel.clone().multiplyScalar(dt));
-        drones.forEach((d, di) => {
-            if(p.position.distanceTo(d.position) < 3000) {
-                createExplosion(d.position);
-                scene.remove(d); drones.splice(di,1);
-                scene.remove(p);
-                state.score += 5000;
-            }
-        });
+    // DRONE BEHAVIOR
+    drones.forEach((d, i) => {
+        d.position.z += 5000 * dt; // Moving toward player
+        if (now - d.userData.lastShot > 2000 && d.position.distanceTo(playerShip.position) < 100000) {
+            spawnEnemyLaser(d.position);
+            d.userData.lastShot = now;
+        }
+        if (d.position.z > playerShip.position.z + 5000) { scene.remove(d); drones.splice(i, 1); }
     });
 
-    particles.forEach((p, i) => {
-        p.position.add(p.userData.vel.clone().multiplyScalar(dt));
-        p.userData.life -= dt;
-        if(p.userData.life <= 0) { scene.remove(p); particles.splice(i,1); }
+    // ENEMY LASER COLLISION
+    enemyLasers.forEach((p, i) => {
+        p.position.z += p.userData.vel.z * dt;
+        if (p.position.distanceTo(playerShip.position) < 1500) {
+            state.health--;
+            scene.remove(p); enemyLasers.splice(i, 1);
+            if (state.health <= 0) respawn();
+        }
+        if (p.position.z > playerShip.position.z + 2000) { scene.remove(p); enemyLasers.splice(i, 1); }
     });
 
-    chunks.forEach(c => { if(c.position.z > playerShip.position.z + 20000) c.position.z -= 20000 * chunks.length; });
-    
+    // Update HUD
+    document.getElementById('shield-val').innerText = state.health;
     document.getElementById('score-val').innerText = Math.floor(state.score += state.speed*dt*0.1);
-    document.getElementById('shield-val').innerText = Math.max(0, state.shield);
-    
+
     camera.position.lerp(playerShip.position.clone().add(new THREE.Vector3(0, 3000, 10000)), 0.1);
     camera.lookAt(playerShip.position.x, playerShip.position.y, playerShip.position.z - 5000);
     renderer.render(scene, camera);
 }
 
+function spawnChunk(z) {
+    const chunk = new THREE.Group();
+    const floor = new THREE.GridHelper(80000, 20, 0x00ffff, 0x002222);
+    floor.position.y = -2500; chunk.add(floor);
+    for(let i=0; i<10; i++) {
+        const side = Math.random() > 0.5 ? 1 : -1;
+        const h = 10000 + Math.random()*30000;
+        const b = new THREE.Mesh(new THREE.BoxGeometry(6000, h, 8000), new THREE.MeshStandardMaterial({color:0x050505}));
+        b.position.set(side * (28000 + Math.random()*15000), h/2 - 2500, (Math.random()-0.5)*20000);
+        chunk.add(b);
+    }
+    chunk.position.z = z; scene.add(chunk); chunks.push(chunk);
+}
+
 function setupControls() {
-    const fire = () => shoot(false);
-    const seeker = () => shoot(true);
-    const surge = () => {
-        if(state.surgeCooldown <= 0) {
-            state.surgeActive = true; state.surgeCooldown = 60;
-            surgeMesh.material.opacity = 0.9;
-            setTimeout(() => { state.surgeActive = false; surgeMesh.material.opacity = 0; }, 3000);
-        }
-    };
-    document.getElementById('fire-btn').ontouchstart = (e) => { e.preventDefault(); fire(); };
-    document.getElementById('seeker-btn').ontouchstart = (e) => { e.preventDefault(); seeker(); };
-    document.getElementById('surge-btn').ontouchstart = (e) => { e.preventDefault(); surge(); };
+    document.getElementById('fire-btn').ontouchstart = (e) => { e.preventDefault(); shoot(false); };
+    document.getElementById('seeker-btn').ontouchstart = (e) => { e.preventDefault(); shoot(true); };
     document.addEventListener('touchstart', e => { if(e.touches[0].clientX < window.innerWidth/2) { joy.active=true; joy.sx=e.touches[0].clientX; joy.sy=e.touches[0].clientY; } });
     document.addEventListener('touchmove', e => { if(joy.active) { joy.x = (e.touches[0].clientX-joy.sx)/80; joy.y = (joy.sy-e.touches[0].clientY)/80; } });
     document.addEventListener('touchend', () => { joy.active=false; joy.x=joy.y=0; });
@@ -283,7 +214,7 @@ function setupControls() {
 
 function shoot(homing) {
     const p = new THREE.Mesh(homing ? new THREE.SphereGeometry(400) : new THREE.BoxGeometry(100,100,4000), new THREE.MeshBasicMaterial({color: homing ? 0xff0000 : 0x00ffff}));
-    p.position.copy(playerShip.position).add(new THREE.Vector3(0,0,-800));
+    p.position.copy(playerShip.position);
     p.userData = { vel: new THREE.Vector3(0,0, homing ? -30000 : -60000) };
     scene.add(p);
     if(homing) missiles.push(p); else lasers.push(p);
