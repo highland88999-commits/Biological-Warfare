@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ASTRA • OLYMPUS PROTOCOL</title>
+  <title>ARTEMIS • OLYMPUS PROTOCOL</title>
   <style>
-    body, html {
+    body,html {
       margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000;
       font-family:'Courier New',monospace; touch-action:none; color:#0ff;
     }
-
     #video-container {
       position:absolute; inset:0; z-index:100; opacity:0; transition:opacity 1.8s;
       pointer-events:none;
@@ -25,8 +24,6 @@
       font-size:3.4rem; letter-spacing:14px; animation:pulse 1.8s infinite;
       text-shadow:0 0 16px #0ff;
     }
-    @keyframes pulse { 0%,100%{opacity:0.7} 50%{opacity:1} }
-
     button {
       margin-top:2rem; padding:1.2rem 3rem;
       background:rgba(0,255,255,0.12); border:2px solid #0ff; color:#0ff;
@@ -70,14 +67,14 @@
     #crosshair {
       position:absolute; width:64px; height:64px; border:2px solid #f44;
       border-radius:8px; pointer-events:none; display:none; z-index:120;
-      box-shadow:0 0 12px #f00; left:calc(50% - 32px); top:calc(50% - 32px);
+      box-shadow:0 0 12px #f00;
     }
     #crosshair::before {
-      content:'TARGET'; position:absolute; top:-24px; left:50%;
-      transform:translateX(-50%); color:#f44; font-size:0.8rem; white-space:nowrap;
+      content:'TARGET'; position:absolute; top:-24px; left:50%; transform:translateX(-50%);
+      color:#f44; font-size:0.8rem; white-space:nowrap;
     }
 
-    #fade { position:absolute; inset:0; background:#000; z-index:200; opacity:0; transition:opacity 1.2s; }
+    #fade { position:absolute; inset:0; background:#000; z-index:200; opacity:0; transition:opacity 1s; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 </head>
@@ -86,7 +83,7 @@
 <div id="fade"></div>
 
 <div id="screen1" class="landing">
-  <h1 class="glitch">ASTRA</h1>
+  <h1 class="glitch">ARTEMIS</h1>
   <button onclick="step1()">ENABLE AUDIO & VIDEO</button>
 </div>
 
@@ -118,7 +115,7 @@
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
 // ────────────────────────────────────────────────
-// YouTube + Two-step landing
+//  YouTube + Landing Sequence
 // ────────────────────────────────────────────────
 
 let yt;
@@ -159,12 +156,11 @@ function launchGame() {
 }
 
 // ────────────────────────────────────────────────
-// THREE.js Game Core
+//  THREE.js Game Core
 // ────────────────────────────────────────────────
 
 let scene, camera, renderer, clock;
-let player, chunks = [], lasers = [], drones = [], missiles = [], enemyLasers = [], particles = [];
-let cores = []; // boss targets
+let player, chunks = [], lasers = [], drones = [], missiles = [], enemyLasers = [];
 let state = {
   level: 1,
   health: 10, maxHealth: 10,
@@ -262,119 +258,43 @@ function shoot(isSeeker=false) {
 
 function findNearest() {
   let closest = null, minD = 1e9;
-  [...drones, ...cores].forEach(e => {
-    const dist = e.position.distanceTo(player.position);
-    if (dist < minD) { minD = dist; closest = e; }
+  [...drones].forEach(d => {
+    const dist = d.position.distanceTo(player.position);
+    if (dist < minD) { minD = dist; closest = d; }
   });
   return closest;
-}
-
-function createExplosion(pos) {
-  for(let i=0; i<12; i++) {
-    const p = new THREE.Mesh(
-      new THREE.SphereGeometry(120 + Math.random()*80, 6, 6),
-      new THREE.MeshBasicMaterial({color: 0xff6600})
-    );
-    p.position.copy(pos);
-    p.userData = {
-      vel: new THREE.Vector3(
-        (Math.random()-0.5)*8000,
-        (Math.random()-0.5)*8000,
-        (Math.random()-0.5)*8000
-      ),
-      life: 0.8 + Math.random()*0.6
-    };
-    scene.add(p);
-    particles.push(p);
-  }
 }
 
 function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
-  const now = Date.now();
 
-  // Player movement
+  // Controls
   player.position.x += joy.x * 42000 * dt;
   player.position.y += joy.y * 34000 * dt;
   player.position.z -= state.speed * dt;
 
+  // Clamp player
   player.position.y = THREE.MathUtils.clamp(player.position.y, -3000, 3000);
   player.position.x = THREE.MathUtils.clamp(player.position.x, -50000, 50000);
 
   recycleChunks();
 
   // Shield regen
-  if (now - state.lastDamage > 5200 && state.health < state.maxHealth) {
+  if (Date.now() - state.lastDamage > 5200 && state.health < state.maxHealth) {
     state.health = Math.min(state.maxHealth, state.health + 1);
     document.getElementById('hp').innerText = state.health;
   }
 
-  // Lasers (player shots)
+  // Lasers
   lasers.forEach((l,i) => {
     l.position.z -= 180000 * dt;
-
-    // Hit drones
-    drones.forEach((d,di) => {
-      if (l.position.distanceTo(d.position) < 1800) {
-        createExplosion(d.position);
-        scene.remove(d); drones.splice(di,1);
-        scene.remove(l); lasers.splice(i,1);
-        state.kills++;
-        checkPhaseTransition();
-      }
-    });
-
-    // Hit boss cores
-    cores.forEach((c,ci) => {
-      if (l.position.distanceTo(c.position) < 8000) {
-        createExplosion(c.position);
-        scene.remove(c); cores.splice(ci,1);
-        scene.remove(l); lasers.splice(i,1);
-        if (cores.length === 0) nextLevel();
-      }
-    });
-
     if (l.position.z < player.position.z - 50000) {
       scene.remove(l); lasers.splice(i,1);
     }
   });
 
-  // Missiles (seekers)
-  missiles.forEach((m,i) => {
-    if (m.userData.target && m.userData.target.parent) {
-      const dir = new THREE.Vector3().subVectors(m.userData.target.position, m.position).normalize();
-      m.position.add(dir.multiplyScalar(90000 * dt));
-      if (m.position.distanceTo(m.userData.target.position) < 1200) {
-        createExplosion(m.userData.target.position);
-        if (drones.includes(m.userData.target)) {
-          drones = drones.filter(d => d !== m.userData.target);
-        } else if (cores.includes(m.userData.target)) {
-          cores = cores.filter(c => c !== m.userData.target);
-          if (cores.length === 0) nextLevel();
-        }
-        scene.remove(m.userData.target);
-        scene.remove(m); missiles.splice(i,1);
-        state.kills++;
-        checkPhaseTransition();
-      }
-    } else {
-      m.position.z -= 140000 * dt;
-      if (m.position.z < player.position.z - 50000) {
-        scene.remove(m); missiles.splice(i,1);
-      }
-    }
-  });
-
-  // Particles
-  particles.forEach((p,i) => {
-    p.position.add(p.userData.vel.clone().multiplyScalar(dt));
-    p.userData.life -= dt;
-    if (p.userData.life <= 0) {
-      scene.remove(p); particles.splice(i,1);
-    }
-  });
-
+  // Update radar & crosshair
   updateRadar();
   updateCrosshair();
 
@@ -382,15 +302,19 @@ function animate() {
 }
 
 // ────────────────────────────────────────────────
-// Controls
+//  Controls
 // ────────────────────────────────────────────────
 
 let joy = { active:false, x:0, y:0, sx:0, sy:0 };
 
 function setupTouch() {
-  document.getElementById('fire-btn').ontouchstart   = e=>{e.preventDefault(); shoot(false);};
-  document.getElementById('seeker-btn').ontouchstart = e=>{e.preventDefault(); shoot(true);};
-  document.getElementById('hyper-btn').ontouchstart  = e=>{e.preventDefault(); triggerHyper();};
+  const fire   = document.getElementById('fire-btn');
+  const seeker = document.getElementById('seeker-btn');
+  const hyper  = document.getElementById('hyper-btn');
+
+  fire.ontouchstart   = e=>{e.preventDefault(); shoot(false);};
+  seeker.ontouchstart = e=>{e.preventDefault(); shoot(true);};
+  hyper.ontouchstart  = e=>{e.preventDefault(); triggerHyper();};
 
   document.addEventListener('touchstart', e=>{
     const t = e.touches[0];
@@ -427,16 +351,12 @@ function triggerHyper() {
   }, 1800);
 }
 
-// ────────────────────────────────────────────────
-// UI Helpers
-// ────────────────────────────────────────────────
-
 function updateRadar() {
   const c = document.getElementById('blips');
   c.innerHTML = '';
-  [...drones, ...cores].forEach(e => {
-    const dx = (e.position.x - player.position.x) / 1800;
-    const dz = (e.position.z - player.position.z) / 1800;
+  drones.forEach(d => {
+    const dx = (d.position.x - player.position.x) / 1800;
+    const dz = (d.position.z - player.position.z) / 1800;
     if (Math.abs(dx) > 60 || Math.abs(dz) > 60) return;
     const b = document.createElement('div');
     b.className = 'blip';
@@ -448,61 +368,14 @@ function updateRadar() {
 
 function updateCrosshair() {
   const ch = document.getElementById('crosshair');
-  ch.style.display = (state.phase === 'BOSS' && cores.length > 0) ? 'block' : 'none';
-}
-
-// ────────────────────────────────────────────────
-// Level & Phase Logic
-// ────────────────────────────────────────────────
-
-function checkPhaseTransition() {
-  if (state.kills >= state.killsNeeded) {
-    state.phase = "BOSS";
-    document.getElementById('phase').innerText = "PHASE: BOSS";
-    state.kills = 0;
-    state.killsNeeded += 40;
-    spawnBoss();
+  if (state.phase !== 'BOSS' || cores.length === 0) {
+    ch.style.display = 'none';
+    return;
   }
-}
-
-function spawnBoss() {
-  const boss = new THREE.Mesh(
-    new THREE.SphereGeometry(140000, 32, 32),
-    new THREE.MeshStandardMaterial({color:0x222244, metalness:0.4, roughness:0.7})
-  );
-  boss.position.set(0, 0, player.position.z - 400000);
-  scene.add(boss);
-
-  cores.forEach(c => scene.remove(c));
-  cores = [];
-
-  const count = Math.min(state.level, 100);
-  for(let i=0; i<count; i++){
-    const phi = Math.acos(-1 + (2*i)/count);
-    const theta = Math.sqrt(count*Math.PI)*phi;
-    const r = 145000;
-
-    const core = new THREE.Mesh(
-      new THREE.SphereGeometry(3800,12,12),
-      new THREE.MeshBasicMaterial({color:0xff0000})
-    );
-    core.position.set(
-      r * Math.sin(phi) * Math.cos(theta),
-      r * Math.sin(phi) * Math.sin(theta),
-      boss.position.z + 80000
-    );
-    scene.add(core);
-    cores.push(core);
-  }
-}
-
-function nextLevel() {
-  state.level++;
-  document.getElementById('lvl').innerText = state.level;
-  state.phase = "SWARM";
-  document.getElementById('phase').innerText = "PHASE: PATROL";
-  state.killsNeeded = 80 + state.level * 20;
-  // You can increase speed, spawn rate, etc. here
+  ch.style.display = 'block';
+  // simple center lock for now — can be improved to nearest target
+  ch.style.left = 'calc(50% - 32px)';
+  ch.style.top  = 'calc(50% - 32px)';
 }
 
 // Resize handler
