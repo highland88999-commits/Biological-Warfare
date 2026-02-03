@@ -3,18 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>ARTEMIS • OLYMPUS PROTOCOL</title>
+  <title>ASTRA • OLYMPUS PROTOCOL</title>
   <style>
+    [cite_start]/* Global Styles and Reset[span_2](end_span) */
     body,html {
       margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000;
       font-family:'Courier New',monospace; touch-action:none; color:#0ff;
     }
+    [span_3](start_span)/* Background Video Container[span_3](end_span) */
     #video-container {
       position:absolute; inset:0; z-index:100; opacity:0; transition:opacity 1.8s;
       pointer-events:none;
     }
     iframe { width:100vw; height:100vh; transform:scale(1.4); pointer-events:none; }
 
+    [span_4](start_span)/* UI Overlay and Landing Screens [cite: 5-8] */
     .landing {
       position:absolute; inset:0; z-index:110; background:#000;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -32,6 +35,7 @@
     }
     button:active { background:#0ff; color:#000; transform:scale(0.96); }
 
+    [cite_start]/* Heads-Up Display (HUD) [cite: 9-14] */
     #hud { position:absolute; inset:0; pointer-events:none; z-index:30; display:none; }
     .top { 
       display:flex; justify-content:space-between; padding:12px 16px;
@@ -53,6 +57,7 @@
       border-radius:50%; box-shadow:0 0 6px #f00; transform:translate(-50%,-50%);
     }
 
+    [cite_start]/* Weapon & Hyper Controls [cite: 15-17] */
     #console {
       position:absolute; bottom:24px; right:24px; display:grid;
       grid-template-columns:repeat(2,1fr); gap:12px; pointer-events:auto;
@@ -64,16 +69,16 @@
     }
     #hyper-btn { grid-column:span 2; height:48px; border-color:#fff; color:#fff; }
 
+    [cite_start]/* Targeting Reticle [cite: 18-20] */
     #crosshair {
       position:absolute; width:64px; height:64px; border:2px solid #f44;
       border-radius:8px; pointer-events:none; display:none; z-index:120;
       box-shadow:0 0 12px #f00;
     }
     #crosshair::before {
-      content:'TARGET'; position:absolute; top:-24px; left:50%; transform:translateX(-50%);
-      color:#f44; font-size:0.8rem; white-space:nowrap;
+      content:'TARGET'; position:absolute; top:-24px; left:50%;
+      transform:translateX(-50%); color:#f44; font-size:0.8rem; white-space:nowrap;
     }
-
     #fade { position:absolute; inset:0; background:#000; z-index:200; opacity:0; transition:opacity 1s; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
@@ -83,7 +88,7 @@
 <div id="fade"></div>
 
 <div id="screen1" class="landing">
-  <h1 class="glitch">ARTEMIS</h1>
+  <h1 class="glitch">ASTRA</h1>
   <button onclick="step1()">ENABLE AUDIO & VIDEO</button>
 </div>
 
@@ -100,24 +105,18 @@
     <div>LVL <span id="lvl">1</span>   SHIELD <span id="hp">10</span></div>
     <div id="phase">PHASE: PATROL</div>
   </div>
-
   <div id="radar"><div id="sweep"></div><div id="blips"></div></div>
-
   <div id="console">
     <div id="hyper-btn" class="btn">HYPER</div>
     <div id="seeker-btn" class="btn">SEEKER</div>
     <div id="fire-btn"  class="btn">CANNON</div>
   </div>
-
   <div id="crosshair"></div>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-// ────────────────────────────────────────────────
-//  YouTube + Landing Sequence
-// ────────────────────────────────────────────────
-
+[cite_start]// [cite: 21-25] YouTube + Landing Sequence Logic
 let yt;
 const PLAYLIST_ID = "PLeMER9rHllyCIchd-ZGKTzAnAXYx4FSOz";
 
@@ -144,48 +143,36 @@ function launchGame() {
     document.getElementById('screen2').style.display = 'none';
     document.getElementById('hud').style.display = 'block';
     document.getElementById('fade').style.opacity = '0';
-
     if (yt) {
       yt.loadPlaylist({ list: PLAYLIST_ID, listType: 'playlist', index: 0 });
       yt.setShuffle(true);
       yt.playVideo();
     }
-
     initThree();
   }, 1200);
 }
 
-// ────────────────────────────────────────────────
-//  THREE.js Game Core
-// ────────────────────────────────────────────────
-
+[cite_start]// [cite: 26-34] THREE.js Game Core Initialization
 let scene, camera, renderer, clock;
 let player, chunks = [], lasers = [], drones = [], missiles = [], enemyLasers = [];
 let state = {
-  level: 1,
-  health: 10, maxHealth: 10,
-  phase: "SWARM",
-  kills: 0, killsNeeded: 80,
-  lastDamage: 0,
-  speed: 8000,
-  hyperActive: false
+  level: 1, health: 10, maxHealth: 10,
+  phase: "SWARM", kills: 0, killsNeeded: 80,
+  lastDamage: 0, speed: 8000, hyperActive: false
 };
-
 const CHUNK_DEPTH = 22000;
 const CHUNK_COUNT = 14;
 
 function initThree() {
   scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x000308, 0.000008);
-
   camera = new THREE.PerspectiveCamera(74, innerWidth/innerHeight, 0.1, 9000000);
   renderer = new THREE.WebGLRenderer({antialias:true});
   renderer.setSize(innerWidth, innerHeight);
   document.body.appendChild(renderer.domElement);
-
   scene.add(new THREE.HemisphereLight(0xaaccff, 0x000022, 1.4));
 
-  // Starfield
+  [cite_start]// Starfield generation[span_4](end_span)
   const stars = new THREE.BufferGeometry();
   const pos = [];
   for(let i=0;i<18000;i++){
@@ -194,6 +181,7 @@ function initThree() {
   stars.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
   scene.add(new THREE.Points(stars, new THREE.PointsMaterial({color:0xffffff, size:180})));
 
+  [span_5](start_span)// Player Hull[span_5](end_span)
   player = new THREE.Group();
   const hull = new THREE.Mesh(
     new THREE.CylinderGeometry(280,340,160,24),
@@ -211,6 +199,7 @@ function initThree() {
   setInterval(spawnDrone, 1400);
 }
 
+[span_6](start_span)//[span_6](end_span) Infinite Terrain (Chunks)
 function spawnChunk(zOff) {
   const c = new THREE.Group();
   const g = new THREE.GridHelper(180000, 30, 0x004488, 0x001122);
@@ -229,25 +218,20 @@ function recycleChunks() {
   });
 }
 
+[span_7](start_span)// [cite: 37-43] Combat Logic: Drones and Projectiles
 function spawnDrone() {
   if (state.phase === 'BOSS') return;
   const d = new THREE.Mesh(
     new THREE.OctahedronGeometry(480),
     new THREE.MeshPhongMaterial({color:0xcc2200, emissive:0x440000})
   );
-  d.position.set(
-    (Math.random()-0.5)*120000,
-    (Math.random()-0.5)*70000,
-    player.position.z - 180000
-  );
+  d.position.set((Math.random()-0.5)*120000, (Math.random()-0.5)*70000, player.position.z - 180000);
   scene.add(d);
   drones.push(d);
 }
 
 function shoot(isSeeker=false) {
-  const geo = isSeeker
-    ? new THREE.SphereGeometry(320,8,8)
-    : new THREE.BoxGeometry(140,140,3800);
+  const geo = isSeeker ? new THREE.SphereGeometry(320,8,8) : new THREE.BoxGeometry(140,140,3800);
   const mat = new THREE.MeshBasicMaterial({color: isSeeker ? 0xff3366 : 0x00ddff});
   const p = new THREE.Mesh(geo, mat);
   p.position.copy(player.position);
@@ -265,75 +249,57 @@ function findNearest() {
   return closest;
 }
 
+[cite_start]// [cite: 44-49] Main Animation Loop
 function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
 
-  // Controls
   player.position.x += joy.x * 42000 * dt;
   player.position.y += joy.y * 34000 * dt;
   player.position.z -= state.speed * dt;
 
-  // Clamp player
   player.position.y = THREE.MathUtils.clamp(player.position.y, -3000, 3000);
   player.position.x = THREE.MathUtils.clamp(player.position.x, -50000, 50000);
 
   recycleChunks();
 
-  // Shield regen
   if (Date.now() - state.lastDamage > 5200 && state.health < state.maxHealth) {
     state.health = Math.min(state.maxHealth, state.health + 1);
     document.getElementById('hp').innerText = state.health;
   }
 
-  // Lasers
   lasers.forEach((l,i) => {
     l.position.z -= 180000 * dt;
-    if (l.position.z < player.position.z - 50000) {
-      scene.remove(l); lasers.splice(i,1);
-    }
+    if (l.position.z < player.position.z - 50000) { scene.remove(l); lasers.splice(i,1); }
   });
 
-  // Update radar & crosshair
   updateRadar();
   updateCrosshair();
-
   renderer.render(scene, camera);
 }
 
-// ────────────────────────────────────────────────
-//  Controls
-// ────────────────────────────────────────────────
-
+[cite_start]// [cite: 50-57] Touch Control Logic
 let joy = { active:false, x:0, y:0, sx:0, sy:0 };
-
 function setupTouch() {
-  const fire   = document.getElementById('fire-btn');
+  const fire = document.getElementById('fire-btn');
   const seeker = document.getElementById('seeker-btn');
-  const hyper  = document.getElementById('hyper-btn');
+  const hyper = document.getElementById('hyper-btn');
 
-  fire.ontouchstart   = e=>{e.preventDefault(); shoot(false);};
+  fire.ontouchstart = e=>{e.preventDefault(); shoot(false);};
   seeker.ontouchstart = e=>{e.preventDefault(); shoot(true);};
-  hyper.ontouchstart  = e=>{e.preventDefault(); triggerHyper();};
+  hyper.ontouchstart = e=>{e.preventDefault(); triggerHyper();};
 
   document.addEventListener('touchstart', e=>{
     const t = e.touches[0];
-    if (t.clientX < innerWidth/2) {
-      joy.active = true;
-      joy.sx = t.clientX; joy.sy = t.clientY;
-    }
+    if (t.clientX < innerWidth/2) { joy.active = true; joy.sx = t.clientX; joy.sy = t.clientY; }
   });
   document.addEventListener('touchmove', e=>{
     if (!joy.active) return;
     const t = e.touches[0];
-    const dx = t.clientX - joy.sx;
-    const dy = t.clientY - joy.sy;
-    joy.x = THREE.MathUtils.clamp(dx/90, -1, 1);
-    joy.y = THREE.MathUtils.clamp(-dy/90, -1, 1);
+    joy.x = THREE.MathUtils.clamp((t.clientX - joy.sx)/90, -1, 1);
+    joy.y = THREE.MathUtils.clamp(-(t.clientY - joy.sy)/90, -1, 1);
   });
-  document.addEventListener('touchend', () => {
-    joy.active = false; joy.x = joy.y = 0;
-  });
+  document.addEventListener('touchend', () => { joy.active = false; joy.x = joy.y = 0; });
 }
 
 function triggerHyper() {
@@ -343,7 +309,6 @@ function triggerHyper() {
   state.speed = 240000;
   document.getElementById('fade').style.background = '#fff';
   document.getElementById('fade').style.opacity = 0.4;
-
   setTimeout(() => {
     state.speed = old;
     state.hyperActive = false;
@@ -351,6 +316,7 @@ function triggerHyper() {
   }, 1800);
 }
 
+[cite_start]// [cite: 58-62] UI and Viewport Handlers
 function updateRadar() {
   const c = document.getElementById('blips');
   c.innerHTML = '';
@@ -361,24 +327,20 @@ function updateRadar() {
     const b = document.createElement('div');
     b.className = 'blip';
     b.style.left = (55 + dx) + 'px';
-    b.style.top  = (55 + dz) + 'px';
+    b.style.top = (55 + dz) + 'px';
     c.appendChild(b);
   });
 }
 
 function updateCrosshair() {
   const ch = document.getElementById('crosshair');
-  if (state.phase !== 'BOSS' || cores.length === 0) {
-    ch.style.display = 'none';
-    return;
-  }
+  [cite_start]// Note: 'cores' variable from blueprint is assumed as enemy targets[span_7](end_span)
+  if (state.phase !== 'BOSS') { ch.style.display = 'none'; return; }
   ch.style.display = 'block';
-  // simple center lock for now — can be improved to nearest target
   ch.style.left = 'calc(50% - 32px)';
-  ch.style.top  = 'calc(50% - 32px)';
+  ch.style.top = 'calc(50% - 32px)';
 }
 
-// Resize handler
 window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
