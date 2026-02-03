@@ -5,26 +5,79 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>ASTRA • OLYMPUS PROTOCOL</title>
   <style>
-    body,html{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:'Courier New',monospace;color:#0ff;touch-action:none}
-    #video-container{position:absolute;inset:0;z-index:100;opacity:0;transition:opacity 1.8s;pointer-events:none}
-    iframe{width:100vw;height:100vh;transform:scale(1.4);pointer-events:none}
-    .landing{position:absolute;inset:0;z-index:110;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-    .glitch{font-size:3.4rem;letter-spacing:14px;animation:pulse 1.8s infinite;text-shadow:0 0 16px #0ff}
-    @keyframes pulse{0%,100%{opacity:0.7}50%{opacity:1}}
-    button{margin-top:2rem;padding:1.2rem 3rem;background:rgba(0,255,255,0.12);border:2px solid #0ff;color:#0ff;font-size:1.3rem;font-family:inherit;cursor:pointer;box-shadow:0 0 12px #0ff;transition:0.2s}
-    button:active{background:#0ff;color:#000;transform:scale(0.96)}
-    #hud{position:absolute;inset:0;pointer-events:none;z-index:30;display:none}
-    .top{display:flex;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,0.75);border-bottom:2px solid #0ff;font-size:1.1rem}
-    #radar{position:absolute;top:70px;right:18px;width:110px;height:110px;border:2px solid #0ff;border-radius:50%;background:rgba(0,20,20,0.65)}
-    #sweep{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(0,255,255,0.25) 0%,transparent 45%);animation:sweep 2.4s linear infinite}
-    @keyframes sweep{to{transform:rotate(360deg)}}
-    .blip{position:absolute;width:5px;height:5px;background:#f00;border-radius:50%;box-shadow:0 0 6px #f00;transform:translate(-50%,-50%)}
-    #console{position:absolute;bottom:24px;right:24px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px;pointer-events:auto}
-    .btn{width:86px;height:86px;border:2px solid #0ff;border-radius:12px;background:rgba(0,0,0,0.7);color:#0ff;font-size:0.9rem;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer}
-    #hyper-btn{grid-column:span 2;height:48px;border-color:#fff;color:#fff}
-    #crosshair{position:absolute;width:64px;height:64px;border:2px solid #f44;border-radius:8px;pointer-events:none;display:none;z-index:120;box-shadow:0 0 12px #f00;left:calc(50% - 32px);top:calc(50% - 32px)}
-    #crosshair::before{content:'TARGET';position:absolute;top:-24px;left:50%;transform:translateX(-50%);color:#f44;font-size:0.8rem;white-space:nowrap}
-    #fade{position:absolute;inset:0;background:#000;z-index:200;opacity:0;transition:opacity 1.2s}
+    body, html {
+      margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000;
+      font-family:'Courier New',monospace; touch-action:none; color:#0ff;
+    }
+
+    #video-container {
+      position:absolute; inset:0; z-index:100; opacity:0; transition:opacity 1.8s;
+      pointer-events:none;
+    }
+    iframe { width:100vw; height:100vh; transform:scale(1.4); pointer-events:none; }
+
+    .landing {
+      position:absolute; inset:0; z-index:110; background:#000;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center;
+    }
+    .glitch {
+      font-size:3.4rem; letter-spacing:14px; animation:pulse 1.8s infinite;
+      text-shadow:0 0 16px #0ff;
+    }
+    @keyframes pulse { 0%,100%{opacity:0.7} 50%{opacity:1} }
+
+    button {
+      margin-top:2rem; padding:1.2rem 3rem;
+      background:rgba(0,255,255,0.12); border:2px solid #0ff; color:#0ff;
+      font-size:1.3rem; font-family:inherit; cursor:pointer;
+      box-shadow:0 0 12px #0ff; transition:0.2s;
+    }
+    button:active { background:#0ff; color:#000; transform:scale(0.96); }
+
+    #hud { position:absolute; inset:0; pointer-events:none; z-index:30; display:none; }
+    .top { 
+      display:flex; justify-content:space-between; padding:12px 16px;
+      background:rgba(0,0,0,0.75); border-bottom:2px solid #0ff; font-size:1.1rem;
+    }
+    #radar {
+      position:absolute; top:70px; right:18px; width:110px; height:110px;
+      border:2px solid #0ff; border-radius:50%; background:rgba(0,20,20,0.65);
+    }
+    #sweep {
+      position:absolute; inset:0; border-radius:50%;
+      background:conic-gradient(from 0deg, rgba(0,255,255,0.25) 0%, transparent 45%);
+      animation:sweep 2.4s linear infinite;
+    }
+    @keyframes sweep { to { transform:rotate(360deg); } }
+
+    .blip {
+      position:absolute; width:5px; height:5px; background:#f00;
+      border-radius:50%; box-shadow:0 0 6px #f00; transform:translate(-50%,-50%);
+    }
+
+    #console {
+      position:absolute; bottom:24px; right:24px; display:grid;
+      grid-template-columns:repeat(2,1fr); gap:12px; pointer-events:auto;
+    }
+    .btn {
+      width:86px; height:86px; border:2px solid #0ff; border-radius:12px;
+      background:rgba(0,0,0,0.7); color:#0ff; font-size:0.9rem; font-weight:bold;
+      display:flex; align-items:center; justify-content:center; cursor:pointer;
+    }
+    #hyper-btn { grid-column:span 2; height:48px; border-color:#fff; color:#fff; }
+
+    #crosshair {
+      position:absolute; width:64px; height:64px; border:2px solid #f44;
+      border-radius:8px; pointer-events:none; display:none; z-index:120;
+      box-shadow:0 0 12px #f00; left:calc(50% - 32px); top:calc(50% - 32px);
+    }
+    #crosshair::before {
+      content:'TARGET'; position:absolute; top:-24px; left:50%;
+      transform:translateX(-50%); color:#f44; font-size:0.8rem; white-space:nowrap;
+    }
+
+    #fade { position:absolute; inset:0; background:#000; z-index:200; opacity:0; transition:opacity 1.2s; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 </head>
@@ -37,10 +90,10 @@
   <button onclick="step1()">ENABLE AUDIO & VIDEO</button>
 </div>
 
-<div id="screen2" class="landing" style="display:none;background:transparent">
+<div id="screen2" class="landing" style="display:none; background:transparent;">
   <div id="video-container"><div id="yt"></div></div>
-  <div style="z-index:130">
-    <h1 class="glitch" style="font-size:2.4rem">OLYMPUS PROTOCOL</h1>
+  <div style="z-index:130;">
+    <h1 class="glitch" style="font-size:2.4rem;">OLYMPUS PROTOCOL</h1>
     <button onclick="launchGame()">ENTER COCKPIT</button>
   </div>
 </div>
@@ -50,219 +103,414 @@
     <div>LVL <span id="lvl">1</span>   SHIELD <span id="hp">10</span></div>
     <div id="phase">PHASE: PATROL</div>
   </div>
+
   <div id="radar"><div id="sweep"></div><div id="blips"></div></div>
+
   <div id="console">
     <div id="hyper-btn" class="btn">HYPER</div>
     <div id="seeker-btn" class="btn">SEEKER</div>
-    <div id="fire-btn" class="btn">CANNON</div>
+    <div id="fire-btn"  class="btn">CANNON</div>
   </div>
+
   <div id="crosshair"></div>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-// YouTube
+// ────────────────────────────────────────────────
+// YouTube + Two-step landing
+// ────────────────────────────────────────────────
+
 let yt;
 const PLAYLIST_ID = "PLeMER9rHllyCIchd-ZGKTzAnAXYx4FSOz";
 
-function onYouTubeIframeAPIReady(){
-  yt=new YT.Player('yt',{height:'100%',width:'100%',playerVars:{autoplay:0,controls:0,modestbranding:1,rel:0,loop:1,playlist:PLAYLIST_ID}})
+function onYouTubeIframeAPIReady() {
+  yt = new YT.Player('yt', {
+    height: '100%', width: '100%',
+    playerVars: {
+      autoplay: 0, controls: 0, modestbranding: 1, rel: 0, loop: 1,
+      playlist: PLAYLIST_ID
+    }
+  });
 }
 
-function step1(){
-  document.getElementById('screen1').style.display='none';
-  document.getElementById('screen2').style.display='flex';
-  document.getElementById('video-container').style.opacity='1';
-  yt&&yt.playVideo()
+function step1() {
+  document.getElementById('screen1').style.display = 'none';
+  document.getElementById('screen2').style.display = 'flex';
+  document.getElementById('video-container').style.opacity = '1';
+  if (yt) yt.playVideo();
 }
 
-function launchGame(){
-  document.getElementById('fade').style.opacity='1';
-  setTimeout(()=>{
-    document.getElementById('screen2').style.display='none';
-    document.getElementById('hud').style.display='block';
-    document.getElementById('fade').style.opacity='0';
-    yt&&yt.loadPlaylist({list:PLAYLIST_ID,listType:'playlist',index:0})&&yt.setShuffle(true)&&yt.playVideo();
-    initThree()
-  },1200)
+function launchGame() {
+  document.getElementById('fade').style.opacity = '1';
+  setTimeout(() => {
+    document.getElementById('screen2').style.display = 'none';
+    document.getElementById('hud').style.display = 'block';
+    document.getElementById('fade').style.opacity = '0';
+
+    if (yt) {
+      yt.loadPlaylist({ list: PLAYLIST_ID, listType: 'playlist', index: 0 });
+      yt.setShuffle(true);
+      yt.playVideo();
+    }
+
+    initThree();
+  }, 1200);
 }
 
-// Game
-let scene,camera,renderer,clock,player,chunks=[],lasers=[],drones=[],missiles=[],particles=[],cores=[];
-let state={level:1,health:10,maxHealth:10,phase:"SWARM",kills:0,killsNeeded:80,lastDamage:0,speed:8000,hyperActive:false};
-const CHUNK_DEPTH=22000,CHUNK_COUNT=14;
+// ────────────────────────────────────────────────
+// THREE.js Game Core
+// ────────────────────────────────────────────────
 
-function initThree(){
-  scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x000308,8e-6);
-  camera=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.1,9e6);
-  renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);document.body.appendChild(renderer.domElement);
-  scene.add(new THREE.HemisphereLight(0xaaccff,0x000022,1.4));
+let scene, camera, renderer, clock;
+let player, chunks = [], lasers = [], drones = [], missiles = [], enemyLasers = [], particles = [];
+let cores = []; // boss targets
+let state = {
+  level: 1,
+  health: 10, maxHealth: 10,
+  phase: "SWARM",
+  kills: 0, killsNeeded: 80,
+  lastDamage: 0,
+  speed: 8000,
+  hyperActive: false
+};
 
-  const stars=new THREE.BufferGeometry(),pos=[];
-  for(let i=0;i<18000;i++)pos.push((Math.random()-.5)*1.6e6,(Math.random()-.5)*1.2e6,(Math.random()-.5)*3e6);
-  stars.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-  scene.add(new THREE.Points(stars,new THREE.PointsMaterial({color:0xffffff,size:180})));
+const CHUNK_DEPTH = 22000;
+const CHUNK_COUNT = 14;
 
-  player=new THREE.Group();
-  const hull=new THREE.Mesh(new THREE.CylinderGeometry(280,340,160,24),new THREE.MeshStandardMaterial({color:0x334455,metalness:.9}));
-  hull.rotation.x=Math.PI/2;player.add(hull);scene.add(player);
+function initThree() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x000308, 0.000008);
 
-  for(let i=0;i<CHUNK_COUNT;i++)spawnChunk(i*-CHUNK_DEPTH);
+  camera = new THREE.PerspectiveCamera(74, innerWidth/innerHeight, 0.1, 9000000);
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth, innerHeight);
+  document.body.appendChild(renderer.domElement);
 
-  clock=new THREE.Clock();setupTouch();animate();setInterval(spawnDrone,1400)
+  scene.add(new THREE.HemisphereLight(0xaaccff, 0x000022, 1.4));
+
+  // Starfield
+  const stars = new THREE.BufferGeometry();
+  const pos = [];
+  for(let i=0;i<18000;i++){
+    pos.push((Math.random()-0.5)*1.6e6, (Math.random()-0.5)*1.2e6, (Math.random()-0.5)*3e6);
+  }
+  stars.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  scene.add(new THREE.Points(stars, new THREE.PointsMaterial({color:0xffffff, size:180})));
+
+  player = new THREE.Group();
+  const hull = new THREE.Mesh(
+    new THREE.CylinderGeometry(280,340,160,24),
+    new THREE.MeshStandardMaterial({color:0x334455, metalness:0.9})
+  );
+  hull.rotation.x = Math.PI/2;
+  player.add(hull);
+  scene.add(player);
+
+  for(let i=0;i<CHUNK_COUNT;i++) spawnChunk(i*-CHUNK_DEPTH);
+
+  clock = new THREE.Clock();
+  setupTouch();
+  animate();
+  setInterval(spawnDrone, 1400);
 }
 
-function spawnChunk(z){const c=new THREE.Group(),g=new THREE.GridHelper(180000,30,0x004488,0x001122);g.position.y=-3800;c.add(g);c.position.z=z;scene.add(c);chunks.push(c)}
-
-function recycleChunks(){chunks.forEach(c=>{if(c.position.z>player.position.z+CHUNK_DEPTH*1.5)c.position.z-=CHUNK_DEPTH*CHUNK_COUNT})}
-
-function spawnDrone(){if(state.phase==='BOSS')return;const d=new THREE.Mesh(new THREE.OctahedronGeometry(480),new THREE.MeshPhongMaterial({color:0xcc2200,emissive:0x440000}));d.position.set((Math.random()-.5)*120000,(Math.random()-.5)*70000,player.position.z-180000);scene.add(d);drones.push(d)}
-
-function shoot(seeker=false){
-  const g=seeker?new THREE.SphereGeometry(320,8,8):new THREE.BoxGeometry(140,140,3800);
-  const m=new THREE.MeshBasicMaterial({color:seeker?0xff3366:0x00ddff});
-  const p=new THREE.Mesh(g,m);p.position.copy(player.position);
-  p.userData={seeker,target:seeker?findNearest():null};
-  scene.add(p);seeker?missiles.push(p):lasers.push(p)
+function spawnChunk(zOff) {
+  const c = new THREE.Group();
+  const g = new THREE.GridHelper(180000, 30, 0x004488, 0x001122);
+  g.position.y = -3800;
+  c.add(g);
+  c.position.z = zOff;
+  scene.add(c);
+  chunks.push(c);
 }
 
-function findNearest(){
-  let c=null,d=1e9;
-  [...drones,...cores].forEach(e=>{const dist=e.position.distanceTo(player.position);if(dist<d){d=dist;c=e}});
-  return c
+function recycleChunks() {
+  chunks.forEach(c => {
+    if (c.position.z > player.position.z + CHUNK_DEPTH*1.5) {
+      c.position.z -= CHUNK_DEPTH * CHUNK_COUNT;
+    }
+  });
 }
 
-function createExplosion(pos){
-  for(let i=0;i<12;i++){
-    const p=new THREE.Mesh(new THREE.SphereGeometry(120+Math.random()*80,6,6),new THREE.MeshBasicMaterial({color:0xff6600}));
+function spawnDrone() {
+  if (state.phase === 'BOSS') return;
+  const d = new THREE.Mesh(
+    new THREE.OctahedronGeometry(480),
+    new THREE.MeshPhongMaterial({color:0xcc2200, emissive:0x440000})
+  );
+  d.position.set(
+    (Math.random()-0.5)*120000,
+    (Math.random()-0.5)*70000,
+    player.position.z - 180000
+  );
+  scene.add(d);
+  drones.push(d);
+}
+
+function shoot(isSeeker=false) {
+  const geo = isSeeker
+    ? new THREE.SphereGeometry(320,8,8)
+    : new THREE.BoxGeometry(140,140,3800);
+  const mat = new THREE.MeshBasicMaterial({color: isSeeker ? 0xff3366 : 0x00ddff});
+  const p = new THREE.Mesh(geo, mat);
+  p.position.copy(player.position);
+  p.userData = { seeker: isSeeker, target: isSeeker ? findNearest() : null };
+  scene.add(p);
+  if (isSeeker) missiles.push(p); else lasers.push(p);
+}
+
+function findNearest() {
+  let closest = null, minD = 1e9;
+  [...drones, ...cores].forEach(e => {
+    const dist = e.position.distanceTo(player.position);
+    if (dist < minD) { minD = dist; closest = e; }
+  });
+  return closest;
+}
+
+function createExplosion(pos) {
+  for(let i=0; i<12; i++) {
+    const p = new THREE.Mesh(
+      new THREE.SphereGeometry(120 + Math.random()*80, 6, 6),
+      new THREE.MeshBasicMaterial({color: 0xff6600})
+    );
     p.position.copy(pos);
-    p.userData={vel:new THREE.Vector3((Math.random()-.5)*8000,(Math.random()-.5)*8000,(Math.random()-.5)*8000),life:.8+Math.random()*.6};
-    scene.add(p);particles.push(p)
+    p.userData = {
+      vel: new THREE.Vector3(
+        (Math.random()-0.5)*8000,
+        (Math.random()-0.5)*8000,
+        (Math.random()-0.5)*8000
+      ),
+      life: 0.8 + Math.random()*0.6
+    };
+    scene.add(p);
+    particles.push(p);
   }
 }
 
-function animate(){
-  requestAnimationFrame(animate);const dt=clock.getDelta(),now=Date.now();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const now = Date.now();
 
-  player.position.x+=joy.x*42000*dt;
-  player.position.y+=joy.y*34000*dt;
-  player.position.z-=state.speed*dt;
+  // Player movement
+  player.position.x += joy.x * 42000 * dt;
+  player.position.y += joy.y * 34000 * dt;
+  player.position.z -= state.speed * dt;
 
-  player.position.y=THREE.MathUtils.clamp(player.position.y,-3000,3000);
-  player.position.x=THREE.MathUtils.clamp(player.position.x,-50000,50000);
+  player.position.y = THREE.MathUtils.clamp(player.position.y, -3000, 3000);
+  player.position.x = THREE.MathUtils.clamp(player.position.x, -50000, 50000);
 
   recycleChunks();
 
-  if(now-state.lastDamage>5200&&state.health<state.maxHealth){
-    state.health=Math.min(state.maxHealth,state.health+1);
-    document.getElementById('hp').innerText=state.health
+  // Shield regen
+  if (now - state.lastDamage > 5200 && state.health < state.maxHealth) {
+    state.health = Math.min(state.maxHealth, state.health + 1);
+    document.getElementById('hp').innerText = state.health;
   }
 
-  lasers.forEach((l,i)=>{
-    l.position.z-=180000*dt;
-    drones.forEach((d,di)=>{if(l.position.distanceTo(d.position)<1800){createExplosion(d.position);scene.remove(d);drones.splice(di,1);scene.remove(l);lasers.splice(i,1);state.kills++;checkPhaseTransition()}});
-    cores.forEach((c,ci)=>{if(l.position.distanceTo(c.position)<8000){createExplosion(c.position);scene.remove(c);cores.splice(ci,1);scene.remove(l);lasers.splice(i,1);if(!cores.length)nextLevel()}});
-    if(l.position.z<player.position.z-50000){scene.remove(l);lasers.splice(i,1)}
-  });
+  // Lasers (player shots)
+  lasers.forEach((l,i) => {
+    l.position.z -= 180000 * dt;
 
-  missiles.forEach((m,i)=>{
-    if(m.userData.target&&m.userData.target.parent){
-      const dir=new THREE.Vector3().subVectors(m.userData.target.position,m.position).normalize();
-      m.position.add(dir.multiplyScalar(90000*dt));
-      if(m.position.distanceTo(m.userData.target.position)<1200){
-        createExplosion(m.userData.target.position);
-        if(drones.includes(m.userData.target))drones=drones.filter(d=>d!==m.userData.target);
-        else if(cores.includes(m.userData.target)){cores=cores.filter(c=>c!==m.userData.target);if(!cores.length)nextLevel()}
-        scene.remove(m.userData.target);scene.remove(m);missiles.splice(i,1);state.kills++;checkPhaseTransition()
+    // Hit drones
+    drones.forEach((d,di) => {
+      if (l.position.distanceTo(d.position) < 1800) {
+        createExplosion(d.position);
+        scene.remove(d); drones.splice(di,1);
+        scene.remove(l); lasers.splice(i,1);
+        state.kills++;
+        checkPhaseTransition();
       }
-    }else{
-      m.position.z-=140000*dt;
-      if(m.position.z<player.position.z-50000){scene.remove(m);missiles.splice(i,1)}
+    });
+
+    // Hit boss cores
+    cores.forEach((c,ci) => {
+      if (l.position.distanceTo(c.position) < 8000) {
+        createExplosion(c.position);
+        scene.remove(c); cores.splice(ci,1);
+        scene.remove(l); lasers.splice(i,1);
+        if (cores.length === 0) nextLevel();
+      }
+    });
+
+    if (l.position.z < player.position.z - 50000) {
+      scene.remove(l); lasers.splice(i,1);
     }
   });
 
-  particles.forEach((p,i)=>{
+  // Missiles (seekers)
+  missiles.forEach((m,i) => {
+    if (m.userData.target && m.userData.target.parent) {
+      const dir = new THREE.Vector3().subVectors(m.userData.target.position, m.position).normalize();
+      m.position.add(dir.multiplyScalar(90000 * dt));
+      if (m.position.distanceTo(m.userData.target.position) < 1200) {
+        createExplosion(m.userData.target.position);
+        if (drones.includes(m.userData.target)) {
+          drones = drones.filter(d => d !== m.userData.target);
+        } else if (cores.includes(m.userData.target)) {
+          cores = cores.filter(c => c !== m.userData.target);
+          if (cores.length === 0) nextLevel();
+        }
+        scene.remove(m.userData.target);
+        scene.remove(m); missiles.splice(i,1);
+        state.kills++;
+        checkPhaseTransition();
+      }
+    } else {
+      m.position.z -= 140000 * dt;
+      if (m.position.z < player.position.z - 50000) {
+        scene.remove(m); missiles.splice(i,1);
+      }
+    }
+  });
+
+  // Particles
+  particles.forEach((p,i) => {
     p.position.add(p.userData.vel.clone().multiplyScalar(dt));
-    p.userData.life-=dt;p.scale.multiplyScalar(.96);
-    if(p.userData.life<=0){scene.remove(p);particles.splice(i,1)}
+    p.userData.life -= dt;
+    if (p.userData.life <= 0) {
+      scene.remove(p); particles.splice(i,1);
+    }
   });
 
-  updateRadar();updateCrosshair();renderer.render(scene,camera)
+  updateRadar();
+  updateCrosshair();
+
+  renderer.render(scene, camera);
 }
 
+// ────────────────────────────────────────────────
 // Controls
-let joy={active:false,x:0,y:0,sx:0,sy:0};
+// ────────────────────────────────────────────────
 
-function setupTouch(){
-  document.getElementById('fire-btn').ontouchstart=e=>{e.preventDefault();shoot(false)};
-  document.getElementById('seeker-btn').ontouchstart=e=>{e.preventDefault();shoot(true)};
-  document.getElementById('hyper-btn').ontouchstart=e=>{e.preventDefault();triggerHyper()};
+let joy = { active:false, x:0, y:0, sx:0, sy:0 };
 
-  document.addEventListener('touchstart',e=>{
-    const t=e.touches[0];
-    if(t.clientX<innerWidth/2){joy.active=true;joy.sx=t.clientX;joy.sy=t.clientY}
+function setupTouch() {
+  document.getElementById('fire-btn').ontouchstart   = e=>{e.preventDefault(); shoot(false);};
+  document.getElementById('seeker-btn').ontouchstart = e=>{e.preventDefault(); shoot(true);};
+  document.getElementById('hyper-btn').ontouchstart  = e=>{e.preventDefault(); triggerHyper();};
+
+  document.addEventListener('touchstart', e=>{
+    const t = e.touches[0];
+    if (t.clientX < innerWidth/2) {
+      joy.active = true;
+      joy.sx = t.clientX; joy.sy = t.clientY;
+    }
   });
-  document.addEventListener('touchmove',e=>{
-    if(!joy.active)return;
-    const t=e.touches[0];
-    const dx=t.clientX-joy.sx,dy=t.clientY-joy.sy;
-    joy.x=THREE.MathUtils.clamp(dx/90,-1,1);
-    joy.y=THREE.MathUtils.clamp(-dy/90,-1,1)
+  document.addEventListener('touchmove', e=>{
+    if (!joy.active) return;
+    const t = e.touches[0];
+    const dx = t.clientX - joy.sx;
+    const dy = t.clientY - joy.sy;
+    joy.x = THREE.MathUtils.clamp(dx/90, -1, 1);
+    joy.y = THREE.MathUtils.clamp(-dy/90, -1, 1);
   });
-  document.addEventListener('touchend',()=>{joy.active=false;joy.x=joy.y=0})
+  document.addEventListener('touchend', () => {
+    joy.active = false; joy.x = joy.y = 0;
+  });
 }
 
-function triggerHyper(){
-  if(state.hyperActive)return;
-  state.hyperActive=true;const old=state.speed;state.speed=240000;
-  document.getElementById('fade').style.background='#fff';document.getElementById('fade').style.opacity=.4;
-  setTimeout(()=>{state.speed=old;state.hyperActive=false;document.getElementById('fade').style.opacity=0},1800)
+function triggerHyper() {
+  if (state.hyperActive) return;
+  state.hyperActive = true;
+  const old = state.speed;
+  state.speed = 240000;
+  document.getElementById('fade').style.background = '#fff';
+  document.getElementById('fade').style.opacity = 0.4;
+
+  setTimeout(() => {
+    state.speed = old;
+    state.hyperActive = false;
+    document.getElementById('fade').style.opacity = 0;
+  }, 1800);
 }
 
-function updateRadar(){
-  const c=document.getElementById('blips');c.innerHTML='';
-  [...drones,...cores].forEach(e=>{
-    const dx=(e.position.x-player.position.x)/1800,dz=(e.position.z-player.position.z)/1800;
-    if(Math.abs(dx)>60||Math.abs(dz)>60)return;
-    const b=document.createElement('div');b.className='blip';
-    b.style.left=(55+dx)+'px';b.style.top=(55+dz)+'px';c.appendChild(b)
-  })
+// ────────────────────────────────────────────────
+// UI Helpers
+// ────────────────────────────────────────────────
+
+function updateRadar() {
+  const c = document.getElementById('blips');
+  c.innerHTML = '';
+  [...drones, ...cores].forEach(e => {
+    const dx = (e.position.x - player.position.x) / 1800;
+    const dz = (e.position.z - player.position.z) / 1800;
+    if (Math.abs(dx) > 60 || Math.abs(dz) > 60) return;
+    const b = document.createElement('div');
+    b.className = 'blip';
+    b.style.left = (55 + dx) + 'px';
+    b.style.top  = (55 + dz) + 'px';
+    c.appendChild(b);
+  });
 }
 
-function updateCrosshair(){
-  document.getElementById('crosshair').style.display=(state.phase==='BOSS'&&cores.length>0)?'block':'none'
+function updateCrosshair() {
+  const ch = document.getElementById('crosshair');
+  ch.style.display = (state.phase === 'BOSS' && cores.length > 0) ? 'block' : 'none';
 }
 
-// Level logic
-function checkPhaseTransition(){
-  if(state.kills>=state.killsNeeded){
-    state.phase="BOSS";document.getElementById('phase').innerText="PHASE: BOSS";
-    state.kills=0;state.killsNeeded+=40;spawnBoss()
+// ────────────────────────────────────────────────
+// Level & Phase Logic
+// ────────────────────────────────────────────────
+
+function checkPhaseTransition() {
+  if (state.kills >= state.killsNeeded) {
+    state.phase = "BOSS";
+    document.getElementById('phase').innerText = "PHASE: BOSS";
+    state.kills = 0;
+    state.killsNeeded += 40;
+    spawnBoss();
   }
 }
 
-function spawnBoss(){
-  const b=new THREE.Mesh(new THREE.SphereGeometry(140000,32,32),new THREE.MeshStandardMaterial({color:0x222244,metalness:.4,roughness:.7}));
-  b.position.set(0,0,player.position.z-400000);scene.add(b);
+function spawnBoss() {
+  const boss = new THREE.Mesh(
+    new THREE.SphereGeometry(140000, 32, 32),
+    new THREE.MeshStandardMaterial({color:0x222244, metalness:0.4, roughness:0.7})
+  );
+  boss.position.set(0, 0, player.position.z - 400000);
+  scene.add(boss);
 
-  cores.forEach(c=>scene.remove(c));cores=[];
+  cores.forEach(c => scene.remove(c));
+  cores = [];
 
-  const n=Math.min(state.level,100);
-  for(let i=0;i<n;i++){
-    const phi=Math.acos(-1+(2*i)/n),theta=Math.sqrt(n*Math.PI)*phi,r=145000;
-    const core=new THREE.Mesh(new THREE.SphereGeometry(3800,12,12),new THREE.MeshBasicMaterial({color:0xff0000}));
-    core.position.set(r*Math.sin(phi)*Math.cos(theta),r*Math.sin(phi)*Math.sin(theta),b.position.z+80000);
-    scene.add(core);cores.push(core)
+  const count = Math.min(state.level, 100);
+  for(let i=0; i<count; i++){
+    const phi = Math.acos(-1 + (2*i)/count);
+    const theta = Math.sqrt(count*Math.PI)*phi;
+    const r = 145000;
+
+    const core = new THREE.Mesh(
+      new THREE.SphereGeometry(3800,12,12),
+      new THREE.MeshBasicMaterial({color:0xff0000})
+    );
+    core.position.set(
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.sin(phi) * Math.sin(theta),
+      boss.position.z + 80000
+    );
+    scene.add(core);
+    cores.push(core);
   }
 }
 
-function nextLevel(){
-  state.level++;document.getElementById('lvl').innerText=state.level;
-  state.phase="SWARM";document.getElementById('phase').innerText="PHASE: PATROL";
-  state.killsNeeded=80+state.level*20
+function nextLevel() {
+  state.level++;
+  document.getElementById('lvl').innerText = state.level;
+  state.phase = "SWARM";
+  document.getElementById('phase').innerText = "PHASE: PATROL";
+  state.killsNeeded = 80 + state.level * 20;
+  // You can increase speed, spawn rate, etc. here
 }
 
-window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+// Resize handler
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
 </script>
 </body>
 </html>
