@@ -5,19 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>ASTRA • OLYMPUS PROTOCOL</title>
   <style>
-    [cite_start]/* Global Styles and Reset[span_2](end_span) */
+    /* Global Styles and Reset */
     body,html {
       margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000;
       font-family:'Courier New',monospace; touch-action:none; color:#0ff;
     }
-    [span_3](start_span)/* Background Video Container[span_3](end_span) */
+    
+    /* Background Video Container */
     #video-container {
       position:absolute; inset:0; z-index:100; opacity:0; transition:opacity 1.8s;
       pointer-events:none;
     }
-    iframe { width:100vw; height:100vh; transform:scale(1.4); pointer-events:none; }
+    video { width:100vw; height:100vh; object-fit: cover; pointer-events:none; }
 
-    [span_4](start_span)/* UI Overlay and Landing Screens [cite: 5-8] */
+    /* UI Overlay and Landing Screens */
     .landing {
       position:absolute; inset:0; z-index:110; background:#000;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -33,9 +34,10 @@
       font-size:1.3rem; font-family:inherit; cursor:pointer;
       box-shadow:0 0 12px #0ff; transition:0.2s;
     }
+    button:hover { background:rgba(0,255,255,0.3); }
     button:active { background:#0ff; color:#000; transform:scale(0.96); }
 
-    [cite_start]/* Heads-Up Display (HUD) [cite: 9-14] */
+    /* Heads-Up Display (HUD) */
     #hud { position:absolute; inset:0; pointer-events:none; z-index:30; display:none; }
     .top { 
       display:flex; justify-content:space-between; padding:12px 16px;
@@ -51,13 +53,14 @@
       animation:sweep 2.4s linear infinite;
     }
     @keyframes sweep { to { transform:rotate(360deg); } }
+    @keyframes pulse { 50% { opacity: 0.8; text-shadow: 0 0 25px #0ff; } }
 
     .blip {
       position:absolute; width:5px; height:5px; background:#f00;
       border-radius:50%; box-shadow:0 0 6px #f00; transform:translate(-50%,-50%);
     }
 
-    [cite_start]/* Weapon & Hyper Controls [cite: 15-17] */
+    /* Weapon & Hyper Controls */
     #console {
       position:absolute; bottom:24px; right:24px; display:grid;
       grid-template-columns:repeat(2,1fr); gap:12px; pointer-events:auto;
@@ -69,7 +72,7 @@
     }
     #hyper-btn { grid-column:span 2; height:48px; border-color:#fff; color:#fff; }
 
-    [cite_start]/* Targeting Reticle [cite: 18-20] */
+    /* Targeting Reticle */
     #crosshair {
       position:absolute; width:64px; height:64px; border:2px solid #f44;
       border-radius:8px; pointer-events:none; display:none; z-index:120;
@@ -79,21 +82,27 @@
       content:'TARGET'; position:absolute; top:-24px; left:50%;
       transform:translateX(-50%); color:#f44; font-size:0.8rem; white-space:nowrap;
     }
-    #fade { position:absolute; inset:0; background:#000; z-index:200; opacity:0; transition:opacity 1s; }
+    #fade { position:absolute; inset:0; background:#000; z-index:200; opacity:0; transition:opacity 1s; pointer-events: none;}
+    
+    /* Invisible Audio Host */
+    #music-host { display: none; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 </head>
 <body>
 
 <div id="fade"></div>
+<div id="music-host"></div>
 
 <div id="screen1" class="landing">
   <h1 class="glitch">ASTRA</h1>
-  <button onclick="step1()">ENABLE AUDIO & VIDEO</button>
+  <button onclick="step1()">ENABLE SYSTEMS</button>
 </div>
 
 <div id="screen2" class="landing" style="display:none; background:transparent;">
-  <div id="video-container"><div id="yt"></div></div>
+  <div id="video-container">
+    <video id="bg-video" loop muted playsinline></video>
+  </div>
   <div style="z-index:130;">
     <h1 class="glitch" style="font-size:2.4rem;">OLYMPUS PROTOCOL</h1>
     <button onclick="launchGame()">ENTER COCKPIT</button>
@@ -103,7 +112,7 @@
 <div id="hud">
   <div class="top">
     <div>LVL <span id="lvl">1</span>   SHIELD <span id="hp">10</span></div>
-    <div id="phase">PHASE: PATROL</div>
+    <div id="phase">PHASE: SCANNING</div>
   </div>
   <div id="radar"><div id="sweep"></div><div id="blips"></div></div>
   <div id="console">
@@ -114,27 +123,47 @@
   <div id="crosshair"></div>
 </div>
 
-<script src="https://www.youtube.com/iframe_api"></script>
 <script>
-[cite_start]// [cite: 21-25] YouTube + Landing Sequence Logic
-let yt;
-const PLAYLIST_ID = "PLeMER9rHllyCIchd-ZGKTzAnAXYx4FSOz";
+// ==========================================
+// ARTEMIS MEDIA INTEGRATION
+// ==========================================
+window.ArtemisMedia = {
+    musicPlayer: null,
+    setup: function() {
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        document.head.appendChild(tag);
 
-function onYouTubeIframeAPIReady() {
-  yt = new YT.Player('yt', {
-    height: '100%', width: '100%',
-    playerVars: {
-      autoplay: 0, controls: 0, modestbranding: 1, rel: 0, loop: 1,
-      playlist: PLAYLIST_ID
+        window.onYouTubeIframeAPIReady = () => {
+            this.musicPlayer = new YT.Player('music-host', {
+                videoId: 'qwMz1wgXokk',
+                playerVars: { 'autoplay': 0, 'controls': 0, 'loop': 1, 'playlist': 'qwMz1wgXokk', 'playsinline': 1 },
+            });
+        };
+    },
+    ignite: function(videoID) {
+        const v = document.getElementById(videoID);
+        v.src = "https://xo6u0xsindhyafqf.public.blob.vercel-storage.com/nexus_render%20%2811%29.webm";
+        v.play().then(() => {
+            v.style.opacity = "1";
+        }).catch(err => console.log("Video Play Error:", err));
+
+        if (this.musicPlayer && this.musicPlayer.playVideo) {
+            this.musicPlayer.unMute();
+            this.musicPlayer.playVideo();
+        }
     }
-  });
-}
+};
+ArtemisMedia.setup();
 
+// ==========================================
+// MENU / LANDING LOGIC
+// ==========================================
 function step1() {
   document.getElementById('screen1').style.display = 'none';
   document.getElementById('screen2').style.display = 'flex';
   document.getElementById('video-container').style.opacity = '1';
-  if (yt) yt.playVideo();
+  ArtemisMedia.ignite('bg-video');
 }
 
 function launchGame() {
@@ -143,18 +172,16 @@ function launchGame() {
     document.getElementById('screen2').style.display = 'none';
     document.getElementById('hud').style.display = 'block';
     document.getElementById('fade').style.opacity = '0';
-    if (yt) {
-      yt.loadPlaylist({ list: PLAYLIST_ID, listType: 'playlist', index: 0 });
-      yt.setShuffle(true);
-      yt.playVideo();
-    }
     initThree();
   }, 1200);
 }
 
-[cite_start]// [cite: 26-34] THREE.js Game Core Initialization
+// ==========================================
+// THREE.JS CORE & KALEIDOSCOPE SHADER
+// ==========================================
 let scene, camera, renderer, clock;
-let player, chunks = [], lasers = [], drones = [], missiles = [], enemyLasers = [];
+let player, chunks = [], lasers = [], drones = [], missiles = [];
+let kaleidoscopeMaterial;
 let state = {
   level: 1, health: 10, maxHealth: 10,
   phase: "SWARM", kills: 0, killsNeeded: 80,
@@ -172,16 +199,71 @@ function initThree() {
   document.body.appendChild(renderer.domElement);
   scene.add(new THREE.HemisphereLight(0xaaccff, 0x000022, 1.4));
 
-  [cite_start]// Starfield generation[span_4](end_span)
-  const stars = new THREE.BufferGeometry();
-  const pos = [];
-  for(let i=0;i<18000;i++){
-    pos.push((Math.random()-0.5)*1.6e6, (Math.random()-0.5)*1.2e6, (Math.random()-0.5)*3e6);
-  }
-  stars.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
-  scene.add(new THREE.Points(stars, new THREE.PointsMaterial({color:0xffffff, size:180})));
+  // KALEIDOSCOPE SCANNER BACKGROUND
+  const kalGeo = new THREE.PlaneGeometry(3000000, 3000000);
+  kaleidoscopeMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      time: { value: 0.0 },
+      resolution: { value: new THREE.Vector2(innerWidth, innerHeight) }
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float time;
+      uniform vec2 resolution;
+      varying vec2 vUv;
+      
+      void main() {
+        // Normalize and adjust for aspect ratio
+        vec2 uv = gl_FragCoord.xy / resolution.xy * 2.0 - 1.0;
+        uv.x *= resolution.x / resolution.y;
 
-  [span_5](start_span)// Player Hull[span_5](end_span)
+        // Polar coordinates
+        float radius = length(uv);
+        float angle = atan(uv.y, uv.x);
+
+        // Fold symmetry (8 segments)
+        float segments = 8.0;
+        float fold = 6.2831853 / segments;
+        angle = mod(angle, fold);
+        angle = abs(angle - fold / 2.0);
+
+        // Convert back to cartesian
+        vec2 kalUv = radius * vec2(cos(angle), sin(angle));
+
+        // Scan/scroll movement
+        kalUv.x += time * 0.15;
+        kalUv.y -= time * 0.1;
+
+        // Geometric pattern generation
+        float pattern = sin(kalUv.x * 25.0) * cos(kalUv.y * 25.0);
+        float scanner = sin(radius * 15.0 - time * 6.0) * 0.5 + 0.5;
+        
+        // Cyberpunk colors: Deep blue/cyan blends
+        vec3 baseColor = vec3(0.0, 0.1, 0.2);
+        vec3 glowColor = vec3(0.0, 0.8, 1.0) * scanner * 0.3;
+        vec3 patternColor = vec3(0.0, 0.3, 0.6) * pattern;
+
+        // Radial fade to black at edges
+        float vignette = 1.0 - smoothstep(0.5, 1.5, radius);
+        
+        vec3 finalColor = (baseColor + glowColor + patternColor) * vignette;
+        gl_FragColor = vec4(finalColor, 1.0);
+      }
+    `,
+    depthWrite: false
+  });
+
+  const kaleidoscopeMesh = new THREE.Mesh(kalGeo, kaleidoscopeMaterial);
+  kaleidoscopeMesh.position.z = -1500000; // Push far into the background
+  scene.add(kaleidoscopeMesh);
+
+  // Player Hull
   player = new THREE.Group();
   const hull = new THREE.Mesh(
     new THREE.CylinderGeometry(280,340,160,24),
@@ -191,6 +273,7 @@ function initThree() {
   player.add(hull);
   scene.add(player);
 
+  // Initial Terrain Chunks
   for(let i=0;i<CHUNK_COUNT;i++) spawnChunk(i*-CHUNK_DEPTH);
 
   clock = new THREE.Clock();
@@ -199,7 +282,9 @@ function initThree() {
   setInterval(spawnDrone, 1400);
 }
 
-[span_6](start_span)//[span_6](end_span) Infinite Terrain (Chunks)
+// ==========================================
+// GAME MECHANICS
+// ==========================================
 function spawnChunk(zOff) {
   const c = new THREE.Group();
   const g = new THREE.GridHelper(180000, 30, 0x004488, 0x001122);
@@ -218,7 +303,6 @@ function recycleChunks() {
   });
 }
 
-[span_7](start_span)// [cite: 37-43] Combat Logic: Drones and Projectiles
 function spawnDrone() {
   if (state.phase === 'BOSS') return;
   const d = new THREE.Mesh(
@@ -249,11 +333,20 @@ function findNearest() {
   return closest;
 }
 
-[cite_start]// [cite: 44-49] Main Animation Loop
+// ==========================================
+// RENDER LOOP
+// ==========================================
 function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
+  const elapsedTime = clock.getElapsedTime();
 
+  // Update Shader Uniforms
+  if (kaleidoscopeMaterial) {
+    kaleidoscopeMaterial.uniforms.time.value = elapsedTime;
+  }
+
+  // Player Movement
   player.position.x += joy.x * 42000 * dt;
   player.position.y += joy.y * 34000 * dt;
   player.position.z -= state.speed * dt;
@@ -263,11 +356,13 @@ function animate() {
 
   recycleChunks();
 
+  // Health Regen
   if (Date.now() - state.lastDamage > 5200 && state.health < state.maxHealth) {
     state.health = Math.min(state.maxHealth, state.health + 1);
     document.getElementById('hp').innerText = state.health;
   }
 
+  // Laser Logic
   lasers.forEach((l,i) => {
     l.position.z -= 180000 * dt;
     if (l.position.z < player.position.z - 50000) { scene.remove(l); lasers.splice(i,1); }
@@ -278,7 +373,9 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-[cite_start]// [cite: 50-57] Touch Control Logic
+// ==========================================
+// INPUT CONTROLS
+// ==========================================
 let joy = { active:false, x:0, y:0, sx:0, sy:0 };
 function setupTouch() {
   const fire = document.getElementById('fire-btn');
@@ -316,7 +413,9 @@ function triggerHyper() {
   }, 1800);
 }
 
-[cite_start]// [cite: 58-62] UI and Viewport Handlers
+// ==========================================
+// HUD & WINDOW HANDLers
+// ==========================================
 function updateRadar() {
   const c = document.getElementById('blips');
   c.innerHTML = '';
@@ -334,7 +433,6 @@ function updateRadar() {
 
 function updateCrosshair() {
   const ch = document.getElementById('crosshair');
-  [cite_start]// Note: 'cores' variable from blueprint is assumed as enemy targets[span_7](end_span)
   if (state.phase !== 'BOSS') { ch.style.display = 'none'; return; }
   ch.style.display = 'block';
   ch.style.left = 'calc(50% - 32px)';
@@ -345,6 +443,11 @@ window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  
+  // Update shader resolution to prevent stretching
+  if (kaleidoscopeMaterial) {
+      kaleidoscopeMaterial.uniforms.resolution.value.set(innerWidth, innerHeight);
+  }
 });
 </script>
 </body>
